@@ -12,3 +12,7 @@ class << Minitest
 end
 
 Minitest.autorun
+
+def fixture_file(path)
+  File.expand_path("../fixtures/#{path}", __FILE__)
+end

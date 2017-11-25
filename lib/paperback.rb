@@ -1,5 +1,13 @@
-require "paperback/version"
-
 module Paperback
-  # Your code goes here...
+  module Support
+  end
 end
+
+require "paperback/support/gem_version"
+
+require "paperback/package"
+require "paperback/package/inspector"
+
+require "paperback/support/tar"
+
+require "paperback/version"

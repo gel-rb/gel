@@ -14,4 +14,17 @@ Rake::TestTask.new(:test) do |t|
   t.test_files = FileList["test/**/*_test.rb"]
 end
 
+[["rack", "2.0.3"],
+ ["rack", "0.1.0"]].each do |name, version|
+  file "test/fixtures/#{name}-#{version}.gem" do
+    Dir.chdir "test/fixtures" do
+      system "gem", "fetch", name, "-v", version
+    end
+  end
+
+  task :fixtures => "test/fixtures/#{name}-#{version}.gem"
+end
+
+task :test => :fixtures
+
 task :default => :test

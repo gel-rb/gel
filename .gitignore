@@ -5,3 +5,5 @@
 /pkg/
 /spec/reports/
 /tmp/
+
+/test/fixtures/*.gem
