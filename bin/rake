@@ -1,0 +1,3 @@
+#!/bin/bash
+
+exec `dirname $0`/metaruby -r rake -e Rake.application.run -- "$@"

@@ -7,7 +7,7 @@ Gem::Specification.new do |spec|
   spec.name          = "paperback"
   spec.version       = Paperback::VERSION
   spec.authors       = ["Paperback Authors"]
-  spec.email         = ["TODO"]
+  spec.email         = ["todo@example.com"]
 
   spec.summary       = "A modern gem manager"
   spec.homepage      = "https://github.com/paperback/paperback"

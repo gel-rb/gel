@@ -1,0 +1,3 @@
+#!/bin/bash
+
+exec `dirname $0`/paperruby -I `ruby --enable=gems -e 'a = $:.dup; gem "minitest"; gem "rake"; puts ($: - a).join(":")'` "$@"

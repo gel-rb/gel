@@ -5,7 +5,7 @@ class PaperbackTest < Minitest::Test
     refute_nil ::Paperback::VERSION
   end
 
-  def test_it_does_something_useful
-    assert false
+  def test_tests_cannot_see_rubygems
+    assert_nil defined?(::Gem)
   end
 end
