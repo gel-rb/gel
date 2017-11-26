@@ -7,7 +7,7 @@ module Paperback
 
       attr_reader :spec
 
-      def gem(spec, sums)
+      def gem(spec)
         @spec = spec
 
         yield self if @block

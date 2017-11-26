@@ -15,6 +15,14 @@ module Paperback
       def version
         @inner.version
       end
+
+      def bindir
+        @inner.bindir
+      end
+
+      def require_paths
+        @inner.require_paths
+      end
     end
 
     class YAMLLoader < ::YAML::ClassLoader::Restricted
@@ -92,7 +100,7 @@ module Paperback
             Specification.new(loaded)
           end or raise "no metadata.gz"
 
-          receiver.gem(spec, sums) do |target|
+          receiver.gem(spec) do |target|
             with_file(package_reader, "data.tar.gz", sums) do |data_stream|
               Paperback::Support::Tar::TarReader.new(Zlib::GzipReader.new(data_stream)) do |data_reader|
                 data_reader.each do |entry|
