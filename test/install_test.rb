@@ -20,7 +20,23 @@ class InstallTest < Minitest::Test
         ["rack", "2.0.3", {}],
       ], entries.sort
 
-      assert_equal({ bindir: "bin", require_paths: ["lib"] }, store.gem_info("rack", "0.1.0"))
+      assert_equal({
+        bindir: "bin",
+        require_paths: ["lib"],
+        dependencies: {},
+      }, store.gem_info("rack", "0.1.0"))
+    end
+  end
+
+  def test_record_dependencies
+    with_fixture_gems_installed(["hoe-3.0.0.gem"]) do |store|
+      assert_equal({
+        bindir: "bin",
+        require_paths: ["lib"],
+        dependencies: {
+          "rake" => [["~>", "0.8"]],
+        },
+      }, store.gem_info("hoe", "3.0.0"))
     end
   end
 end

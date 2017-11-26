@@ -7,12 +7,18 @@ class Paperback::Package::Installer
 
   def gem(spec)
     @spec = spec
-    @files = []
+    @files = {}
+    spec.require_paths.each { |reqp| @files[reqp] = [] }
 
     yield self
 
-    @store.add_gem(spec.name, spec.version, spec.bindir, spec.require_paths) do
-      @store.add_lib(spec.name, spec.version, @files.map { |s| s.sub(/\.(?:so|bundle|rb)\z/, "") })
+    @store.add_gem(spec.name, spec.version, spec.bindir, spec.require_paths, spec.runtime_dependencies) do
+      is_first = true
+      spec.require_paths.each do |reqp|
+        location = is_first ? spec.version : [spec.version, reqp]
+        @store.add_lib(spec.name, location, @files[reqp].map { |s| s.sub(/\.(?:so|bundle|rb)\z/, "") })
+        is_first = false
+      end
     end
   end
 
@@ -23,7 +29,7 @@ class Paperback::Package::Installer
     @spec.require_paths.each do |reqp|
       prefix = "#{root}/#{reqp}/"
       if target.start_with?(prefix)
-        @files << target[prefix.size..-1]
+        @files[reqp] << target[prefix.size..-1]
       end
     end
     raise "won't overwrite #{target}" if File.exist?(target)

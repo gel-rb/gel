@@ -10,11 +10,12 @@ class Paperback::Store
     @lib_pstore = PStore.new("#{root}/lib.pstore")
   end
 
-  def add_gem(name, version, bindir, require_paths)
+  def add_gem(name, version, bindir, require_paths, dependencies)
     name = name.to_s
     version = version.to_s
     bindir = bindir.to_s
     require_paths = require_paths.map(&:to_s)
+    dependencies = dependencies.transform_values { |dep| dep.map { |pair| pair.map(&:to_s) } }
 
     primary_pstore(true) do |st|
       h = st[name] || {}
@@ -22,6 +23,7 @@ class Paperback::Store
       d = {}
       d[:bindir] = bindir unless bindir == "bin"
       d[:require_paths] = require_paths unless require_paths == ["lib"]
+      d[:dependencies] = dependencies unless dependencies.empty?
       h[version] = d
       st[name] = h
 
@@ -31,7 +33,7 @@ class Paperback::Store
 
   def add_lib(name, version, files)
     name = name.to_s
-    version = version.to_s
+    version = version.is_a?(Array) ? version.map(&:to_s) : version.to_s
     files = files.map(&:to_s)
 
     lib_pstore(true) do |st|
@@ -53,6 +55,7 @@ class Paperback::Store
       d = d.dup
       d[:bindir] = "bin" unless d.key?(:bindir)
       d[:require_paths] = ["lib"] unless d.key?(:require_paths)
+      d[:dependencies] = {} unless d.key?(:dependencies)
       d
     end
   end
@@ -60,20 +63,23 @@ class Paperback::Store
   def gems_for_lib(file)
     lib_pstore do |st|
       if h = st[file]
-        h.flat_map do |name, versions|
-          versions.map do |version|
-            [name, version]
+        h.each do |name, versions|
+          versions.each do |version|
+            if version.is_a?(Array)
+              yield name, *version
+            else
+              yield name, version
+            end
           end
         end
-      else
-        []
       end
     end
   end
 
-  def each
+  def each(gem_name = nil)
     primary_pstore do |st|
-      st.roots.each do |name|
+      gems = gem_name ? [gem_name] : st.roots
+      gems.each do |name|
         st[name].each do |version, info|
           yield name, version, info
         end

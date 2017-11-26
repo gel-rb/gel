@@ -23,6 +23,15 @@ module Paperback
       def require_paths
         @inner.require_paths
       end
+
+      def runtime_dependencies
+        h = {}
+        @inner.dependencies.each do |dep|
+          next unless dep.type == :runtime || dep.type.nil?
+          h[dep.name] = dep.requirement.requirements.map { |pair| pair.map(&:to_s) }
+        end
+        h
+      end
     end
 
     class YAMLLoader < ::YAML::ClassLoader::Restricted
@@ -35,7 +44,7 @@ module Paperback
         class_loader = self.new
         scanner      = ::YAML::ScalarScanner.new class_loader
 
-        visitor = ::YAML::Visitors::NoAliasRuby.new scanner, class_loader
+        visitor = ::YAML::Visitors::ToRuby.new scanner, class_loader
         visitor.accept result
       end
 
@@ -61,12 +70,16 @@ module Paperback
       end
 
       class Gem_Specification
-        attr_accessor :bindir, :executables, :name, :require_paths, :specification_version, :version
+        attr_accessor :bindir, :executables, :name, :require_paths, :specification_version, :version, :dependencies
       end
-      class Gem_Dependency; end
+      class Gem_Dependency
+        attr_accessor :name, :requirement, :type
+      end
       class Gem_Platform; end
       Gem_Version = Paperback::Support::GemVersion
-      class Gem_Requirement; end
+      class Gem_Requirement
+        attr_accessor :requirements
+      end
     end
 
     def self.with_file(reader, filename, checksums)
