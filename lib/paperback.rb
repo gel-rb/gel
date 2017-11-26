@@ -5,6 +5,7 @@ end
 
 require "paperback/support/gem_version"
 
+require "paperback/environment"
 require "paperback/store"
 
 require "paperback/package"

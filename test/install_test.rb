@@ -1,5 +1,4 @@
 require "test_helper"
-require "tmpdir"
 
 class InstallTest < Minitest::Test
   def test_install_single_package
