@@ -10,6 +10,14 @@ class Paperback::Environment
   def self.gem(name, *requirements)
     requirements = Paperback::Support::GemRequirement.new(requirements)
 
+    if version = activated_gems[name]
+      if requirements.satisfied_by?(Paperback::Support::GemVersion.new(version))
+        return
+      else
+        raise "already loaded gem #{name} #{version}, which is incompatible with: #{requirements}"
+      end
+    end
+
     _name, version, _info = @store.each(name).find do |_name, v, _info|
       requirements.satisfied_by?(Paperback::Support::GemVersion.new(v))
     end

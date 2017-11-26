@@ -19,6 +19,7 @@ end
   ["rack", "0.1.0"],
   ["hoe", "3.0.0"],
   ["rubyforge", "2.0.4"],
+  ["json_pure", "1.0.0"],
   ["json_pure", "2.1.0"],
 ].each do |name, version|
   file "test/fixtures/#{name}-#{version}.gem" do

@@ -59,4 +59,40 @@ class ActivateTest < Minitest::Test
       assert_equal "#{store.root}/gems/rubyforge-2.0.4/lib/rubyforge/client.rb", output.shift
     end
   end
+
+  def test_report_activation_conflicts
+    with_fixture_gems_installed(["rubyforge-2.0.4.gem", "json_pure-1.0.0.gem", "json_pure-2.1.0.gem"]) do |store|
+      assert_raises(LoadError) { require "rubyforge" }
+
+      output = read_from_fork do |ch|
+        Paperback::Environment.activate(store)
+        $-w = false
+        Paperback::Environment.gem "json_pure", "1.0.0"
+        begin
+          Paperback::Environment.require "rubyforge"
+        rescue => ex
+          ch.puts ex
+        end
+      end.lines.map(&:chomp)
+
+      assert_equal "already loaded gem json_pure 1.0.0, which is incompatible with: >= 1.1.7", output.shift
+    end
+  end
+
+  def test_report_unsatisfiable_constraints
+    with_fixture_gems_installed(["rack-2.0.3.gem"]) do |store|
+      assert_raises(LoadError) { require "rack" }
+
+      output = read_from_fork do |ch|
+        Paperback::Environment.activate(store)
+        begin
+          Paperback::Environment.gem "rack", "< 1.0"
+        rescue => ex
+          ch.puts ex
+        end
+      end.lines.map(&:chomp)
+
+      assert_equal "unable to satisfy requirements for gem rack: < 1.0", output.shift
+    end
+  end
 end
