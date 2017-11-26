@@ -17,8 +17,8 @@ class ActivateTest < Minitest::Test
         ch.puts $".grep(/rack\/request/).join(":")
       end.lines.map(&:chomp)
 
-      assert_equal "#{store.root}/gems/rack-2.0.3/lib", output[0]
-      assert_equal "#{store.root}/gems/rack-2.0.3/lib/rack/request.rb", output[1]
+      assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
+      assert_equal "#{store.root}/gems/rack-2.0.3/lib/rack/request.rb", output.shift
     end
   end
 
@@ -35,8 +35,28 @@ class ActivateTest < Minitest::Test
         ch.puts $".grep(/rack\/request/).join(":")
       end.lines.map(&:chomp)
 
-      assert_equal "#{store.root}/gems/rack-2.0.3/lib", output[0]
-      assert_equal "#{store.root}/gems/rack-2.0.3/lib/rack/request.rb", output[1]
+      assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
+      assert_equal "#{store.root}/gems/rack-2.0.3/lib/rack/request.rb", output.shift
+    end
+  end
+
+  def test_activate_simple_dependencies
+    with_fixture_gems_installed(["rubyforge-2.0.4.gem", "json_pure-2.1.0.gem"]) do |store|
+      assert_raises(LoadError) { require "rubyforge" }
+
+      output = read_from_fork do |ch|
+        Paperback::Environment.activate(store)
+        $-w = false
+        Paperback::Environment.require "rubyforge"
+
+        ch.puts $:.grep(/json_pure/).join(":")
+        ch.puts $:.grep(/rubyforge/).join(":")
+        ch.puts $".grep(/rubyforge\//).join(":")
+      end.lines.map(&:chomp)
+
+      assert_equal "#{store.root}/gems/json_pure-2.1.0/lib", output.shift
+      assert_equal "#{store.root}/gems/rubyforge-2.0.4/lib", output.shift
+      assert_equal "#{store.root}/gems/rubyforge-2.0.4/lib/rubyforge/client.rb", output.shift
     end
   end
 end

@@ -4,6 +4,7 @@ module Paperback
 end
 
 require "paperback/support/gem_version"
+require "paperback/support/gem_requirement"
 
 require "paperback/environment"
 require "paperback/store"

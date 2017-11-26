@@ -8,7 +8,17 @@ class Paperback::Environment
   end
 
   def self.gem(name, *requirements)
-    activate_gem name, requirements.first
+    requirements = Paperback::Support::GemRequirement.new(requirements)
+
+    _name, version, _info = @store.each(name).find do |_name, v, _info|
+      requirements.satisfied_by?(Paperback::Support::GemVersion.new(v))
+    end
+
+    if version
+      activate_gem name, version
+    else
+      raise "unable to satisfy requirements for gem #{name}: #{requirements}"
+    end
   end
 
   def self.activate_gem(name, version)
@@ -17,6 +27,12 @@ class Paperback::Environment
 
     info = @store.gem_info(name, version)
     raise "gem #{name} #{version} not available" if info.nil?
+
+    info[:dependencies].each do |dep, reqs|
+      reqs.each do |(qual, ver)|
+        gem dep, "#{qual} #{ver}"
+      end
+    end
 
     lib_dirs = info[:require_paths].map { |s| File.expand_path(s, "#{@store.root}/gems/#{name}-#{version}/") }
 

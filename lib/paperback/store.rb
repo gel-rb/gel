@@ -77,6 +77,8 @@ class Paperback::Store
   end
 
   def each(gem_name = nil)
+    return enum_for(__callee__, gem_name) unless block_given?
+
     primary_pstore do |st|
       gems = gem_name ? [gem_name] : st.roots
       gems.each do |name|

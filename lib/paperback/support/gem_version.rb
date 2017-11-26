@@ -198,7 +198,7 @@ class Paperback::Support::GemVersion
   @@all = {}
 
   def self.new version # :nodoc:
-    return super unless GemVersion == self
+    return super unless Paperback::Support::GemVersion == self
 
     @@all[version] ||= super
   end

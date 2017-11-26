@@ -28,7 +28,8 @@ module Paperback
         h = {}
         @inner.dependencies.each do |dep|
           next unless dep.type == :runtime || dep.type.nil?
-          h[dep.name] = dep.requirement.requirements.map { |pair| pair.map(&:to_s) }
+          req = dep.requirement || dep.version_requirements
+          h[dep.name] = req.requirements.map { |pair| pair.map(&:to_s) }
         end
         h
       end
@@ -73,7 +74,7 @@ module Paperback
         attr_accessor :bindir, :executables, :name, :require_paths, :specification_version, :version, :dependencies
       end
       class Gem_Dependency
-        attr_accessor :name, :requirement, :type
+        attr_accessor :name, :requirement, :type, :version_requirements
       end
       class Gem_Platform; end
       Gem_Version = Paperback::Support::GemVersion
