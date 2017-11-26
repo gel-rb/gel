@@ -37,9 +37,7 @@ class Paperback::Environment
     raise "gem #{name} #{version} not available" if info.nil?
 
     info[:dependencies].each do |dep, reqs|
-      reqs.each do |(qual, ver)|
-        gem dep, "#{qual} #{ver}"
-      end
+      gem dep, *reqs.map { |(qual, ver)| "#{qual} #{ver}" }
     end
 
     lib_dirs = info[:require_paths].map { |s| File.expand_path(s, "#{@store.root}/gems/#{name}-#{version}/") }
