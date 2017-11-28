@@ -8,6 +8,7 @@ require "paperback/support/gem_requirement"
 
 require "paperback/environment"
 require "paperback/store"
+require "paperback/locked_store"
 
 require "paperback/package"
 require "paperback/package/inspector"
