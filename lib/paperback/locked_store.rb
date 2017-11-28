@@ -14,21 +14,25 @@ class Paperback::LockedStore
     @locked_versions = locks.dup
   end
 
-  def gem_info(name, version)
-    @inner.gem_info(name, version) if @locked_versions[name] == version
+  def locked?(gem)
+    @locked_versions[gem.name] == gem.version
+  end
+
+  def gem(name, version)
+    @inner.gem(name, version) if @locked_versions[gem.name] == version
   end
 
   def gems_for_lib(file)
-    @inner.gems_for_lib(file) do |name, version, *args|
-      yield name, version, *args if @locked_versions[name] == version
+    @inner.gems_for_lib(file) do |gem, subdir|
+      yield gem, subdir if locked?(gem)
     end
   end
 
   def each(gem_name = nil)
     return enum_for(__callee__, gem_name) unless block_given?
 
-    @inner.each(gem_name) do |name, version, info|
-      yield name, version, info if @locked_versions[name] == version
+    @inner.each(gem_name) do |gem|
+      yield gem if locked?(gem)
     end
   end
 end

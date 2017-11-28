@@ -11,13 +11,13 @@ class InstallTest < Minitest::Test
       assert File.exist?("#{dir}/gems/rack-2.0.3/SPEC")
 
       entries = []
-      store.each do |name, version, info|
-        entries << [name, version, info]
+      store.each do |gem|
+        entries << [gem.name, gem.version]
       end
 
       assert_equal [
-        ["rack", "0.1.0", {}],
-        ["rack", "2.0.3", {}],
+        ["rack", "0.1.0"],
+        ["rack", "2.0.3"],
       ], entries.sort
 
       assert_equal({
