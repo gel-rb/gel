@@ -24,7 +24,7 @@ class InstallTest < Minitest::Test
         bindir: "bin",
         require_paths: ["lib"],
         dependencies: {},
-      }, store.gem_info("rack", "0.1.0"))
+      }, store.gem("rack", "0.1.0").info)
     end
   end
 
@@ -36,7 +36,7 @@ class InstallTest < Minitest::Test
         dependencies: {
           "rake" => [["~>", "0.8"]],
         },
-      }, store.gem_info("hoe", "3.0.0"))
+      }, store.gem("hoe", "3.0.0").info)
     end
   end
 end

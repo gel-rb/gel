@@ -10,6 +10,7 @@ class Paperback::Package::Installer
     @files = {}
     @installed_files = []
     spec.require_paths.each { |reqp| @files[reqp] = [] }
+    @root = @store.gem_root(@spec.name, @spec.version)
 
     yield self
 
@@ -24,13 +25,12 @@ class Paperback::Package::Installer
   end
 
   def file(filename, io)
-    root = File.expand_path("#{@store.root}/gems/#{@spec.name}-#{@spec.version}")
-    target = File.expand_path("#{root}/#{filename}")
-    raise "invalid filename" unless target.start_with?("#{root}/")
+    target = File.expand_path("#{@root}/#{filename}")
+    raise "invalid filename" unless target.start_with?("#{@root}/")
     return if @installed_files.include?(target)
     @installed_files << target
     @spec.require_paths.each do |reqp|
-      prefix = "#{root}/#{reqp}/"
+      prefix = "#{@root}/#{reqp}/"
       if target.start_with?(prefix)
         @files[reqp] << target[prefix.size..-1]
       end

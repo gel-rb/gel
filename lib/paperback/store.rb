@@ -51,27 +51,11 @@ class Paperback::Store
   def gem(name, version)
     info = gem_info(name, version)
     raise "gem #{name} #{version} not available" if info.nil?
-    Paperback::StoreGem.new(gem_root(name, version), name, version, info)
+    _gem(name, version, info)
   end
 
   def gem_root(name, version)
     "#{@root}/gems/#{name}-#{version}"
-  end
-
-  def gem_info(name, version)
-    primary_pstore do |st|
-      return unless h = st[name]
-      return unless d = h[version]
-      inflate_info(d)
-    end
-  end
-
-  def inflate_info(d)
-    d = d.dup
-    d[:bindir] = "bin" unless d.key?(:bindir)
-    d[:require_paths] = ["lib"] unless d.key?(:require_paths)
-    d[:dependencies] = {} unless d.key?(:dependencies)
-    d
   end
 
   def gems_for_lib(file)
@@ -98,13 +82,33 @@ class Paperback::Store
       gems = gem_name ? [gem_name] : st.roots
       gems.each do |name|
         st[name].each do |version, info|
-          yield Paperback::StoreGem.new(gem_root(name, version), name, version, inflate_info(info))
+          yield _gem(name, version, info)
         end
       end
     end
   end
 
   private
+
+  def _gem(name, version, info)
+    Paperback::StoreGem.new(gem_root(name, version), name, version, inflate_info(info))
+  end
+
+  def gem_info(name, version)
+    primary_pstore do |st|
+      return unless h = st[name]
+      return unless d = h[version]
+      d
+    end
+  end
+
+  def inflate_info(d)
+    d = d.dup
+    d[:bindir] = "bin" unless d.key?(:bindir)
+    d[:require_paths] = ["lib"] unless d.key?(:require_paths)
+    d[:dependencies] = {} unless d.key?(:dependencies)
+    d
+  end
 
   def primary_pstore(write = false)
     @primary_pstore.transaction(!write) do

@@ -8,10 +8,6 @@ class Paperback::StoreGem
     @info = info
   end
 
-  def gem_version
-    @gem_version ||= Paperback::Support::GemVersion.new(version)
-  end
-
   def satisfies?(requirements)
     requirements.satisfied_by?(gem_version)
   end
@@ -24,16 +20,22 @@ class Paperback::StoreGem
     @info[:dependencies]
   end
 
+  def path(file, subdir = nil)
+    subdir ||= _default_require_path
+    "#{root}/#{subdir}/#{file}"
+  end
+
+  private
+
+  def gem_version
+    @gem_version ||= Paperback::Support::GemVersion.new(version)
+  end
+
   def _require_paths
     @info[:require_paths]
   end
 
   def _default_require_path
     _require_paths.first
-  end
-
-  def path(file, subdir = nil)
-    subdir ||= _default_require_path
-    "#{root}/#{subdir}/#{file}"
   end
 end
