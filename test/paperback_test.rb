@@ -5,7 +5,15 @@ class PaperbackTest < Minitest::Test
     refute_nil ::Paperback::VERSION
   end
 
-  def test_tests_cannot_see_rubygems
-    assert_nil defined?(::Gem)
+  def test_tests_cannot_see_rubygems_runtime
+    assert_nil defined?(::Gem.default_exec_format)
+  end
+
+  def test_tests_cannot_see_bundler_runtime
+    assert_nil defined?(::Bundler)
+  end
+
+  def test_tests_dont_have_rubygems_loaded
+    assert_empty $".grep(/rubygems\.rb$/i)
   end
 end

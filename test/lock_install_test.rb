@@ -16,6 +16,8 @@ DEPENDENCIES
 LOCKFILE
     lockfile.close
 
+    WebMock.allow_net_connect!
+
     loader = Paperback::LockLoader.new(lockfile.path)
     with_empty_store do |store|
       output = read_from_fork do |ch|

@@ -3,6 +3,7 @@ require "paperback"
 
 require "minitest"
 require "minitest/mock"
+require "webmock/minitest"
 
 require "tmpdir"
 
@@ -11,6 +12,10 @@ class << Minitest
   def load_plugins
     # no-op
   end
+end
+
+module Gem
+  Version = Paperback::Support::GemVersion
 end
 
 Minitest.autorun
