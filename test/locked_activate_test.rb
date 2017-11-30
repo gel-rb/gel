@@ -7,7 +7,7 @@ class LockedActivateTest < Minitest::Test
         Paperback::Environment.activate(store)
         Paperback::Environment.gem "rack"
 
-        ch.puts $:.grep(/rack/).join(":")
+        ch.puts $:.grep(/\brack/).join(":")
       end.lines.map(&:chomp)
 
       assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
@@ -20,7 +20,7 @@ class LockedActivateTest < Minitest::Test
         Paperback::Environment.activate(locked_store)
         Paperback::Environment.gem "rack"
 
-        ch.puts $:.grep(/rack/).join(":")
+        ch.puts $:.grep(/\brack/).join(":")
       end.lines.map(&:chomp)
 
       assert_equal "#{store.root}/gems/rack-0.1.0/lib", output.shift
@@ -33,7 +33,7 @@ class LockedActivateTest < Minitest::Test
         Paperback::Environment.activate(store)
         Paperback::Environment.gem "rack"
 
-        ch.puts $:.grep(/rack/).join(":")
+        ch.puts $:.grep(/\brack/).join(":")
       end.lines.map(&:chomp)
 
       assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift

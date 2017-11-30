@@ -24,7 +24,7 @@ LOCKFILE
 
         ch.puts $:.grep(/json_pure/).join(":")
         ch.puts $:.grep(/rubyforge/).join(":")
-        ch.puts $:.grep(/rack/).join(":")
+        ch.puts $:.grep(/\brack/).join(":")
         ch.puts $".grep(/rubyforge\//).join(":")
       end.lines.map(&:chomp)
 
@@ -69,7 +69,7 @@ LOCKFILE
 
           ch.puts $:.grep(/json_pure/).join(":")
           ch.puts $:.grep(/rubyforge/).join(":")
-          ch.puts $:.grep(/rack/).join(":")
+          ch.puts $:.grep(/\brack/).join(":")
           ch.puts $".grep(/rubyforge\//).join(":")
         end.lines.map(&:chomp)
 

@@ -13,8 +13,8 @@ class ActivateTest < Minitest::Test
         require "rack"
         require "rack/request"
 
-        ch.puts $:.grep(/rack/).join(":")
-        ch.puts $".grep(/rack\/request/).join(":")
+        ch.puts $:.grep(/\brack/).join(":")
+        ch.puts $".grep(/\brack\/request/).join(":")
       end.lines.map(&:chomp)
 
       assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
@@ -31,8 +31,8 @@ class ActivateTest < Minitest::Test
         Paperback::Environment.activate(store)
         Paperback::Environment.require "rack/request"
 
-        ch.puts $:.grep(/rack/).join(":")
-        ch.puts $".grep(/rack\/request/).join(":")
+        ch.puts $:.grep(/\brack/).join(":")
+        ch.puts $".grep(/\brack\/request/).join(":")
       end.lines.map(&:chomp)
 
       assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
