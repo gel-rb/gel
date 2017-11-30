@@ -4,7 +4,7 @@ class Paperback::Store
   attr_reader :root
 
   def initialize(root)
-    @root = root
+    @root = File.expand_path(root)
     @primary_pstore = PStore.new("#{root}/.pstore")
     @bin_pstore = PStore.new("#{root}/bin.pstore")
     @lib_pstore = PStore.new("#{root}/lib.pstore")
@@ -85,6 +85,7 @@ class Paperback::Store
     primary_pstore do |st|
       gems = gem_name ? [gem_name] : st.roots
       gems.each do |name|
+        next unless st[name]
         st[name].each do |version, info|
           yield _gem(name, version, info)
         end

@@ -3,4 +3,4 @@ set -euo pipefail
 IFS=$'\n\t'
 set -vx
 
-gem install rake minitest
+"`dirname "$0"`"/paperruby "`dirname "$0"`"/../bootstrap.rb gemfile

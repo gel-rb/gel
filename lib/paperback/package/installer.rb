@@ -26,7 +26,7 @@ class Paperback::Package::Installer
 
   def file(filename, io)
     target = File.expand_path("#{@root}/#{filename}")
-    raise "invalid filename" unless target.start_with?("#{@root}/")
+    raise "invalid filename #{target.inspect} outside #{(@root + "/").inspect}" unless target.start_with?("#{@root}/")
     return if @installed_files.include?(target)
     @installed_files << target
     @spec.require_paths.each do |reqp|

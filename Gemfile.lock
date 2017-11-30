@@ -1,0 +1,15 @@
+PATH
+  remote: .
+  specs:
+    paperback (0.1.0)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    minitest (5.10.3)
+    rake (12.3.0)
+
+DEPENDENCIES
+  paperback!
+  minitest
+  rake

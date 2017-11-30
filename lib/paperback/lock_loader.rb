@@ -78,10 +78,13 @@ class Paperback::LockLoader
     end
 
     locked_store.lock(locks)
-    env.activate(locked_store)
 
-    locks.keys.each do |gem_name|
-      env.gem(gem_name)
+    if env
+      env.activate(locked_store)
+
+      locks.keys.each do |gem_name|
+        env.gem(gem_name)
+      end
     end
   end
 end
