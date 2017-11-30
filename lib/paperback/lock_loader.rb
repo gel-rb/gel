@@ -1,3 +1,5 @@
+require "uri"
+
 class Paperback::LockLoader
   attr_reader :filename
 
@@ -5,7 +7,25 @@ class Paperback::LockLoader
     @filename = filename
   end
 
-  def activate(env, base_store)
+  def install_gem(base_store, catalogs, name, version)
+    catalogs.each do |catalog|
+      begin
+        f = catalog.download_gem(name, version)
+      rescue Net::HTTPError
+      else
+        f.close
+        installer = Paperback::Package::Installer.new(base_store)
+        Paperback::Package.extract(f.path, installer)
+        return
+      ensure
+        f.unlink if f
+      end
+    end
+
+    raise "Unable to locate #{name} #{version} in: #{catalogs.join ", "}"
+  end
+
+  def activate(env, base_store, install: false)
     locked_store = Paperback::LockedStore.new(base_store)
 
     lock_content = Paperback::LockParser.new.parse(File.read(filename))
@@ -15,9 +35,15 @@ class Paperback::LockLoader
       case section
       when "GEM"
         specs = body["specs"]
+        catalogs = body["remote"].map { |r| Paperback::Catalog.new(URI(r)) }
         specs.each do |gem_spec, dep_specs|
           gem_spec =~ /\A(.+) \(([^-]+)(?:-(.+))?\)\z/
           name, version, _platform = $1, $2, $3
+
+          if !base_store.gem?(name, version) && install
+            install_gem(base_store, catalogs, name, version)
+          end
+
           locks[name] = version
         end
       when "PATH", "GIT"

@@ -10,6 +10,7 @@ require "paperback/environment"
 require "paperback/store"
 require "paperback/store_gem"
 require "paperback/locked_store"
+require "paperback/catalog"
 
 require "paperback/lock_parser"
 require "paperback/lock_loader"

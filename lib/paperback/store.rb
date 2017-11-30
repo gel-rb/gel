@@ -48,6 +48,10 @@ class Paperback::Store
     end
   end
 
+  def gem?(name, version)
+    !!gem_info(name, version)
+  end
+
   def gem(name, version)
     info = gem_info(name, version)
     raise "gem #{name} #{version} not available" if info.nil?
