@@ -16,7 +16,11 @@ DEPENDENCIES
 LOCKFILE
     lockfile.close
 
-    WebMock.allow_net_connect!
+    stub_request(:get, "https://rubygems.org/gems/json_pure-2.1.0.gem").
+      to_return(body: File.open(fixture_file("json_pure-2.1.0.gem")))
+
+    stub_request(:get, "https://rubygems.org/gems/rubyforge-2.0.4.gem").
+      to_return(body: File.open(fixture_file("rubyforge-2.0.4.gem")))
 
     loader = Paperback::LockLoader.new(lockfile.path)
     with_empty_store do |store|
