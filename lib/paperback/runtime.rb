@@ -7,6 +7,6 @@ if ENV["PAPERBACK_STORE"]
   if ENV["PAPERBACK_LOCKFILE"]
     loader = Paperback::LockLoader.new(ENV["PAPERBACK_LOCKFILE"])
 
-    loader.activate(Paperback::Environment, store)
+    loader.activate(Paperback::Environment, store, install: !!ENV["PAPERBACK_INSTALL"])
   end
 end
