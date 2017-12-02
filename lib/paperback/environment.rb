@@ -38,6 +38,7 @@ class Paperback::Environment
     end
 
     lib_dirs = gem.require_paths
+    @store.prepare gem.name => gem.version
 
     activated_gems[gem.name] = gem
     $:.concat lib_dirs

@@ -68,6 +68,28 @@ class Paperback::Store
     "#{@root}/ext/#{name}-#{version}"
   end
 
+  def prepare(versions)
+  end
+
+  def libs_for_gems(versions)
+    lib_pstore do |st|
+      st.roots.each do |file|
+        h = st[file]
+        h.each do |fname, fversions|
+          next unless version = versions[fname]
+          fversions.each do |fversion|
+            if fversion.is_a?(Array)
+              fversion, subdir = fversion
+              yield fname, fversion, file, subdir if fversion == version
+            else
+              yield fname, fversion, file if fversion == version
+            end
+          end
+        end
+      end
+    end
+  end
+
   def gems_for_lib(file)
     lib_pstore do |st|
       if h = st[file]
