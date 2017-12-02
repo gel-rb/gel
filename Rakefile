@@ -20,6 +20,7 @@ end
   ["rubyforge", "2.0.4"],
   ["json_pure", "1.0.0"],
   ["json_pure", "2.1.0"],
+  ["fast_blank", "1.0.0"],
 ].each do |name, version|
   file "test/fixtures/#{name}-#{version}.gem" do
     Dir.chdir "test/fixtures" do

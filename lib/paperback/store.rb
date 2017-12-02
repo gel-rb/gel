@@ -10,12 +10,13 @@ class Paperback::Store
     @lib_pstore = PStore.new("#{root}/lib.pstore")
   end
 
-  def add_gem(name, version, bindir, require_paths, dependencies)
+  def add_gem(name, version, bindir, require_paths, dependencies, extensions)
     name = name.to_s
     version = version.to_s
     bindir = bindir.to_s
     require_paths = require_paths.map(&:to_s)
     dependencies = dependencies.transform_values { |dep| dep.map { |pair| pair.map(&:to_s) } }
+    extensions = !!extensions
 
     primary_pstore(true) do |st|
       h = st[name] || {}
@@ -24,6 +25,7 @@ class Paperback::Store
       d[:bindir] = bindir unless bindir == "bin"
       d[:require_paths] = require_paths unless require_paths == ["lib"]
       d[:dependencies] = dependencies unless dependencies.empty?
+      d[:extensions] = extensions if extensions
       h[version] = d
       st[name] = h
 
@@ -62,6 +64,10 @@ class Paperback::Store
     "#{@root}/gems/#{name}-#{version}"
   end
 
+  def extension_path(name, version)
+    "#{@root}/ext/#{name}-#{version}"
+  end
+
   def gems_for_lib(file)
     lib_pstore do |st|
       if h = st[file]
@@ -96,7 +102,9 @@ class Paperback::Store
   private
 
   def _gem(name, version, info)
-    Paperback::StoreGem.new(gem_root(name, version), name, version, inflate_info(info))
+    info = inflate_info(info)
+    extensions = extension_path(name, version) if info[:extensions]
+    Paperback::StoreGem.new(gem_root(name, version), name, version, extensions, info)
   end
 
   def gem_info(name, version)

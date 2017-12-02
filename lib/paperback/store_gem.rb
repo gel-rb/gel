@@ -1,10 +1,13 @@
 class Paperback::StoreGem
-  attr_reader :root, :name, :version, :info
+  EXTENSION_SUBDIR_TOKEN = "..".freeze
 
-  def initialize(root, name, version, info)
+  attr_reader :root, :name, :version, :extensions, :info
+
+  def initialize(root, name, version, extensions, info)
     @root = root
     @name = name
     @version = version
+    @extensions = extensions
     @info = info
   end
 
@@ -13,7 +16,9 @@ class Paperback::StoreGem
   end
 
   def require_paths
-    _require_paths.map { |reqp| "#{root}/#{reqp}" }
+    paths = _require_paths.map { |reqp| "#{root}/#{reqp}" }
+    paths << extensions if extensions
+    paths
   end
 
   def dependencies
@@ -21,8 +26,12 @@ class Paperback::StoreGem
   end
 
   def path(file, subdir = nil)
-    subdir ||= _default_require_path
-    "#{root}/#{subdir}/#{file}"
+    if subdir == EXTENSION_SUBDIR_TOKEN && extensions
+      "#{extensions}/#{file}"
+    else
+      subdir ||= _default_require_path
+      "#{root}/#{subdir}/#{file}"
+    end
   end
 
   private

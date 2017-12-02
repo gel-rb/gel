@@ -68,7 +68,7 @@ class Paperback::LockLoader
           else
             deps = []
           end
-          locks[name] = Paperback::StoreGem.new(dir, name, version, require_paths: ["lib"], dependencies: deps)
+          locks[name] = Paperback::StoreGem.new(dir, name, version, nil, require_paths: ["lib"], dependencies: deps)
         end
       when "PLATFORMS", "DEPENDENCIES"
       when "BUNDLED WITH"

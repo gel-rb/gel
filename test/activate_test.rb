@@ -95,4 +95,25 @@ class ActivateTest < Minitest::Test
       assert_equal "unable to satisfy requirements for gem rack: < 1.0", output.shift
     end
   end
+
+  def test_activate_gem_with_extensions
+    with_fixture_gems_installed(["fast_blank-1.0.0.gem"]) do |store|
+      assert_raises(LoadError) { require "fast_blank" }
+      assert_raises(NoMethodError) { "x".blank? }
+
+      output = read_from_fork do |ch|
+        Paperback::Environment.activate(store)
+        Paperback::Environment.require "fast_blank"
+
+        ch.puts $:.grep(/fast_blank/).join(":")
+
+        ch.puts ["x", "", " "].map(&:blank?).join(",")
+      end.lines.map(&:chomp)
+
+      assert_equal ["#{store.root}/gems/fast_blank-1.0.0/lib",
+                    "#{store.root}/ext/fast_blank-1.0.0"], output.shift.split(":")
+
+      assert_equal "false,true,true", output.shift
+    end
+  end
 end

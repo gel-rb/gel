@@ -24,6 +24,10 @@ module Paperback
         @inner.require_paths
       end
 
+      def extensions
+        @inner.extensions
+      end
+
       def runtime_dependencies
         h = {}
         @inner.dependencies.each do |dep|
@@ -71,7 +75,7 @@ module Paperback
       end
 
       class Gem_Specification
-        attr_accessor :bindir, :executables, :name, :require_paths, :specification_version, :version, :dependencies
+        attr_accessor :bindir, :executables, :name, :require_paths, :specification_version, :version, :dependencies, :extensions
       end
       class Gem_Dependency
         attr_accessor :name, :requirement, :type, :version_requirements

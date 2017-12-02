@@ -39,4 +39,40 @@ class InstallTest < Minitest::Test
       }, store.gem("hoe", "3.0.0").info)
     end
   end
+
+  def test_installing_an_extension
+    Dir.mktmpdir do |dir|
+      store = Paperback::Store.new(dir)
+      result = Paperback::Package::Installer.new(store)
+      Paperback::Package.extract(fixture_file("fast_blank-1.0.0.gem"), result)
+
+      # Files from gem
+      assert File.exist?("#{dir}/gems/fast_blank-1.0.0/benchmark")
+      assert File.exist?("#{dir}/gems/fast_blank-1.0.0/ext/fast_blank/extconf.rb")
+      assert File.exist?("#{dir}/gems/fast_blank-1.0.0/ext/fast_blank/fast_blank.c")
+
+      # Build artifact
+      assert File.exist?("#{dir}/gems/fast_blank-1.0.0/ext/fast_blank/fast_blank.o")
+
+      # Compiled binary
+      dlext = RbConfig::CONFIG["DLEXT"]
+      assert File.exist?("#{dir}/ext/fast_blank-1.0.0/fast_blank.#{dlext}")
+
+      entries = []
+      store.each do |gem|
+        entries << [gem.name, gem.version]
+      end
+
+      assert_equal [
+        ["fast_blank", "1.0.0"],
+      ], entries.sort
+
+      assert_equal({
+        bindir: "bin",
+        extensions: true,
+        require_paths: ["lib"],
+        dependencies: {},
+      }, store.gem("fast_blank", "1.0.0").info)
+    end
+  end
 end
