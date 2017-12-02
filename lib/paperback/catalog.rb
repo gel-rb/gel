@@ -8,7 +8,7 @@ class Paperback::Catalog
 
   def download_gem(name, version)
     response = http_get("/gems/#{name}-#{version}.gem")
-    f = Tempfile.new("gem")
+    f = Tempfile.new("gem", encoding: "ascii-8bit")
     f.write(response.body)
     f.rewind
     f
