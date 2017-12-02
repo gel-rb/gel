@@ -1,4 +1,6 @@
 class Paperback::Environment
+  IGNORE_LIST = []
+
   def self.activated_gems
     @activated ||= {}
   end
@@ -8,6 +10,8 @@ class Paperback::Environment
   end
 
   def self.gem(name, *requirements)
+    return if IGNORE_LIST.include?(name)
+
     requirements = Paperback::Support::GemRequirement.new(requirements)
 
     if existing = activated_gems[name]
