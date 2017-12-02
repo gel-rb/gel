@@ -26,11 +26,14 @@ class Paperback::Package::Installer
     end
 
     def install(store)
+      extensions = Regexp.union(["rb", RbConfig::CONFIG["DLEXT"], RbConfig::CONFIG["DLEXT2"]].reject(&:empty?))
+      extensions = /\.#{extensions}\z/
+
       store.add_gem(spec.name, spec.version, spec.bindir, spec.require_paths, spec.runtime_dependencies) do
         is_first = true
         spec.require_paths.each do |reqp|
           location = is_first ? spec.version : [spec.version, reqp]
-          store.add_lib(spec.name, location, @files[reqp].map { |s| s.sub(/\.(?:so|bundle|rb)\z/, "") })
+          store.add_lib(spec.name, location, @files[reqp].map { |s| s.sub(extensions, "") })
           is_first = false
         end
       end
