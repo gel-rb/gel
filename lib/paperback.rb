@@ -14,6 +14,7 @@ require "paperback/catalog"
 
 require "paperback/lock_parser"
 require "paperback/lock_loader"
+require "paperback/installer"
 
 require "paperback/package"
 require "paperback/package/inspector"

@@ -35,7 +35,9 @@ def with_fixture_gems_installed(paths)
   with_empty_store do |store|
     paths.each do |path|
       result = Paperback::Package::Installer.new(store)
-      Paperback::Package.extract(fixture_file(path), result)
+      g = Paperback::Package.extract(fixture_file(path), result)
+      g.compile
+      g.install
     end
 
     yield store

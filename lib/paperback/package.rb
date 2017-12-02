@@ -118,7 +118,7 @@ module Paperback
             Specification.new(loaded)
           end or raise "no metadata.gz"
 
-          receiver.gem(spec) do |target|
+          return receiver.gem(spec) do |target|
             with_file(package_reader, "data.tar.gz", sums) do |data_stream|
               Paperback::Support::Tar::TarReader.new(Zlib::GzipReader.new(data_stream)) do |data_reader|
                 data_reader.each do |entry|

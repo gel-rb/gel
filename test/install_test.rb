@@ -4,9 +4,15 @@ class InstallTest < Minitest::Test
   def test_install_single_package
     Dir.mktmpdir do |dir|
       store = Paperback::Store.new(dir)
+
       result = Paperback::Package::Installer.new(store)
-      Paperback::Package.extract(fixture_file("rack-2.0.3.gem"), result)
-      Paperback::Package.extract(fixture_file("rack-0.1.0.gem"), result)
+      g = Paperback::Package.extract(fixture_file("rack-2.0.3.gem"), result)
+      g.compile
+      g.install
+
+      g = Paperback::Package.extract(fixture_file("rack-0.1.0.gem"), result)
+      g.compile
+      g.install
 
       assert File.exist?("#{dir}/gems/rack-2.0.3/SPEC")
 
@@ -44,7 +50,9 @@ class InstallTest < Minitest::Test
     Dir.mktmpdir do |dir|
       store = Paperback::Store.new(dir)
       result = Paperback::Package::Installer.new(store)
-      Paperback::Package.extract(fixture_file("fast_blank-1.0.0.gem"), result)
+      g = Paperback::Package.extract(fixture_file("fast_blank-1.0.0.gem"), result)
+      g.compile
+      g.install
 
       # Files from gem
       assert File.exist?("#{dir}/gems/fast_blank-1.0.0/benchmark")

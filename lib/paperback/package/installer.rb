@@ -8,26 +8,29 @@ class Paperback::Package::Installer
   end
 
   def gem(spec)
-    root = @store.gem_root(spec.name, spec.version)
-
-    g = GemInstaller.new(spec, root)
+    g = GemInstaller.new(spec, @store)
     yield g
-    g.install(@store)
+    g
   end
 
   class GemInstaller
-    attr_reader :spec, :root
+    attr_reader :spec, :store, :root, :build_path
 
-    def initialize(spec, root)
+    def initialize(spec, store)
       @spec = spec
-      @root = root
+      @store = store
+
+      @root = store.gem_root(spec.name, spec.version)
+      if spec.extensions.any?
+        @build_path = store.extension_path(spec.name, spec.version)
+      end
 
       @files = {}
       @installed_files = []
       spec.require_paths.each { |reqp| @files[reqp] = [] }
     end
 
-    def compile(ext, install_dir)
+    def compile_extension(ext, install_dir)
       raise "Don't know how to build #{ext.inspect} yet" unless ext =~ /extconf/
 
       work_dir = File.expand_path(File.dirname(ext), root)
@@ -98,17 +101,15 @@ class Paperback::Package::Installer
       local_config.unlink if local_config
     end
 
-    def install(store)
-      build_path = nil
-
+    def compile
       if spec.extensions.any?
-        build_path = store.extension_path(spec.name, spec.version)
-
         spec.extensions.each do |ext|
-          compile ext, build_path
+          compile_extension ext, build_path
         end
       end
+    end
 
+    def install
       loadable_file_types = ["rb", RbConfig::CONFIG["DLEXT"], RbConfig::CONFIG["DLEXT2"]].reject(&:empty?)
       loadable_file_types_re = /\.#{Regexp.union loadable_file_types}\z/
       loadable_file_types_pattern = "*.{#{loadable_file_types.join(",")}}"

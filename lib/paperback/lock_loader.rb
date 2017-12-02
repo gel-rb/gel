@@ -7,29 +7,15 @@ class Paperback::LockLoader
     @filename = filename
   end
 
-  def install_gem(base_store, catalogs, name, version)
-    catalogs.each do |catalog|
-      begin
-        f = catalog.download_gem(name, version)
-      rescue Net::HTTPError
-      else
-        f.close
-        installer = Paperback::Package::Installer.new(base_store)
-        Paperback::Package.extract(f.path, installer)
-        return
-      ensure
-        f.unlink if f
-      end
-    end
-
-    raise "Unable to locate #{name} #{version} in: #{catalogs.join ", "}"
-  end
-
   def activate(env, base_store, install: false)
     locked_store = Paperback::LockedStore.new(base_store)
 
     lock_content = Paperback::LockParser.new.parse(File.read(filename))
     locks = {}
+
+    if install
+      installer = Paperback::Installer.new(base_store)
+    end
 
     lock_content.each do |(section, body)|
       case section
@@ -41,7 +27,7 @@ class Paperback::LockLoader
           name, version, _platform = $1, $2, $3
 
           if !base_store.gem?(name, version) && install
-            install_gem(base_store, catalogs, name, version)
+            installer.install_gem(catalogs, name, version)
           end
 
           locks[name] = version
@@ -76,6 +62,8 @@ class Paperback::LockLoader
         warn "Unknown lockfile section #{section.inspect}"
       end
     end
+
+    installer.wait if installer
 
     locked_store.lock(locks)
 
