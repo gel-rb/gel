@@ -9,7 +9,12 @@ class Paperback::Package::Installer
 
   def gem(spec)
     g = GemInstaller.new(spec, @store)
-    yield g
+    begin
+      yield g
+    rescue Exception
+      g.abort!
+      raise
+    end
     g
   end
 
@@ -20,14 +25,36 @@ class Paperback::Package::Installer
       @spec = spec
       @store = store
 
+      raise "gem already installed" if store.gem?(spec.name, spec.version)
+
       @root = store.gem_root(spec.name, spec.version)
+      FileUtils.rm_rf(@root) if @root && Dir.exist?(@root)
+
       if spec.extensions.any?
         @build_path = store.extension_path(spec.name, spec.version)
+        FileUtils.rm_rf(@build_path) if @build_path && Dir.exist?(@build_path)
+      else
+        @build_path = nil
       end
 
       @files = {}
       @installed_files = []
       spec.require_paths.each { |reqp| @files[reqp] = [] }
+    end
+
+    def abort!
+      $stderr.puts "FileUtils.rm_rf(#{root.inspect})" if root
+      $stderr.puts "FileUtils.rm_rf(#{build_path.inspect})" if build_path
+      #FileUtils.rm_rf(root) if root
+      #FileUtils.rm_rf(build_path) if build_path
+    end
+
+    def needs_compile?
+      !!@build_path
+    end
+
+    def compile_ready?
+      true
     end
 
     def compile_extension(ext, install_dir)

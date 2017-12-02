@@ -7,7 +7,7 @@ class Paperback::LockLoader
     @filename = filename
   end
 
-  def activate(env, base_store, install: false)
+  def activate(env, base_store, install: false, output: nil)
     locked_store = Paperback::LockedStore.new(base_store)
 
     lock_content = Paperback::LockParser.new.parse(File.read(filename))
@@ -26,8 +26,18 @@ class Paperback::LockLoader
           gem_spec =~ /\A(.+) \(([^-]+)(?:-(.+))?\)\z/
           name, version, _platform = $1, $2, $3
 
-          if !base_store.gem?(name, version) && install
-            installer.install_gem(catalogs, name, version)
+          if installer
+            if dep_specs
+              dep_names = dep_specs.map { |spec|
+                spec =~ /\A(.+?)(?: \((.+)\))?\z/
+                $1
+              }
+              installer.known_dependencies name => dep_names
+            end
+
+            if !base_store.gem?(name, version)
+              installer.install_gem(catalogs, name, version)
+            end
           end
 
           locks[name] = version
@@ -47,9 +57,15 @@ class Paperback::LockLoader
             end
           end
           if dep_specs
+            dep_names = dep_specs.map { |spec|
+              spec =~ /\A(.+?)(?: \((.+)\))?\z/
+              $1
+            }
+            installer.known_dependencies name => dep_names
+
             deps = dep_specs.map do |spec|
-              spec =~ /\A(.+) \((.+)\)\z/
-              [$1, $2.split(", ").map { |req| Paperback::Support::GemRequirement.parse(req) }]
+              spec =~ /\A(.+?)(?: \((.+)\))?\z/
+              [$1, ($2 ? $2.split(", ") : []).map { |req| Paperback::Support::GemRequirement.parse(req) }]
             end
           else
             deps = []
@@ -63,7 +79,7 @@ class Paperback::LockLoader
       end
     end
 
-    installer.wait if installer
+    installer.wait(output) if installer
 
     locked_store.lock(locks)
 

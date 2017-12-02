@@ -5,9 +5,9 @@ class Paperback::Store
 
   def initialize(root)
     @root = File.expand_path(root)
-    @primary_pstore = PStore.new("#{root}/.pstore")
-    @bin_pstore = PStore.new("#{root}/bin.pstore")
-    @lib_pstore = PStore.new("#{root}/lib.pstore")
+    @primary_pstore = PStore.new("#{root}/.pstore", true)
+    @bin_pstore = PStore.new("#{root}/bin.pstore", true)
+    @lib_pstore = PStore.new("#{root}/lib.pstore", true)
   end
 
   def add_gem(name, version, bindir, require_paths, dependencies, extensions)
