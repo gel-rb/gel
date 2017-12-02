@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 IFS=$'\n\t'
-set -vx
+DIR="`dirname $0`"
+set -x
 
-"`dirname "$0"`"/paperruby "`dirname "$0"`"/../bootstrap.rb gemfile
+"$DIR"/paperruby "$DIR"/../bootstrap.rb gemfile

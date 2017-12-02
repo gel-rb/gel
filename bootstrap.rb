@@ -10,7 +10,7 @@ when "gemfile"
   store = Paperback::Store.new("tmp/bootstrap/store")
   loader = Paperback::LockLoader.new("Gemfile.lock")
 
-  loader.activate(nil, store, install: true)
+  loader.activate(nil, store, install: true, output: $stderr)
 
 when "fetch"
   name, version = ARGV.shift, ARGV.shift
