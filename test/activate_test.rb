@@ -29,7 +29,7 @@ class ActivateTest < Minitest::Test
 
       output = read_from_fork do |ch|
         Paperback::Environment.activate(store)
-        Paperback::Environment.require "rack/request"
+        require Paperback::Environment.resolve_gem_path("rack/request")
 
         ch.puts $:.grep(/\brack/).join(":")
         ch.puts $".grep(/\brack\/request/).join(":")
@@ -47,7 +47,7 @@ class ActivateTest < Minitest::Test
       output = read_from_fork do |ch|
         Paperback::Environment.activate(store)
         $-w = false
-        Paperback::Environment.require "rubyforge"
+        require Paperback::Environment.resolve_gem_path("rubyforge")
 
         ch.puts $:.grep(/json_pure/).join(":")
         ch.puts $:.grep(/rubyforge/).join(":")
@@ -69,7 +69,7 @@ class ActivateTest < Minitest::Test
         $-w = false
         Paperback::Environment.gem "json_pure", "1.0.0"
         begin
-          Paperback::Environment.require "rubyforge"
+          require Paperback::Environment.resolve_gem_path("rubyforge")
         rescue => ex
           ch.puts ex
         end
@@ -103,7 +103,7 @@ class ActivateTest < Minitest::Test
 
       output = read_from_fork do |ch|
         Paperback::Environment.activate(store)
-        Paperback::Environment.require "fast_blank"
+        require Paperback::Environment.resolve_gem_path("fast_blank")
 
         ch.puts $:.grep(/fast_blank/).join(":")
 

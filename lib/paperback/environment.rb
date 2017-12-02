@@ -44,12 +44,12 @@ class Paperback::Environment
     $:.concat lib_dirs
   end
 
-  def self.require(path)
+  def self.resolve_gem_path(path)
     @store.gems_for_lib(path) do |gem, subdir|
       activate_gem gem
-      return super(gem.path(path, subdir))
+      return gem.path(path, subdir)
     end
 
-    super
+    path
   end
 end
