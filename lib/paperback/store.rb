@@ -11,11 +11,15 @@ class Paperback::Store
   end
 
   def add_gem(name, version, bindir, require_paths, dependencies, extensions)
-    name = name.to_s
-    version = version.to_s
-    bindir = bindir.to_s
-    require_paths = require_paths.map(&:to_s)
-    dependencies = dependencies.transform_values { |dep| dep.map { |pair| pair.map(&:to_s) } }
+    name = normalize_string(name)
+    version = normalize_string(version)
+    bindir = normalize_string(bindir)
+    require_paths = require_paths.map { |v| normalize_string(v) }
+    _dependencies = {}
+    dependencies.each do |key, dep|
+      _dependencies[normalize_string(key)] = dep.map { |pair| pair.map { |v| normalize_string(v) } }
+    end
+    dependencies = _dependencies
     extensions = !!extensions
 
     primary_pstore(true) do |st|
@@ -34,9 +38,9 @@ class Paperback::Store
   end
 
   def add_lib(name, version, files)
-    name = name.to_s
-    version = version.is_a?(Array) ? version.map(&:to_s) : version.to_s
-    files = files.map(&:to_s)
+    name = normalize_string(name)
+    version = version.is_a?(Array) ? version.map { |v| normalize_string(v) } : normalize_string(version)
+    files = files.map { |v| normalize_string(v) }
 
     lib_pstore(true) do |st|
       files.each do |file|
@@ -161,5 +165,13 @@ class Paperback::Store
     @bin_pstore.transaction(!write) do
       yield @bin_pstore
     end
+  end
+
+  # Almost every string we store is pure ASCII, and binary strings
+  # marshal better.
+  def normalize_string(str)
+    str = str.to_s
+    str = str.b if str.ascii_only?
+    str
   end
 end
