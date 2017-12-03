@@ -49,6 +49,8 @@ class Paperback::Environment
   end
 
   def self.resolve_gem_path(path)
+    return path if path.start_with?("/")
+
     result = nil
     @store.gems_for_lib(path) do |gem, subdir|
       result = [gem, subdir]
