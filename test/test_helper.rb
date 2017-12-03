@@ -1,8 +1,8 @@
 $LOAD_PATH.unshift File.expand_path("../../lib", __FILE__)
 require "paperback"
+require "paperback/compatibility"
 
-require "minitest"
-require "minitest/mock"
+require "minitest/autorun"
 require "webmock/minitest"
 
 require "tmpdir"
@@ -13,12 +13,6 @@ class << Minitest
     # no-op
   end
 end
-
-module Gem
-  Version = Paperback::Support::GemVersion
-end
-
-Minitest.autorun
 
 def fixture_file(path)
   File.expand_path("../fixtures/#{path}", __FILE__)

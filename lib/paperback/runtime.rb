@@ -1,14 +1,22 @@
-if ENV["PAPERBACK_STORE"]
-  # TODO: This loads too much
-  require "paperback"
+# TODO: This loads too much
+require "paperback"
 
-  store = Paperback::Store.new(ENV["PAPERBACK_STORE"])
+require "rbconfig"
+dir = ENV["PAPERBACK_STORE"] || "~/.local/paperback/#{RbConfig::CONFIG["ruby_version"]}"
+dir = File.expand_path(dir)
 
-  if ENV["PAPERBACK_LOCKFILE"]
-    Paperback::Environment::IGNORE_LIST.concat ENV["PAPERBACK_IGNORE"].split if ENV["PAPERBACK_IGNORE"]
+require "fileutils"
+FileUtils.mkdir_p(dir) unless Dir.exist?(dir)
+store = Paperback::Store.new(dir)
 
-    loader = Paperback::LockLoader.new(ENV["PAPERBACK_LOCKFILE"])
+if ENV["PAPERBACK_LOCKFILE"]
+  Paperback::Environment::IGNORE_LIST.concat ENV["PAPERBACK_IGNORE"].split if ENV["PAPERBACK_IGNORE"]
 
-    loader.activate(Paperback::Environment, store, install: !!ENV["PAPERBACK_INSTALL"], output: $stderr)
-  end
+  loader = Paperback::LockLoader.new(ENV["PAPERBACK_LOCKFILE"])
+
+  loader.activate(Paperback::Environment, store, install: !!ENV["PAPERBACK_INSTALL"], output: $stderr)
+else
+  Paperback::Environment.activate(Paperback::LockedStore.new(store))
 end
+
+require "paperback/compatibility"
