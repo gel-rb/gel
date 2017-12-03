@@ -28,7 +28,7 @@ class LockedActivateTest < Minitest::Test
   end
 
   def test_lock_excludes_gems
-    with_fixture_gems_installed(["json_pure-2.1.0.gem", "rack-2.0.3.gem"]) do |store|
+    with_fixture_gems_installed(["hoe-3.0.0.gem", "rack-2.0.3.gem"]) do |store|
       output = read_from_fork do |ch|
         Paperback::Environment.activate(store)
         Paperback::Environment.gem "rack"
@@ -40,7 +40,7 @@ class LockedActivateTest < Minitest::Test
 
 
       locked_store = Paperback::LockedStore.new(store)
-      locked_store.lock("json_pure" => "2.1.0")
+      locked_store.lock("hoe" => "3.0.0")
 
       output = read_from_fork do |ch|
         Paperback::Environment.activate(locked_store)

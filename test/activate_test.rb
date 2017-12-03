@@ -41,41 +41,39 @@ class ActivateTest < Minitest::Test
   end
 
   def test_activate_simple_dependencies
-    with_fixture_gems_installed(["rubyforge-2.0.4.gem", "json_pure-2.1.0.gem"]) do |store|
-      assert_raises(LoadError) { require "rubyforge" }
+    with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem"]) do |store|
+      assert_raises(LoadError) { require "rack/test" }
 
       output = read_from_fork do |ch|
         Paperback::Environment.activate(store)
-        $-w = false
-        require Paperback::Environment.resolve_gem_path("rubyforge")
+        require Paperback::Environment.resolve_gem_path("rack/test")
 
-        ch.puts $:.grep(/json_pure/).join(":")
-        ch.puts $:.grep(/rubyforge/).join(":")
-        ch.puts $".grep(/rubyforge\//).join(":")
+        ch.puts $:.grep(/\brack(?!-test)/).join(":")
+        ch.puts $:.grep(/rack-test/).join(":")
+        ch.puts $".grep(/rack\/test\/ut/).join(":")
       end.lines.map(&:chomp)
 
-      assert_equal "#{store.root}/gems/json_pure-2.1.0/lib", output.shift
-      assert_equal "#{store.root}/gems/rubyforge-2.0.4/lib", output.shift
-      assert_equal "#{store.root}/gems/rubyforge-2.0.4/lib/rubyforge/client.rb", output.shift
+      assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
+      assert_equal "#{store.root}/gems/rack-test-0.6.3/lib", output.shift
+      assert_equal "#{store.root}/gems/rack-test-0.6.3/lib/rack/test/utils.rb", output.shift
     end
   end
 
   def test_report_activation_conflicts
-    with_fixture_gems_installed(["rubyforge-2.0.4.gem", "json_pure-1.0.0.gem", "json_pure-2.1.0.gem"]) do |store|
-      assert_raises(LoadError) { require "rubyforge" }
+    with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-0.1.0.gem", "rack-2.0.3.gem"]) do |store|
+      assert_raises(LoadError) { require "rack/test" }
 
       output = read_from_fork do |ch|
         Paperback::Environment.activate(store)
-        $-w = false
-        Paperback::Environment.gem "json_pure", "1.0.0"
+        Paperback::Environment.gem "rack", "0.1.0"
         begin
-          require Paperback::Environment.resolve_gem_path("rubyforge")
+          require Paperback::Environment.resolve_gem_path("rack/test")
         rescue => ex
           ch.puts ex
         end
       end.lines.map(&:chomp)
 
-      assert_equal "already loaded gem json_pure 1.0.0, which is incompatible with: >= 1.1.7", output.shift
+      assert_equal "already loaded gem rack 0.1.0, which is incompatible with: >= 1.0", output.shift
     end
   end
 
