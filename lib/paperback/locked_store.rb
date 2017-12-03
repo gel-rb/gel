@@ -3,7 +3,7 @@ class Paperback::LockedStore
 
   def initialize(inner)
     @inner = inner
-    @locked_versions = {}
+    @locked_versions = nil
 
     @lib_cache = nil
     @full_cache = false
@@ -37,15 +37,15 @@ class Paperback::LockedStore
   end
 
   def locked?(gem)
-    @locked_versions[gem.name] == gem.version
+    !@locked_versions || @locked_versions[gem.name] == gem.version
   end
 
   def locked_gems
-    @locked_versions.values.grep(Paperback::StoreGem)
+    @locked_versions ? @locked_versions.values.grep(Paperback::StoreGem) : []
   end
 
   def gem(name, version)
-    if @locked_versions[name] == version
+    if !@locked_versions || @locked_versions[name] == version
       @inner.gem(name, version)
     else
       locked_gems.find { |g| g.name == name && g.version == version }
@@ -60,15 +60,24 @@ class Paperback::LockedStore
       end
     end
 
+    hits = []
     unless @full_cache
       @inner.gems_for_lib(file) do |gem, subdir|
-        yield gem, subdir if locked?(gem)
+        if locked?(gem)
+          hits << [gem, subdir]
+          yield gem, subdir
+        end
       end
     end
 
     locked_gems.each do |gem|
-      yield gem, nil if File.exist?(gem.path(file) + ".rb")
+      if File.exist?(gem.path(file) + ".rb")
+        hits << [gem, nil]
+        yield gem, nil
+      end
     end
+
+    @lib_cache[file] = hits
   end
 
   def each(gem_name = nil)
