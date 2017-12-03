@@ -30,7 +30,9 @@ end
 def gem(*args)
   Paperback::Environment.gem(*args)
 end
+private :gem
 
 def require(path)
   super Paperback::Environment.resolve_gem_path(path)
 end
+private :require

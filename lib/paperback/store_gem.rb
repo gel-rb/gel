@@ -11,6 +11,14 @@ class Paperback::StoreGem
     @info = info
   end
 
+  def ==(other)
+    other.class == self.class && @name == other.name && @version == other.version
+  end
+
+  def hash
+    @name.hash ^ @version.hash
+  end
+
   def satisfies?(requirements)
     requirements.satisfied_by?(gem_version)
   end

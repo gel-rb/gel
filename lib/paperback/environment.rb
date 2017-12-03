@@ -3,7 +3,9 @@ class Paperback::Environment
 
   class << self
     attr_reader :store
+    attr_accessor :gemfile
   end
+  self.gemfile = nil
 
   def self.activated_gems
     @activated ||= {}
@@ -11,6 +13,34 @@ class Paperback::Environment
 
   def self.activate(store)
     @store = store
+  end
+
+  def self.search_upwards(name, dir = Dir.pwd)
+    file = File.join(dir, name)
+    until File.exist?(file)
+      next_dir = File.dirname(dir)
+      return nil if next_dir == dir
+    end
+    file
+  end
+
+  def self.load_gemfile(path = nil)
+    path ||= ENV["PAPERBACK_GEMFILE"]
+    path ||= search_upwards("Gemfile")
+    path ||= "Gemfile"
+
+    raise "No Gemfile found in #{path.inspect}" unless File.exist?(path)
+
+    content = File.read(path)
+    @gemfile = Paperback::GemfileParser.parse(content, path, 1)
+  end
+
+  def self.require_groups(*groups)
+    gems = @gemfile.gems
+    groups = [:default] if groups.empty?
+    groups = groups.map(&:to_s)
+    gems = gems.reject { |g| ((g[2][:groups] || [:default]).map(&:to_s) & groups).empty? }
+    @gemfile.autorequire(self, gems)
   end
 
   def self.gem(name, *requirements)
@@ -50,6 +80,24 @@ class Paperback::Environment
 
     activated_gems[gem.name] = gem
     $:.concat lib_dirs
+  end
+
+  def self.gem_has_file?(gem_name, path)
+    @store.gems_for_lib(path) do |gem, subdir|
+      if gem.name == gem_name && gem == activated_gems[gem_name]
+        return gem.path(path, subdir)
+      end
+    end
+
+    false
+  end
+
+  def self.scoped_require(gem_name, path)
+    if full_path = gem_has_file?(gem_name, path)
+      require full_path
+    else
+      raise LoadError, "No file #{path.inspect} found in gem #{gem_name.inspect}"
+    end
   end
 
   def self.resolve_gem_path(path)

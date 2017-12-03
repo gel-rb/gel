@@ -12,6 +12,7 @@ require "paperback/store_gem"
 require "paperback/locked_store"
 require "paperback/catalog"
 
+require "paperback/gemfile_parser"
 require "paperback/lock_parser"
 require "paperback/lock_loader"
 require "paperback/installer"
