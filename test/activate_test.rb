@@ -22,8 +22,47 @@ class ActivateTest < Minitest::Test
     end
   end
 
+  def test_basic_gem_activation_prefers_latest
+    with_fixture_gems_installed(["rack-0.1.0.gem", "rack-2.0.3.gem"]) do |store|
+      assert_raises(LoadError) { require "rack" }
+      assert_raises(LoadError) { require "rack/request" }
+
+      output = read_from_fork do |ch|
+        Paperback::Environment.activate(store)
+        Paperback::Environment.gem "rack"
+
+        require "rack"
+        require "rack/request"
+
+        ch.puts $:.grep(/\brack/).join(":")
+        ch.puts $".grep(/\brack\/request/).join(":")
+      end.lines.map(&:chomp)
+
+      assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
+      assert_equal "#{store.root}/gems/rack-2.0.3/lib/rack/request.rb", output.shift
+    end
+  end
+
   def test_automatic_gem_activation
     with_fixture_gems_installed(["rack-2.0.3.gem", "rack-0.1.0.gem"]) do |store|
+      assert_raises(LoadError) { require "rack" }
+      assert_raises(LoadError) { require "rack/request" }
+
+      output = read_from_fork do |ch|
+        Paperback::Environment.activate(store)
+        require Paperback::Environment.resolve_gem_path("rack/request")
+
+        ch.puts $:.grep(/\brack/).join(":")
+        ch.puts $".grep(/\brack\/request/).join(":")
+      end.lines.map(&:chomp)
+
+      assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
+      assert_equal "#{store.root}/gems/rack-2.0.3/lib/rack/request.rb", output.shift
+    end
+  end
+
+  def test_automatic_gem_activation_prefers_latest
+    with_fixture_gems_installed(["rack-0.1.0.gem", "rack-2.0.3.gem"]) do |store|
       assert_raises(LoadError) { require "rack" }
       assert_raises(LoadError) { require "rack/request" }
 

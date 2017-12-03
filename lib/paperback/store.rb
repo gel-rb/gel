@@ -31,6 +31,9 @@ class Paperback::Store
       d[:dependencies] = dependencies unless dependencies.empty?
       d[:extensions] = extensions if extensions
       h[version] = d
+      h.keys.sort_by { |v| Paperback::Support::GemVersion.new(v) }.reverse_each do |v|
+        h[v] = h.delete(v)
+      end
       st[name] = h
 
       yield if block_given?
@@ -48,7 +51,7 @@ class Paperback::Store
         d = h[name] || []
         raise "already installed" if d.include?(version)
         d << version
-        h[name] = d
+        h[name] = d.sort_by { |v,_| Paperback::Support::GemVersion.new(v) }.reverse
         st[file] = h
       end
     end
