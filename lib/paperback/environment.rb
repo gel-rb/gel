@@ -49,9 +49,15 @@ class Paperback::Environment
   end
 
   def self.resolve_gem_path(path)
+    result = nil
     @store.gems_for_lib(path) do |gem, subdir|
-      activate_gem gem
-      return gem.path(path, subdir)
+      result = [gem, subdir]
+      break
+    end
+
+    if result
+      activate_gem result[0]
+      return result[0].path(path, result[1])
     end
 
     path
