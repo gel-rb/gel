@@ -1,5 +1,9 @@
 class Paperback::Environment
-  IGNORE_LIST = []
+  IGNORE_LIST = %w(bundler)
+
+  class << self
+    attr_reader :store
+  end
 
   def self.activated_gems
     @activated ||= {}
@@ -51,15 +55,17 @@ class Paperback::Environment
   def self.resolve_gem_path(path)
     return path if path.start_with?("/")
 
-    result = nil
-    @store.gems_for_lib(path) do |gem, subdir|
-      result = [gem, subdir]
-      break
-    end
+    if @store
+      result = nil
+      @store.gems_for_lib(path) do |gem, subdir|
+        result = [gem, subdir]
+        break
+      end
 
-    if result
-      activate_gem result[0]
-      return result[0].path(path, result[1])
+      if result
+        activate_gem result[0]
+        return result[0].path(path, result[1])
+      end
     end
 
     path

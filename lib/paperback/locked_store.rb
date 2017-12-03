@@ -5,7 +5,7 @@ class Paperback::LockedStore
     @inner = inner
     @locked_versions = nil
 
-    @lib_cache = nil
+    @lib_cache = {}
     @full_cache = false
   end
 
@@ -15,8 +15,6 @@ class Paperback::LockedStore
 
   def prepare(locks)
     return if @full_cache
-
-    @lib_cache ||= {}
 
     inner_versions = {}
     locks.each do |name, version|
@@ -53,11 +51,9 @@ class Paperback::LockedStore
   end
 
   def gems_for_lib(file)
-    if @lib_cache
-      if c = @lib_cache[file]
-        c.each { |gem, subdir| yield gem, subdir }
-        return
-      end
+    if c = @lib_cache[file]
+      c.each { |gem, subdir| yield gem, subdir }
+      return
     end
 
     hits = []

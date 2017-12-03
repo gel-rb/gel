@@ -9,9 +9,9 @@ require "fileutils"
 FileUtils.mkdir_p(dir) unless Dir.exist?(dir)
 store = Paperback::Store.new(dir)
 
-if ENV["PAPERBACK_LOCKFILE"]
-  Paperback::Environment::IGNORE_LIST.concat ENV["PAPERBACK_IGNORE"].split if ENV["PAPERBACK_IGNORE"]
+Paperback::Environment::IGNORE_LIST.concat ENV["PAPERBACK_IGNORE"].split if ENV["PAPERBACK_IGNORE"]
 
+if ENV["PAPERBACK_LOCKFILE"]
   loader = Paperback::LockLoader.new(ENV["PAPERBACK_LOCKFILE"])
 
   loader.activate(Paperback::Environment, store, install: !!ENV["PAPERBACK_INSTALL"], output: $stderr)
