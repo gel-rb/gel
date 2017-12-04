@@ -1,4 +1,4 @@
-require "paperback"
+require_relative "lib/paperback"
 
 case ARGV.shift
 when "gemfile"

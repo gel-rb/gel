@@ -1,5 +1,5 @@
 # TODO: This loads too much
-require "paperback"
+require_relative "../paperback"
 
 require "rbconfig"
 dir = ENV["PAPERBACK_STORE"] || "~/.local/paperback/#{RbConfig::CONFIG["ruby_version"]}"
@@ -19,4 +19,4 @@ else
   Paperback::Environment.activate(Paperback::LockedStore.new(store))
 end
 
-require "paperback/compatibility"
+require_relative "compatibility"
