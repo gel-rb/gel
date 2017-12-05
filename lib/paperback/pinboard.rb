@@ -10,18 +10,18 @@ class Paperback::Pinboard
     @pstore = PStore.new("#{root}/.pstore")
   end
 
-  def file(uri, token = nil, &block)
+  def file(uri, token: nil, tail: true, &block)
     unless @pstore.transaction(true) { @pstore[uri.to_s] }
-      add uri, token
+      add uri, token: token
     end
 
     tail_file = Paperback::TailFile.new(uri, self)
-    tail_file.update if stale(uri, token)
+    tail_file.update(!tail) if stale(uri, token)
 
     File.open(filename(uri), "r", &block)
   end
 
-  def add(uri, token = nil)
+  def add(uri, token: nil)
     filename = mangle_uri(uri)
 
     @pstore.transaction(false) do

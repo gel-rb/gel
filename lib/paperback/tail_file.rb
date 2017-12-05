@@ -25,8 +25,7 @@ class Paperback::TailFile
     @etag = pinboard.etag(uri)
   end
 
-  def update
-    force_reset = false
+  def update(force_reset = false)
     uri = self.uri
 
     File.open(@filename, "a+b") do |f|
@@ -176,7 +175,7 @@ class Paperback::TailFile
         end
       end
 
-      raise "Giving up after 8 requests"
+      raise "Giving up after #{MAXIMUM_CHAIN} requests"
     end
   end
 
