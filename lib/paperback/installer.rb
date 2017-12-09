@@ -120,6 +120,7 @@ class Paperback::Installer
 
   def wait(output = nil)
     clear = ""
+    tty = output && output.isatty
 
     pools = { "Downloading" => @download_pool, "Compiling" => @compile_pool }
 
@@ -130,14 +131,17 @@ class Paperback::Installer
         if output
           output.write clear
           output.write @messages.pop until @messages.empty?
-          messages = pools.map { |label, pool| pool_status(label, pool) }.compact
-          if messages.empty?
-            msgline = ""
-          else
-            msgline = "[" + messages.join(";   ") + "]"
+
+          if tty
+            messages = pools.map { |label, pool| pool_status(label, pool) }.compact
+            if messages.empty?
+              msgline = ""
+            else
+              msgline = "[" + messages.join(";   ") + "]"
+            end
+            clear = "\r" + " " * msgline.size + "\r"
+            output.write msgline
           end
-          clear = "\r" + " " * msgline.size + "\r"
-          output.write msgline
         else
           @messages.pop until @messages.empty?
         end
