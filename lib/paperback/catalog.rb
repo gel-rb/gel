@@ -2,8 +2,9 @@ require "net/http"
 require "tempfile"
 
 class Paperback::Catalog
-  def initialize(uri)
+  def initialize(uri, httpool: Paperback::Httpool.new)
     @uri = uri
+    @httpool = httpool
   end
 
   def download_gem(name, version)
@@ -24,18 +25,16 @@ class Paperback::Catalog
     original_uri = uri = URI(File.join(@uri.to_s, path))
 
     5.times do
-      Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https") do |http|
-        get = Net::HTTP::Get.new(uri)
-        response = http.request(get)
+      get = Net::HTTP::Get.new(uri)
+      response = @httpool.request(uri, get)
 
-        case response
-        when Net::HTTPRedirection
-          uri = URI(response["Location"])
-          next
-        else
-          response.value
-          return response
-        end
+      case response
+      when Net::HTTPRedirection
+        uri = URI(response["Location"])
+        next
+      else
+        response.value
+        return response
       end
     end
 

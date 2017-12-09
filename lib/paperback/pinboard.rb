@@ -5,8 +5,10 @@
 #   * a stale flag
 class Paperback::Pinboard
   attr_reader :root
-  def initialize(root)
+  def initialize(root, httpool: Paperback::Httpool.new)
     @root = root
+    @httpool = httpool
+
     @pstore = PStore.new("#{root}/.pstore")
   end
 
@@ -15,7 +17,7 @@ class Paperback::Pinboard
       add uri, token: token
     end
 
-    tail_file = Paperback::TailFile.new(uri, self)
+    tail_file = Paperback::TailFile.new(uri, self, httpool: @httpool)
     tail_file.update(!tail) if stale(uri, token)
 
     File.open(filename(uri), "r", &block)
