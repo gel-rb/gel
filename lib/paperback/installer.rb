@@ -13,27 +13,20 @@ class Paperback::Installer
 
     @trace = nil
 
-    @shutdown = false
-
     @messages = Queue.new
 
     @store = store
     @dependencies = Hash.new { |h, k| h[k] = [] }
     @weights = Hash.new(1)
+    @pending = Hash.new(0)
 
-    @download_cond = new_cond
-    @compile_cond = new_cond
-    @idle_cond = new_cond
+    @download_pool = Paperback::WorkPool.new(DOWNLOAD_CONCURRENCY, monitor: self, name: "paperback-download")
+    @compile_pool = Paperback::WorkPool.new(COMPILE_CONCURRENCY, monitor: self, name: "paperback-compile")
 
-    @download_queue = []
-    @compile_queue = []
+    @download_pool.queue_order = -> ((_, name)) { -@weights[name] }
+    @compile_pool.queue_order = -> ((_, name)) { -@weights[name] }
+
     @compile_waiting = []
-
-    @total = 0
-
-    @errors = []
-
-    @workers = []
   end
 
   def known_dependencies(deps)
@@ -49,86 +42,26 @@ class Paperback::Installer
         end
       end
 
-      prioritize_queues
+      # Every time we learn about a new dependency, we reorder the
+      # queues to ensure the most depended-on gems are processed first.
+      # This ensures we can start compiling extension gems as soon as
+      # possible.
+      @download_pool.reorder_queue!
+      @compile_pool.reorder_queue!
     end
   end
 
   def install_gem(catalogs, name, version)
     synchronize do
       raise "catalogs is nil" if catalogs.nil?
-      @download_queue << [catalogs, name, version]
-      prioritize_queues
-      @total += 1
-      @download_cond.signal
-    end
-  end
-
-  def start
-    synchronize do
-      DOWNLOAD_CONCURRENCY.times do
-        @workers << Thread.new do
-          Thread.current.report_on_exception = true
-          Thread.current[:role] = :download
-
-          catch(:stop) do
-            loop do
-              next_job = synchronize do
-                Thread.current[:job] = "~"
-                Thread.current[:idle] = true
-                @download_cond.wait_until do
-                  @idle_cond.broadcast
-                  @shutdown || @download_queue.first
-                end
-                throw :stop if @shutdown
-                Thread.current[:idle] = false
-                @download_queue.shift
-              end
-
-              Thread.current[:job] = next_job[1]
-              work_download next_job
-            end
-          end
-        end
+      @pending[name] += 1
+      @download_pool.queue(name) do
+        work_download([catalogs, name, version])
       end
-
-      COMPILE_CONCURRENCY.times do
-        @workers << Thread.new do
-          Thread.current.report_on_exception = true
-          Thread.current[:role] = :compile
-
-          catch(:stop) do
-            loop do
-              next_job = synchronize do
-                Thread.current[:job] = "~"
-                Thread.current[:idle] = true
-                @compile_cond.wait_until do
-                  @idle_cond.broadcast
-                  @shutdown || @compile_queue.first
-                end
-                throw :stop if @shutdown
-                Thread.current[:idle] = false
-                @compile_queue.shift
-              end
-
-              Thread.current[:job] = next_job.spec.name
-              work_compile next_job
-            end
-          end
-        end
-      end
-    end
-  end
-
-  def shutdown
-    synchronize do
-      @shutdown = true
-      @download_cond.broadcast
-      @compile_cond.broadcast
     end
   end
 
   def work_download((catalogs, name, version))
-    p [catalogs, name, version] if catalogs.nil?
     catalogs.each do |catalog|
       begin
         f = catalog.download_gem(name, version)
@@ -142,14 +75,12 @@ class Paperback::Installer
           synchronize do
             add_weight name, 1000
 
-            @compile_queue << g
-            prioritize_queues
-
-            @compile_cond.signal
+            @compile_pool.queue(g.spec.name) do
+              work_compile(g)
+            end
           end
         else
-          @messages << "Installing #{name} (#{version})\n"
-          g.install
+          work_install(g)
         end
         return
       ensure
@@ -158,88 +89,81 @@ class Paperback::Installer
     end
 
     raise "Unable to locate #{name} #{version} in: #{catalogs.join ", "}"
-  rescue => ex
-    synchronize do
-      @errors << [name, version, ex]
-    end
   end
 
   def work_compile(g)
-    if g.compile_ready?
-      g.compile
-      @messages << "Installing #{g.spec.name} (#{g.spec.version})\n"
-      g.install
-      synchronize do
-        until @compile_waiting.empty?
-          @compile_queue << @compile_waiting.shift
-        end
-        prioritize_queues
-      end
-    else
-      synchronize do
+    synchronize do
+      unless compile_ready?(g.spec.name)
         @compile_waiting << g
+        return
       end
     end
-  rescue => ex
+
+    g.compile
+    work_install(g)
+  end
+
+  def work_install(g)
+    @messages << "Installing #{g.spec.name} (#{g.spec.version})\n"
+    g.install
+    @pending[g.spec.name] -= 1
+
     synchronize do
-      @errors << [g.spec.name, g.spec.version, ex]
+      until @compile_waiting.empty?
+        g = @compile_waiting.shift
+        @compile_pool.queue(g.spec.name) do
+          work_compile(g)
+        end
+      end
     end
   end
 
   def wait(output = nil)
-    synchronize do
-      if @workers.empty?
-        return if @total.zero?
+    clear = ""
 
-        start
-      end
+    pools = { "Downloading" => @download_pool, "Compiling" => @compile_pool }
 
-      clear = ""
-      @idle_cond.wait_until do
+    return if pools.values.all?(&:idle?)
+
+    update_status = lambda do
+      synchronize do
         if output
           output.write clear
           output.write @messages.pop until @messages.empty?
-          groups = @workers.reject { |w| w[:idle] }.group_by { |w| w[:role] }
-          if groups[:download]
-            download_msg = "Downloading: " + groups[:download].map { |w| w[:job] }.join(" ")
-            download_msg << " +#{@download_queue.size}" unless @download_queue.empty?
-          end
-          if groups[:compile]
-            compile_msg = "Compiling: " + groups[:compile].map { |w| w[:job] }.join(" ")
-            compile_msg << " +#{@compile_queue.size}" unless @compile_queue.empty?
-          end
-          if download_msg && compile_msg
-            msgline = "[#{download_msg};   #{compile_msg}]"
-          elsif download_msg || compile_msg
-            msgline = "[#{download_msg || compile_msg}]"
-          else
+          messages = pools.map { |label, pool| pool_status(label, pool) }.compact
+          if messages.empty?
             msgline = ""
+          else
+            msgline = "[" + messages.join(";   ") + "]"
           end
-          clear = "\b" * msgline.size + " " * msgline.size + "\b" * msgline.size
+          clear = "\r" + " " * msgline.size + "\r"
           output.write msgline
         else
           @messages.pop until @messages.empty?
         end
-        @download_queue.empty? && @compile_queue.empty? && @workers.all? { |w| w[:idle] }
+        pools.values.all?(&:idle?) && @compile_waiting.empty?
       end
-      if output
-        output.write clear
-      end
-      raise unless @compile_waiting.empty?
-      shutdown
     end
 
-    @workers.each(&:join).clear
+    pools.values.map do |pool|
+      Thread.new do
+        pool.wait(&update_status)
+        pools.values.each(&:tick!)
+        pool.stop
+      end
+    end.each(&:join)
 
-    if @errors.empty?
+    errors = @download_pool.errors + @compile_pool.errors
+
+    if errors.empty?
       if output
-        output.write "Installed #{@total} gems\n"
+        output.write "Installed #{@download_pool.count} gems\n"
       end
     else
       if output
-        output.write "Installed #{@total - @errors.size} of #{@total} gems\n\nErrors encountered with #{@errors.size} gems:\n\n"
-        @errors.each do |name, version, exception|
-          output.write "#{name} (#{version})\n  #{exception}\n\n"
+        output.write "Installed #{@download_pool.count - errors.size} of #{@download_pool.count} gems\n\nErrors encountered with #{errors.size} gems:\n\n"
+        errors.each do |(_, name), exception|
+          output.write "#{name}\n  #{exception}\n\n"
         end
       end
 
@@ -249,23 +173,24 @@ class Paperback::Installer
 
   private
 
+  def compile_ready?(name)
+    @dependencies[name].all? { |dep| @pending[dep] == 0 && compile_ready?(dep) }
+  end
+
+  def pool_status(label, pool)
+    st = pool.status
+    return if st[:active].empty? && st[:queued].zero?
+
+    msg = "#{label}:".dup
+    msg << " #{st[:active].join(" ")}" unless st[:active].empty?
+    msg << " +#{st[:queued]}" unless st[:queued].zero?
+    msg
+  end
+
   def add_weight(name, weight)
     @weights[name] += weight
     @dependencies[name].each do |dependency|
       add_weight dependency, weight
-    end
-  end
-
-  # Every time we learn about a new dependency, we reorder the queues to
-  # ensure the most depended-on gems are processed first. This ensures
-  # we can start compiling extension gems as soon as possible.
-  def prioritize_queues
-    @download_queue.sort_by! do |_catalogs, name, _version|
-      -@weights[name]
-    end
-
-    @compile_queue.sort_by! do |g|
-      -@weights[g.spec.name]
     end
   end
 end

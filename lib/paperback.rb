@@ -15,6 +15,8 @@ require_relative "paperback/catalog"
 require_relative "paperback/tail_file"
 require_relative "paperback/pinboard"
 
+require_relative "paperback/work_pool"
+
 require_relative "paperback/gemfile_parser"
 require_relative "paperback/lock_parser"
 require_relative "paperback/lock_loader"
