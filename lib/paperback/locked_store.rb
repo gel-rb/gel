@@ -88,7 +88,7 @@ class Paperback::LockedStore
     end
 
     list.each do |gem|
-      yield gem
+      yield gem if !gem_name || gem.name == gem_name
     end
   end
 end

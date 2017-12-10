@@ -51,6 +51,13 @@ module Paperback::GemfileParser
       @result.add_gem(name, requirements, options)
     end
 
+    def gemspec
+      if file = Dir["#{File.dirname(@result.filename)}/*.gemspec"].first
+        spec = Paperback::GemspecParser.parse(File.read(file), file)
+        gem spec.name, spec.version, path: "."
+      end
+    end
+
     def group(*names)
       @stack << { group: names }
       yield

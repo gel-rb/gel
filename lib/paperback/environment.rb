@@ -16,10 +16,10 @@ class Paperback::Environment
   end
 
   def self.search_upwards(name, dir = Dir.pwd)
-    file = File.join(dir, name)
-    until File.exist?(file)
+    until (file = File.join(dir, name)) && File.exist?(file)
       next_dir = File.dirname(dir)
       return nil if next_dir == dir
+      dir = next_dir
     end
     file
   end

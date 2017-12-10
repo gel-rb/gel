@@ -48,20 +48,18 @@ class Paperback::LockLoader
           gem_spec =~ /\A(.+) \(([^-]+)(?:-(.+))?\)\z/
           name, version, _platform = $1, $2, $3
           if section == "GIT"
+            dir_name = File.basename(body["remote"].first, ".git")
             # Massively cheating for now
-            dir = "~/.rbenv/gems/2.4.0/bundler/gems/#{name}-#{body["revision"].first[0, 12]}"
+            dir = "~/.rbenv/gems/2.4.0/bundler/gems/#{dir_name}-#{body["revision"].first[0, 12]}"
           else
             dir = File.expand_path(body["remote"].first, File.dirname(filename))
-            if Dir.exist?("#{dir}/#{name}")
-              dir = "#{dir}/#{name}"
-            end
           end
           if dep_specs
             dep_names = dep_specs.map { |spec|
               spec =~ /\A(.+?)(?: \((.+)\))?\z/
               $1
             }
-            installer.known_dependencies name => dep_names
+            installer.known_dependencies name => dep_names if installer
 
             deps = dep_specs.map do |spec|
               spec =~ /\A(.+?)(?: \((.+)\))?\z/
@@ -70,7 +68,7 @@ class Paperback::LockLoader
           else
             deps = []
           end
-          locks[name] = Paperback::StoreGem.new(dir, name, version, nil, require_paths: ["lib"], dependencies: deps)
+          locks[name] = Paperback::DirectGem.new(dir, name, version)
         end
       when "PLATFORMS", "DEPENDENCIES"
       when "BUNDLED WITH"
@@ -87,7 +85,7 @@ class Paperback::LockLoader
       env.activate(locked_store)
 
       locks.keys.each do |gem_name|
-        env.gem(gem_name)
+        env.gem(gem_name) rescue nil
       end
     end
   end
