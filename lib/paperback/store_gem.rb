@@ -42,6 +42,17 @@ class Paperback::StoreGem
     end
   end
 
+  def libs
+    _require_paths.each do |subdir|
+      prefix = "#{root}/#{subdir}/"
+      Dir["#{prefix}**/*.rb"].each do |path|
+        next unless path.start_with?(prefix)
+        file = path[prefix.size..-1].sub(/\.rb$/, "")
+        yield file, subdir
+      end
+    end
+  end
+
   private
 
   def gem_version

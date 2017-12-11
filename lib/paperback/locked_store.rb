@@ -26,6 +26,13 @@ class Paperback::LockedStore
     @inner.libs_for_gems(inner_versions) do |name, version, file, subdir|
       (@lib_cache[file] ||= []) << [g[name], subdir]
     end
+
+    locks.each do |name, version|
+      next unless version.is_a?(Paperback::StoreGem)
+      version.libs do |file, subdir|
+        (@lib_cache[file] ||= []) << [version, subdir]
+      end
+    end
   end
 
   def lock(locks)
