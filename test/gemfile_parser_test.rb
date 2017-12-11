@@ -80,7 +80,7 @@ GEMFILE
 
     with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
       output = read_from_fork do |ch|
-        Paperback::Environment.activate(store)
+        Paperback::Environment.open(store)
         Paperback::Environment.gem "rack"
         Paperback::Environment.gem "rack-test"
         result.autorequire(Paperback::Environment)

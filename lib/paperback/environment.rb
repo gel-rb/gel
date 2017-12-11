@@ -6,12 +6,13 @@ class Paperback::Environment
     attr_accessor :gemfile
   end
   self.gemfile = nil
+  @active_lockfile = false
 
   def self.activated_gems
     @activated ||= {}
   end
 
-  def self.activate(store)
+  def self.open(store)
     @store = store
   end
 
@@ -24,15 +25,50 @@ class Paperback::Environment
     file
   end
 
-  def self.load_gemfile(path = nil)
+  def self.find_gemfile(path = nil)
+    if path && @gemfile && @gemfile.filename != File.expand_path(path)
+      raise "Cannot activate #{path.inspect}; already activated #{@gemfile.filename.inspect}"
+    end
+    return @gemfile.filename if @gemfile
+
     path ||= ENV["PAPERBACK_GEMFILE"]
     path ||= search_upwards("Gemfile")
     path ||= "Gemfile"
 
     raise "No Gemfile found in #{path.inspect}" unless File.exist?(path)
 
+    path
+  end
+
+  def self.load_gemfile(path = nil)
+    return if @gemfile
+
+    path = find_gemfile(path)
+
     content = File.read(path)
     @gemfile = Paperback::GemfileParser.parse(content, path, 1)
+  end
+
+  def self.lockfile_name(gemfile = self.gemfile.filename)
+    ENV["PAPERBACK_LOCKFILE"] ||
+      (gemfile && File.exist?(gemfile + ".lock") && gemfile + ".lock") ||
+      search_upwards("Gemfile.lock") ||
+      "Gemfile.lock"
+  end
+
+  def self.activate(install: false, output: nil)
+    Paperback::Environment.load_gemfile
+    return if @active_lockfile
+
+    lockfile = Paperback::Environment.lockfile_name
+    if File.exist?(lockfile)
+      @active_lockfile = true
+      loader = Paperback::LockLoader.new(lockfile)
+
+      loader.activate(Paperback::Environment, Paperback::Environment.store.inner, install: install, output: output)
+    else
+      raise "No lockfile found in #{lockfile.inspect}"
+    end
   end
 
   def self.require_groups(*groups)
@@ -43,7 +79,7 @@ class Paperback::Environment
     @gemfile.autorequire(self, gems)
   end
 
-  def self.gem(name, *requirements)
+  def self.gem(name, *requirements, why: nil)
     return if IGNORE_LIST.include?(name)
 
     requirements = Paperback::Support::GemRequirement.new(requirements)
@@ -52,7 +88,8 @@ class Paperback::Environment
       if existing.satisfies?(requirements)
         return
       else
-        raise "already loaded gem #{name} #{existing.version}, which is incompatible with: #{requirements}"
+        why = " (#{why.join("; ")})" if why && why.first
+        raise "already loaded gem #{name} #{existing.version}, which is incompatible with: #{requirements}#{why}"
       end
     end
 
@@ -61,18 +98,19 @@ class Paperback::Environment
     end
 
     if gem
-      activate_gem gem
+      activate_gem gem, why: why
     else
-      raise "unable to satisfy requirements for gem #{name}: #{requirements}"
+      why = " (#{why.join("; ")})" if why && why.first
+      raise "unable to satisfy requirements for gem #{name}: #{requirements}#{why}"
     end
   end
 
-  def self.activate_gem(gem)
+  def self.activate_gem(gem, why: nil)
     return if activated_gems[gem.name] && activated_gems[gem.name].version == gem.version
     raise "already activated #{gem.name} #{activated_gems[gem.name].version}" if activated_gems[gem.name]
 
     gem.dependencies.each do |dep, reqs|
-      self.gem(dep, *reqs.map { |(qual, ver)| "#{qual} #{ver}" })
+      self.gem(dep, *reqs.map { |(qual, ver)| "#{qual} #{ver}" }, why: ["required by #{gem.name} #{gem.version}", *why])
     end
 
     lib_dirs = gem.require_paths
@@ -101,9 +139,7 @@ class Paperback::Environment
   end
 
   def self.resolve_gem_path(path)
-    return path if path.start_with?("/")
-
-    if @store
+    if @store && !path.start_with?("/")
       result = nil
       @store.gems_for_lib(path) do |gem, subdir|
         result = [gem, subdir]
@@ -111,7 +147,7 @@ class Paperback::Environment
       end
 
       if result
-        activate_gem result[0]
+        activate_gem result[0], why: ["provides #{path.inspect}"]
         return result[0].path(path, result[1])
       end
     end

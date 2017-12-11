@@ -25,6 +25,11 @@ module Gem
   def self.win_platform?
     false
   end
+
+  @@loaded_specs = {}.freeze
+  def self.loaded_specs
+    @@loaded_specs
+  end
 end
 
 def gem(*args)

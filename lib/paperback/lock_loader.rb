@@ -82,7 +82,7 @@ class Paperback::LockLoader
     locked_store.lock(locks)
 
     if env
-      env.activate(locked_store)
+      env.open(locked_store)
 
       locks.keys.each do |gem_name|
         env.gem(gem_name) rescue nil

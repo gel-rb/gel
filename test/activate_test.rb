@@ -7,7 +7,7 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "rack/request" }
 
       output = read_from_fork do |ch|
-        Paperback::Environment.activate(store)
+        Paperback::Environment.open(store)
         Paperback::Environment.gem "rack", "2.0.3"
 
         require "rack"
@@ -28,7 +28,7 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "rack/request" }
 
       output = read_from_fork do |ch|
-        Paperback::Environment.activate(store)
+        Paperback::Environment.open(store)
         Paperback::Environment.gem "rack"
 
         require "rack"
@@ -49,7 +49,7 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "rack/request" }
 
       output = read_from_fork do |ch|
-        Paperback::Environment.activate(store)
+        Paperback::Environment.open(store)
         require Paperback::Environment.resolve_gem_path("rack/request")
 
         ch.puts $:.grep(/\brack/).join(":")
@@ -67,7 +67,7 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "rack/request" }
 
       output = read_from_fork do |ch|
-        Paperback::Environment.activate(store)
+        Paperback::Environment.open(store)
         require Paperback::Environment.resolve_gem_path("rack/request")
 
         ch.puts $:.grep(/\brack/).join(":")
@@ -84,7 +84,7 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "rack/test" }
 
       output = read_from_fork do |ch|
-        Paperback::Environment.activate(store)
+        Paperback::Environment.open(store)
         require Paperback::Environment.resolve_gem_path("rack/test")
 
         ch.puts $:.grep(/\brack(?!-test)/).join(":")
@@ -103,7 +103,7 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "rack/test" }
 
       output = read_from_fork do |ch|
-        Paperback::Environment.activate(store)
+        Paperback::Environment.open(store)
         Paperback::Environment.gem "rack", "0.1.0"
         begin
           require Paperback::Environment.resolve_gem_path("rack/test")
@@ -112,7 +112,7 @@ class ActivateTest < Minitest::Test
         end
       end.lines.map(&:chomp)
 
-      assert_equal "already loaded gem rack 0.1.0, which is incompatible with: >= 1.0", output.shift
+      assert_equal "already loaded gem rack 0.1.0, which is incompatible with: >= 1.0 (required by rack-test 0.6.3; provides \"rack/test\")", output.shift
     end
   end
 
@@ -121,7 +121,7 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "rack" }
 
       output = read_from_fork do |ch|
-        Paperback::Environment.activate(store)
+        Paperback::Environment.open(store)
         begin
           Paperback::Environment.gem "rack", "< 1.0"
         rescue => ex
@@ -139,7 +139,7 @@ class ActivateTest < Minitest::Test
       assert_raises(NoMethodError) { "x".blank? }
 
       output = read_from_fork do |ch|
-        Paperback::Environment.activate(store)
+        Paperback::Environment.open(store)
         require Paperback::Environment.resolve_gem_path("fast_blank")
 
         ch.puts $:.grep(/fast_blank/).join(":")

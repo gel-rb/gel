@@ -11,12 +11,10 @@ store = Paperback::Store.new(dir)
 
 Paperback::Environment::IGNORE_LIST.concat ENV["PAPERBACK_IGNORE"].split if ENV["PAPERBACK_IGNORE"]
 
-if ENV["PAPERBACK_LOCKFILE"]
-  loader = Paperback::LockLoader.new(ENV["PAPERBACK_LOCKFILE"])
+Paperback::Environment.open(Paperback::LockedStore.new(store))
 
-  loader.activate(Paperback::Environment, store, install: !!ENV["PAPERBACK_INSTALL"], output: $stderr)
-else
-  Paperback::Environment.activate(Paperback::LockedStore.new(store))
+if ENV["PAPERBACK_LOCKFILE"]
+  Paperback::Environment.activate(output: $stderr)
 end
 
 require_relative "compatibility"
