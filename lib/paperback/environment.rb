@@ -140,11 +140,12 @@ class Paperback::Environment
 
   def self.resolve_gem_path(path)
     if @store && !path.start_with?("/")
-      result = nil
+      results = []
       @store.gems_for_lib(path) do |gem, subdir|
-        result = [gem, subdir]
-        break
+        results << [gem, subdir]
+        break if activated_gems[gem.name] == gem
       end
+      result = results.find { |g, _| activated_gems[g.name] == g } || results.first
 
       if result
         activate_gem result[0], why: ["provides #{path.inspect}"]
