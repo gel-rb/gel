@@ -9,6 +9,7 @@
 
 module Gem
   Version = Paperback::Support::GemVersion
+  Requirement = Paperback::Support::GemRequirement
 
   LoadError = Class.new(::LoadError)
 
@@ -29,6 +30,12 @@ module Gem
   @@loaded_specs = {}.freeze
   def self.loaded_specs
     @@loaded_specs
+  end
+
+  def self.find_files(pattern)
+    Paperback::Environment.store.each.
+      flat_map(&:require_paths).
+      flat_map { |dir| Dir[File.join(dir, pattern)] }
   end
 end
 
