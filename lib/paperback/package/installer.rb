@@ -141,7 +141,7 @@ class Paperback::Package::Installer
       loadable_file_types_re = /\.#{Regexp.union loadable_file_types}\z/
       loadable_file_types_pattern = "*.{#{loadable_file_types.join(",")}}"
 
-      store.add_gem(spec.name, spec.version, spec.bindir, spec.require_paths, spec.runtime_dependencies, spec.extensions.any?) do
+      store.add_gem(spec.name, spec.version, spec.bindir, spec.executables, spec.require_paths, spec.runtime_dependencies, spec.extensions.any?) do
         is_first = true
         spec.require_paths.each do |reqp|
           location = is_first ? spec.version : [spec.version, reqp]

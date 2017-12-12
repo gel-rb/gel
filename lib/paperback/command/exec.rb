@@ -15,20 +15,43 @@ class Paperback::Command::Exec < Paperback::Command
     lib.unshift dir unless lib.include?(dir)
     ENV["RUBYLIB"] = lib.join(File::PATH_SEPARATOR)
 
-    execute_inline(*command_line) || exec(*command_line)
+    original_command = command_line.shift
+    expanded_command = expand_executable(original_command)
+
+    execute_inline(original_command, expanded_command, *command_line) || exec([original_command, expanded_command], *command_line)
   end
 
-  def execute_inline(file, *arguments)
-    return unless File.exist?(file) && File.executable?(file)
-    File.open(file, "rb") do |f|
+  def expand_executable(original_command)
+    if original_command.include?(File::SEPARATOR) || (File::ALT_SEPARATOR && original_command.include?(File::ALT_SEPARATOR))
+      return File.expand_path(original_command)
+    end
+
+    if Paperback::Environment.find_executable(original_command)
+      Paperback::Environment.activate(output: $stderr)
+      if found = Paperback::Environment.find_executable(original_command)
+        return found
+      end
+    end
+
+    path_attempts = ENV["PATH"].split(File::PATH_SEPARATOR).map { |e| File.join(e, original_command) }
+    if found = path_attempts.find { |path| File.executable?(path) }
+      return File.expand_path(found)
+    end
+
+    original_command
+  end
+
+  def execute_inline(original_command, expanded_command, *arguments)
+    return unless File.exist?(expanded_command) && File.executable?(expanded_command)
+    File.open(expanded_command, "rb") do |f|
       first_line = f.gets.chomp
       return unless first_line =~ /\A#!.*\bruby\b/
     end
 
     Paperback::Environment.activate(output: $stderr)
-    $0 = file
+    $0 = original_command
     ARGV.replace(arguments)
-    load $0
+    load expanded_command
     exit
   end
 end

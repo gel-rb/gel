@@ -71,6 +71,14 @@ class Paperback::Environment
     end
   end
 
+  def self.find_executable(exe, gem_name = nil, gem_version = nil)
+    @store.each(gem_name) do |g|
+      next if gem_version && g.version != gem_version
+      return File.join(g.root, g.bindir, exe) if g.executables.include?(exe)
+    end
+    nil
+  end
+
   def self.require_groups(*groups)
     gems = @gemfile.gems
     groups = [:default] if groups.empty?

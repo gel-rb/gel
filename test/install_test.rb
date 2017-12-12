@@ -28,6 +28,7 @@ class InstallTest < Minitest::Test
 
       assert_equal({
         bindir: "bin",
+        executables: ["rackup"],
         require_paths: ["lib"],
         dependencies: {},
       }, store.gem("rack", "0.1.0").info)
@@ -38,6 +39,7 @@ class InstallTest < Minitest::Test
     with_fixture_gems_installed(["hoe-3.0.0.gem"]) do |store|
       assert_equal({
         bindir: "bin",
+        executables: ["sow"],
         require_paths: ["lib"],
         dependencies: {
           "rake" => [["~>", "0.8"]],
@@ -87,6 +89,7 @@ class InstallTest < Minitest::Test
 
       assert_equal({
         bindir: "bin",
+        executables: [],
         extensions: true,
         require_paths: ["lib"],
         dependencies: {},

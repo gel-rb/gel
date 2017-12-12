@@ -10,10 +10,11 @@ class Paperback::Store
     @lib_pstore = PStore.new("#{root}/lib.pstore", true)
   end
 
-  def add_gem(name, version, bindir, require_paths, dependencies, extensions)
+  def add_gem(name, version, bindir, executables, require_paths, dependencies, extensions)
     name = normalize_string(name)
     version = normalize_string(version)
     bindir = normalize_string(bindir)
+    executables = executables.map { |v| normalize_string(v) }
     require_paths = require_paths.map { |v| normalize_string(v) }
     _dependencies = {}
     dependencies.each do |key, dep|
@@ -27,6 +28,7 @@ class Paperback::Store
       raise "already installed" if h[version]
       d = {}
       d[:bindir] = bindir unless bindir == "bin"
+      d[:executables] = executables unless executables.empty?
       d[:require_paths] = require_paths unless require_paths == ["lib"]
       d[:dependencies] = dependencies unless dependencies.empty?
       d[:extensions] = extensions if extensions
@@ -147,6 +149,7 @@ class Paperback::Store
   def inflate_info(d)
     d = d.dup
     d[:bindir] = "bin" unless d.key?(:bindir)
+    d[:executables] = [] unless d.key?(:executables)
     d[:require_paths] = ["lib"] unless d.key?(:require_paths)
     d[:dependencies] = {} unless d.key?(:dependencies)
     d

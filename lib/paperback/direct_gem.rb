@@ -11,11 +11,13 @@ class Paperback::DirectGem < Paperback::StoreGem
       root = "#{root}/#{name}"
       gemspec = load_gemspec("#{root}/#{name}.gemspec")
     else
-      super(root, name, version, [], require_paths: ["lib"], dependencies: [])
+      super(root, name, version, [], bindir: "bin", executables: [], require_paths: ["lib"], dependencies: [])
       return
     end
 
     info = {
+      bindir: gemspec.bindir || "bin",
+      executables: gemspec.executables,
       require_paths: gemspec.require_paths || [gemspec.require_path].compact,
       dependencies: gemspec.runtime_dependencies,
     }

@@ -29,8 +29,16 @@ class Paperback::StoreGem
     paths
   end
 
+  def bindir
+    @info[:bindir] || "bin"
+  end
+
   def dependencies
     @info[:dependencies]
+  end
+
+  def executables
+    @info[:executables]
   end
 
   def path(file, subdir = nil)
