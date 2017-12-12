@@ -13,7 +13,7 @@ module Paperback
         yield self if @block
       end
 
-      def file(filename, io)
+      def file(filename, io, _mode)
         @block.call filename, io
       end
     end

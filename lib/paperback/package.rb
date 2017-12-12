@@ -20,6 +20,10 @@ module Paperback
         @inner.bindir
       end
 
+      def executables
+        @inner.executables
+      end
+
       def require_paths
         @inner.require_paths
       end
@@ -122,7 +126,7 @@ module Paperback
             with_file(package_reader, "data.tar.gz", sums) do |data_stream|
               Paperback::Support::Tar::TarReader.new(Zlib::GzipReader.new(data_stream)) do |data_reader|
                 data_reader.each do |entry|
-                  target.file(entry.full_name, entry)
+                  target.file(entry.full_name, entry, entry.header.mode)
                 end
               end
               true

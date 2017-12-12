@@ -46,6 +46,16 @@ class InstallTest < Minitest::Test
     end
   end
 
+  def test_mode_on_installed_files
+    with_fixture_gems_installed(["rack-2.0.3.gem"]) do |store|
+      assert_equal 0644, File.stat("#{store.root}/gems/rack-2.0.3/lib/rack.rb").mode & 03777
+      assert !File.executable?("#{store.root}/gems/rack-2.0.3/lib/rack.rb")
+
+      assert_equal 0755, File.stat("#{store.root}/gems/rack-2.0.3/bin/rackup").mode & 03777
+      assert File.executable?("#{store.root}/gems/rack-2.0.3/bin/rackup")
+    end
+  end
+
   def test_installing_an_extension
     Dir.mktmpdir do |dir|
       store = Paperback::Store.new(dir)

@@ -161,7 +161,7 @@ class Paperback::Package::Installer
       end
     end
 
-    def file(filename, io)
+    def file(filename, io, source_mode)
       target = File.expand_path(filename, root)
       raise "invalid filename #{target.inspect} outside #{(root + "/").inspect}" unless target.start_with?("#{root}/")
       return if @installed_files.include?(target)
@@ -174,7 +174,11 @@ class Paperback::Package::Installer
       end
       raise "won't overwrite #{target}" if File.exist?(target)
       FileUtils.mkdir_p(File.dirname(target))
-      File.open(target, "wb") do |f|
+      mode = 0444
+      mode |= source_mode & 0200
+      mode |= 0111 if source_mode & 0111 != 0
+      mode |= 0111 if spec.executables.any? { |e| filename == "#{spec.bindir}/#{e}" }
+      File.open(target, "wb", mode) do |f|
         f.write io.read
       end
     end
