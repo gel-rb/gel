@@ -4,9 +4,20 @@ class Paperback::Environment
   class << self
     attr_reader :store
     attr_accessor :gemfile
+    attr_reader :architectures
   end
   self.gemfile = nil
   @active_lockfile = false
+  @architectures = ["ruby".freeze].freeze
+
+  def self.store_set
+    list = []
+    architectures.each do |arch|
+      list << Paperback::MultiStore.subkey(arch, true)
+      list << Paperback::MultiStore.subkey(arch, false)
+    end
+    list
+  end
 
   def self.activated_gems
     @activated ||= {}

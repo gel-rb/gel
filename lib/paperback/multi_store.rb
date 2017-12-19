@@ -1,0 +1,60 @@
+require "rbconfig"
+
+class Paperback::MultiStore
+  VERSION = "#{RbConfig::CONFIG["ruby_version"]}".freeze
+
+  def initialize(stores)
+    @stores = stores
+  end
+
+  def [](architecture, version = false)
+    @stores[self.class.subkey(architecture, version)]
+  end
+
+  def self.subkey(architecture, version)
+    architecture ||= "ruby"
+    if version && architecture == "ruby"
+      VERSION
+    elsif version
+      "#{architecture}-#{VERSION}"
+    else
+      "#{architecture}"
+    end
+  end
+
+  def prepare(versions)
+    @stores.each do |_, store|
+      store.prepare(versions)
+    end
+  end
+
+  def gems_for_lib(file)
+    @stores.each do |_, store|
+      store.gems_for_lib(file) do |gem, subdir|
+        yield gem, subdir
+      end
+    end
+  end
+
+  def each(gem_name = nil, &block)
+    return enum_for(__callee__, gem_name) unless block_given?
+
+    @stores.each do |_, store|
+      store.each(gem_name, &block)
+    end
+  end
+
+  def gem(name, version)
+    @stores.each do |_, store|
+      g = store.gem(name, version)
+      return g if g
+    end
+    nil
+  end
+
+  def libs_for_gems(versions, &block)
+    @stores.each do |_, store|
+      store.libs_for_gems(versions, &block)
+    end
+  end
+end

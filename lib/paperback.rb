@@ -11,6 +11,7 @@ require_relative "paperback/store"
 require_relative "paperback/store_gem"
 require_relative "paperback/direct_gem"
 require_relative "paperback/locked_store"
+require_relative "paperback/multi_store"
 
 require_relative "paperback/catalog"
 require_relative "paperback/tail_file"
