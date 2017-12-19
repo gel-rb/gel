@@ -19,6 +19,7 @@ end
   ["hoe", "3.0.0"],
   ["rack-test", "0.6.3"],
   ["fast_blank", "1.0.0"],
+  ["atomic", "1.1.16"],
 ].each do |name, version|
   file "test/fixtures/#{name}-#{version}.gem" do
     Dir.chdir "test/fixtures" do

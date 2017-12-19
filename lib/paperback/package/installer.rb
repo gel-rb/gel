@@ -23,6 +23,10 @@ class Paperback::Package::Installer
 
     def initialize(spec, store)
       @spec = spec
+
+      if store.is_a?(Paperback::MultiStore)
+        store = store[spec.architecture, spec.extensions.any?]
+      end
       @store = store
 
       raise "gem already installed" if store.gem?(spec.name, spec.version)

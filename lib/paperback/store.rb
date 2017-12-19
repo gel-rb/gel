@@ -59,7 +59,7 @@ class Paperback::Store
     end
   end
 
-  def gem?(name, version)
+  def gem?(name, version, _platform = nil)
     !!gem_info(name, version)
   end
 

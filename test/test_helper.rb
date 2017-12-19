@@ -25,6 +25,20 @@ def with_empty_store
   end
 end
 
+def with_empty_multi_store
+  Dir.mktmpdir do |dir|
+    stores = {}
+    Paperback::Environment.store_set.each do |arch|
+      subdir = File.join(dir, arch)
+      Dir.mkdir subdir
+      stores[arch] = Paperback::Store.new(subdir)
+    end
+    store = Paperback::MultiStore.new(stores)
+    store.define_singleton_method(:root) { dir }
+    yield store
+  end
+end
+
 def with_fixture_gems_installed(paths)
   with_empty_store do |store|
     paths.each do |path|

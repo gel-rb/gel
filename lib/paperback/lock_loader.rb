@@ -24,7 +24,8 @@ class Paperback::LockLoader
         catalogs = body["remote"].map { |r| Paperback::Catalog.new(URI(r)) }
         specs.each do |gem_spec, dep_specs|
           gem_spec =~ /\A(.+) \(([^-]+)(?:-(.+))?\)\z/
-          name, version, _platform = $1, $2, $3
+          name, version, platform = $1, $2, $3
+          next unless env.platform?(platform)
 
           if installer
             if dep_specs
@@ -35,8 +36,8 @@ class Paperback::LockLoader
               installer.known_dependencies name => dep_names
             end
 
-            if !base_store.gem?(name, version)
-              installer.install_gem(catalogs, name, version)
+            if !base_store.gem?(name, version, platform)
+              installer.install_gem(catalogs, name, platform ? "#{version}-#{platform}" : version)
             end
           end
 
@@ -46,7 +47,9 @@ class Paperback::LockLoader
         specs = body["specs"]
         specs.each do |gem_spec, dep_specs|
           gem_spec =~ /\A(.+) \(([^-]+)(?:-(.+))?\)\z/
-          name, version, _platform = $1, $2, $3
+          name, version, platform = $1, $2, $3
+          next unless env.platform?(platform)
+
           if section == "GIT"
             dir_name = File.basename(body["remote"].first, ".git")
             # Massively cheating for now

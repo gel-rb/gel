@@ -10,6 +10,10 @@ class Paperback::Environment
   @active_lockfile = false
   @architectures = ["ruby".freeze].freeze
 
+  def self.platform?(platform)
+    platform.nil? || architectures.include?(platform)
+  end
+
   def self.store_set
     list = []
     architectures.each do |arch|

@@ -16,6 +16,10 @@ module Paperback
         @inner.version
       end
 
+      def architecture
+        @inner.architecture
+      end
+
       def bindir
         @inner.bindir
       end
@@ -79,7 +83,7 @@ module Paperback
       end
 
       class Gem_Specification
-        attr_accessor :bindir, :executables, :name, :require_paths, :specification_version, :version, :dependencies, :extensions
+        attr_accessor :architecture, :bindir, :executables, :name, :require_paths, :specification_version, :version, :dependencies, :extensions
       end
       class Gem_Dependency
         attr_accessor :name, :requirement, :type, :version_requirements

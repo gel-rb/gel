@@ -52,6 +52,13 @@ class Paperback::MultiStore
     nil
   end
 
+  def gem?(name, version, platform = nil)
+    @stores.any? do |key, store|
+      next if platform && !key.start_with?(platform)
+      store.gem?(name, version)
+    end
+  end
+
   def libs_for_gems(versions, &block)
     @stores.each do |_, store|
       store.libs_for_gems(versions, &block)

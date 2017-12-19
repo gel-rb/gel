@@ -171,7 +171,11 @@ class Paperback::Installer
         end
       end
 
-      raise "Errors encountered while installing gems"
+      if errors.first
+        raise errors.first.last
+      else
+        raise "Errors encountered while installing gems"
+      end
     end
   end
 
