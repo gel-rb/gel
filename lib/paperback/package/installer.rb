@@ -61,9 +61,7 @@ class Paperback::Package::Installer
       true
     end
 
-    def compile_extension(ext, install_dir)
-      raise "Don't know how to build #{ext.inspect} yet" unless ext =~ /extconf/
-
+    def with_build_environment(ext, install_dir)
       work_dir = File.expand_path(File.dirname(ext), root)
 
       FileUtils.mkdir_p(install_dir)
@@ -81,61 +79,87 @@ class Paperback::Package::Installer
       local_config.close
 
       File.open("#{install_dir}/build.log", "w") do |log|
-        pid = spawn(
-          { "RUBYOPT" => nil },
-          RbConfig.ruby, "--disable=gems",
-          #"-I", __dir__.chomp!("paperback/package"), "-r", "paperback/runtime",
-          "-r", local_config.path,
-          File.basename(ext),
-          chdir: work_dir,
-          in: IO::NULL,
-          [:out, :err] => log,
-        )
-
-        _, status = Process.waitpid2(pid)
-        raise "extconf exited with #{status.exitstatus}" unless status.success?
-
-        pid = spawn(
-          "make", "clean",
-          "DESTDIR=",
-          chdir: work_dir,
-          in: IO::NULL,
-          [:out, :err] => log,
-        )
-
-        _, status = Process.waitpid2(pid)
-        # Ignore exit status
-
-        pid = spawn(
-          "make",
-          "DESTDIR=",
-          chdir: work_dir,
-          in: IO::NULL,
-          [:out, :err] => log,
-        )
-
-        _, status = Process.waitpid2(pid)
-        raise "make exited with #{status.exitstatus}" unless status.success?
-
-        pid = spawn(
-          "make", "install",
-          "DESTDIR=",
-          chdir: work_dir,
-          in: IO::NULL,
-          [:out, :err] => log,
-        )
-
-        _, status = Process.waitpid2(pid)
-        raise "make install exited with #{status.exitstatus}" unless status.success?
+        yield work_dir, short_install_dir, local_config.path, log
       end
     ensure
       local_config.unlink if local_config
     end
 
+    def build_command(work_dir, log, *command, **options)
+      pid = spawn(
+        *command,
+        chdir: work_dir,
+        in: IO::NULL,
+        [:out, :err] => log,
+        **options,
+      )
+
+      _, status = Process.waitpid2(pid)
+      status
+    end
+
+    def compile_extconf(ext, install_dir)
+      with_build_environment(ext, install_dir) do |work_dir, short_install_dir, local_config_path, log|
+        status = build_command(
+          work_dir, log,
+          { "RUBYOPT" => nil },
+          RbConfig.ruby, "--disable=gems",
+          #"-I", __dir__.chomp!("paperback/package"), "-r", "paperback/runtime",
+          "-r", local_config_path,
+          File.basename(ext),
+        )
+        raise "extconf exited with #{status.exitstatus}" unless status.success?
+
+        _status = build_command(work_dir, log, "make", "clean", "DESTDIR=")
+        # Ignore exit status
+
+        status = build_command(work_dir, log, "make", "DESTDIR=")
+        raise "make exited with #{status.exitstatus}" unless status.success?
+
+        status = build_command(work_dir, log, "make", "install", "DESTDIR=")
+        raise "make install exited with #{status.exitstatus}" unless status.success?
+      end
+    end
+
+    def compile_rakefile(ext, install_dir)
+      with_build_environment(ext, install_dir) do |work_dir, short_install_dir, local_config_path, log|
+        if File.basename(ext) =~ /mkrf_conf/i
+          status = build_command(
+            work_dir, log,
+            { "RUBYOPT" => nil },
+            RbConfig.ruby, "--disable-gems",
+            "-r", local_config_path,
+            File.basename(ext),
+          )
+          raise "mkrf_conf exited with #{status.exitstatus}" unless status.success?
+        end
+
+        status = build_command(
+          work_dir, log,
+          { "RUBYARCHDIR" => short_install_dir, "RUBYLIBDIR" => short_install_dir },
+          RbConfig.ruby, "--disable-gems",
+          "-I", File.expand_path("../..", __dir__),
+          "-r", "paperback/runtime",
+          "-r", "paperback/command",
+          "-e", "Paperback::Command.run(ARGV)",
+          "--",
+          "exec",
+          "rake",
+        )
+      end
+    end
+
     def compile
       if spec.extensions.any?
         spec.extensions.each do |ext|
-          compile_extension ext, build_path
+          case File.basename(ext)
+          when /extconf/i
+            compile_extconf ext, build_path
+          when /mkrf_conf/i, /rakefile/i
+            compile_rakefile ext, build_path
+          else
+            raise "Don't know how to build #{ext.inspect} yet"
+          end
         end
       end
     end
