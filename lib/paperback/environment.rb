@@ -1,3 +1,5 @@
+require "rbconfig"
+
 class Paperback::Environment
   IGNORE_LIST = %w(bundler)
 
@@ -9,6 +11,11 @@ class Paperback::Environment
   self.gemfile = nil
   @active_lockfile = false
   @architectures = ["ruby".freeze].freeze
+
+  GEMFILE_PLATFORMS = begin
+    v = RbConfig::CONFIG["ruby_version"].split(".")[0..1].inject(:+)
+    ["ruby", "ruby_#{v}", "mri", "mri_#{v}"]
+  end
 
   def self.platform?(platform)
     platform.nil? || architectures.include?(platform)
@@ -78,7 +85,7 @@ class Paperback::Environment
     lockfile = Paperback::Environment.lockfile_name
     if File.exist?(lockfile)
       @active_lockfile = true
-      loader = Paperback::LockLoader.new(lockfile)
+      loader = Paperback::LockLoader.new(lockfile, gemfile)
 
       loader.activate(Paperback::Environment, Paperback::Environment.store.inner, install: install, output: output)
     else
@@ -94,8 +101,14 @@ class Paperback::Environment
     nil
   end
 
+  def self.filtered_gems(gems = self.gemfile.gems)
+    platforms = GEMFILE_PLATFORMS.map(&:to_s)
+    gems = gems.reject { |g| g[2][:platforms] && (Array(g[2][:platforms]).map(&:to_s) & platforms).empty? }
+    gems
+  end
+
   def self.require_groups(*groups)
-    gems = @gemfile.gems
+    gems = filtered_gems
     groups = [:default] if groups.empty?
     groups = groups.map(&:to_s)
     gems = gems.reject { |g| ((g[2][:groups] || [:default]).map(&:to_s) & groups).empty? }

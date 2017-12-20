@@ -85,4 +85,84 @@ LOCKFILE
       end
     end
   end
+
+  def test_ignore_gems_excluded_by_gemfile
+    gemfile_content = <<GEMFILE
+gem "rack"
+gem "rack-test", platforms: :rbx
+GEMFILE
+
+    lockfile = Tempfile.new
+    lockfile.write(<<LOCKFILE)
+GEM
+  remote: https://rubygems.org/
+  specs:
+    rack (2.0.3)
+    rack-test (0.6.3)
+      rack (>= 1.0)
+
+DEPENDENCIES
+  rack
+  rack-test
+LOCKFILE
+    lockfile.close
+
+    loader = Paperback::LockLoader.new(lockfile.path, Paperback::GemfileParser.parse(gemfile_content))
+    with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
+      output = read_from_fork do |ch|
+        loader.activate(Paperback::Environment, store)
+
+        ch.puts $:.grep(/\brack(?!-test)/).join(":")
+        ch.puts $:.grep(/rack-test/).join(":")
+        ch.puts $:.grep(/hoe/).join(":")
+      end.lines.map(&:chomp)
+
+      # rack is activated because the Gemfile references it directly,
+      # for all platforms. rack-test is excluded by its platform option.
+      assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
+      assert_equal "", output.shift
+
+      # Other installed gems are also not activated
+      assert_equal "", output.shift
+    end
+  end
+
+  def test_ignore_dependent_gems_excluded_by_gemfile
+    gemfile_content = <<GEMFILE
+gem "rack-test", platforms: :rbx
+GEMFILE
+
+    lockfile = Tempfile.new
+    lockfile.write(<<LOCKFILE)
+GEM
+  remote: https://rubygems.org/
+  specs:
+    rack (2.0.3)
+    rack-test (0.6.3)
+      rack (>= 1.0)
+
+DEPENDENCIES
+  rack-test
+LOCKFILE
+    lockfile.close
+
+    loader = Paperback::LockLoader.new(lockfile.path, Paperback::GemfileParser.parse(gemfile_content))
+    with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
+      output = read_from_fork do |ch|
+        loader.activate(Paperback::Environment, store)
+
+        ch.puts $:.grep(/\brack(?!-test)/).join(":")
+        ch.puts $:.grep(/rack-test/).join(":")
+        ch.puts $:.grep(/hoe/).join(":")
+      end.lines.map(&:chomp)
+
+      # Neither gem is activated; rack-test is not wanted by this
+      # platform, and rack is just a dependency
+      assert_equal "", output.shift
+      assert_equal "", output.shift
+
+      # Other installed gems are also not activated
+      assert_equal "", output.shift
+    end
+  end
 end
