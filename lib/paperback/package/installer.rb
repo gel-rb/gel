@@ -1,6 +1,7 @@
 require "fileutils"
 require "pathname"
 require "rbconfig"
+require "tempfile"
 
 class Paperback::Package::Installer
   def initialize(store)
@@ -23,6 +24,7 @@ class Paperback::Package::Installer
 
     def initialize(spec, store)
       @spec = spec
+      @root_store = store
 
       if store.is_a?(Paperback::MultiStore)
         store = store[spec.architecture, spec.extensions.any?]
@@ -102,9 +104,10 @@ class Paperback::Package::Installer
       with_build_environment(ext, install_dir) do |work_dir, short_install_dir, local_config_path, log|
         status = build_command(
           work_dir, log,
-          { "RUBYOPT" => nil, "MAKEFLAGS" => "-j3" },
+          { "RUBYOPT" => nil, "MAKEFLAGS" => "-j3", "PAPERBACK_STORE" => File.expand_path(@root_store.root), "PAPERBACK_LOCKFILE" => nil },
           RbConfig.ruby, "--disable=gems",
-          #"-I", __dir__.chomp!("paperback/package"), "-r", "paperback/runtime",
+          "-I", File.expand_path("../..", __dir__),
+          "-r", "paperback/runtime",
           "-r", local_config_path,
           File.basename(ext),
         )

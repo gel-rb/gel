@@ -14,7 +14,7 @@ Paperback::Environment.store_set.each do |key|
   FileUtils.mkdir_p(subdir) unless Dir.exist?(subdir)
   stores[key] = Paperback::Store.new(subdir)
 end
-store = Paperback::MultiStore.new(stores)
+store = Paperback::MultiStore.new(dir, stores)
 
 Paperback::Environment::IGNORE_LIST.concat ENV["PAPERBACK_IGNORE"].split if ENV["PAPERBACK_IGNORE"]
 

@@ -33,7 +33,7 @@ def with_empty_multi_store
       Dir.mkdir subdir
       stores[arch] = Paperback::Store.new(subdir)
     end
-    store = Paperback::MultiStore.new(stores)
+    store = Paperback::MultiStore.new(dir, stores)
     store.define_singleton_method(:root) { dir }
     yield store
   end

@@ -4,7 +4,8 @@ class MultiStoreTest < Minitest::Test
   def test_activation_across_stores
     with_fixture_gems_installed(["rack-2.0.3.gem", "rack-0.1.0.gem"]) do |store_1|
       with_fixture_gems_installed(["rack-test-0.6.3.gem"]) do |store_2|
-        multi = Paperback::MultiStore.new("ruby-#{RbConfig::CONFIG["ruby_version"]}" => store_1,
+        multi = Paperback::MultiStore.new(nil,
+                                       "ruby-#{RbConfig::CONFIG["ruby_version"]}" => store_1,
                                        "ruby" => store_2)
 
         output = read_from_fork do |ch|
