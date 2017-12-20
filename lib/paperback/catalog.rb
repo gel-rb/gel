@@ -1,5 +1,5 @@
+require "fileutils"
 require "net/http"
-require "tempfile"
 
 class Paperback::Catalog
   def initialize(uri, httpool: Paperback::Httpool.new)
@@ -7,12 +7,21 @@ class Paperback::Catalog
     @httpool = httpool
   end
 
+  def cached_gem(name, version)
+    path = cache_path(name, version)
+    return path if File.exist?(path)
+  end
+
   def download_gem(name, version)
+    path = cache_path(name, version)
+    return path if File.exist?(path)
+
     response = http_get("/gems/#{name}-#{version}.gem")
-    f = Tempfile.new("gem", encoding: "ascii-8bit")
-    f.write(response.body)
-    f.rewind
-    f
+    FileUtils.mkdir_p(cache_dir)
+    File.open(path, "wb") do |f|
+      f.write(response.body)
+    end
+    path
   end
 
   def to_s
@@ -20,6 +29,18 @@ class Paperback::Catalog
   end
 
   private
+
+  def uri_identifier
+    @uri.host + "-" + Digest(:SHA256).hexdigest(@uri.to_s)[0..10]
+  end
+
+  def cache_dir
+    File.expand_path("~/.cache/paperback/gems/#{uri_identifier}")
+  end
+
+  def cache_path(name, version)
+    File.join(cache_dir, "#{name}-#{version}.gem")
+  end
 
   def http_get(path)
     original_uri = uri = URI(File.join(@uri.to_s, path))

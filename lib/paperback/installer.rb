@@ -61,34 +61,40 @@ class Paperback::Installer
     end
   end
 
-  def work_download((catalogs, name, version))
+  def download_gem(catalogs, name, version)
+    catalogs.each do |catalog|
+      if fpath = catalog.cached_gem(name, version)
+        return fpath
+      end
+    end
+
     catalogs.each do |catalog|
       begin
-        f = catalog.download_gem(name, version)
+        return catalog.download_gem(name, version)
       rescue Net::HTTPError
-      else
-        f.close
-        installer = Paperback::Package::Installer.new(store)
-        g = Paperback::Package.extract(f.path, installer)
-        known_dependencies g.spec.name => g.spec.runtime_dependencies.keys
-        if g.needs_compile?
-          synchronize do
-            add_weight name, 1000
-
-            @compile_pool.queue(g.spec.name) do
-              work_compile(g)
-            end
-          end
-        else
-          work_install(g)
-        end
-        return
-      ensure
-        f.unlink if f
       end
     end
 
     raise "Unable to locate #{name} #{version} in: #{catalogs.join ", "}"
+  end
+
+  def work_download((catalogs, name, version))
+    fpath = download_gem(catalogs, name, version)
+
+    installer = Paperback::Package::Installer.new(store)
+    g = Paperback::Package.extract(fpath, installer)
+    known_dependencies g.spec.name => g.spec.runtime_dependencies.keys
+    if g.needs_compile?
+      synchronize do
+        add_weight name, 1000
+
+        @compile_pool.queue(g.spec.name) do
+          work_compile(g)
+        end
+      end
+    else
+      work_install(g)
+    end
   end
 
   def work_compile(g)

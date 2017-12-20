@@ -16,10 +16,9 @@ when "gemfile"
 when "fetch"
   name, version = ARGV.shift, ARGV.shift
 
-  temp = Paperback::Catalog.new("https://rubygems.org/").download_gem(name, version)
-  File.open("#{name}-#{version}.gem", "wb") do |f|
-    f.write(temp.read)
-  end
+  cache_location = Paperback::Catalog.new("https://rubygems.org/").download_gem(name, version)
+  require "fileutils"
+  FileUtils.cp cache_location, "#{name}-#{version}.gem"
 
 else
   raise "unknown"
