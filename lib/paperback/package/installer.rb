@@ -102,7 +102,7 @@ class Paperback::Package::Installer
       with_build_environment(ext, install_dir) do |work_dir, short_install_dir, local_config_path, log|
         status = build_command(
           work_dir, log,
-          { "RUBYOPT" => nil },
+          { "RUBYOPT" => nil, "MAKEFLAGS" => "-j3" },
           RbConfig.ruby, "--disable=gems",
           #"-I", __dir__.chomp!("paperback/package"), "-r", "paperback/runtime",
           "-r", local_config_path,
@@ -113,7 +113,7 @@ class Paperback::Package::Installer
         _status = build_command(work_dir, log, "make", "clean", "DESTDIR=")
         # Ignore exit status
 
-        status = build_command(work_dir, log, "make", "DESTDIR=")
+        status = build_command(work_dir, log, "make", "-j3", "DESTDIR=")
         raise "make exited with #{status.exitstatus}" unless status.success?
 
         status = build_command(work_dir, log, "make", "install", "DESTDIR=")
