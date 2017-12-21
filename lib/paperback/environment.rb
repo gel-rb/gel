@@ -38,6 +38,11 @@ class Paperback::Environment
     @store = store
   end
 
+  def self.git_path(remote, revision)
+    short = File.basename(remote, ".git")
+    File.join(@store.root, "git", "#{short}-#{revision[0..12]}")
+  end
+
   def self.search_upwards(name, dir = Dir.pwd)
     until (file = File.join(dir, name)) && File.exist?(file)
       next_dir = File.dirname(dir)

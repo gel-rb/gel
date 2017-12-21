@@ -61,6 +61,56 @@ class Paperback::Installer
     end
   end
 
+  def load_git_gem(remote, revision, name, destination)
+    synchronize do
+      @pending[name] += 1
+      @download_pool.queue(name) do
+        work_git(remote, revision, name, destination)
+      end
+    end
+  end
+
+  def work_git(remote, revision, name, destination)
+    short = File.basename(remote, ".git")
+    digest = Digest(:SHA256).hexdigest(remote)[0..12]
+    cache_dir = File.expand_path("~/.cache/paperback/git/#{short}-#{digest}")
+    if Dir.exist?(cache_dir)
+      # Check whether the revision is already in our mirror
+      pid = spawn("git", "rev-list", "--quiet", revision,
+                  chdir: cache_dir,
+                  in: IO::NULL, [:out, :err] => IO::NULL)
+      _, status = Process.waitpid2(pid)
+
+      unless status.success?
+        # If not, try updating the mirror from upstream
+        pid = spawn("git", "remote", "update",
+                    chdir: cache_dir,
+                    in: IO::NULL, [:out, :err] => IO::NULL)
+        _, status = Process.waitpid2(pid)
+        raise "git remote update failed" unless status.success?
+      end
+    else
+      pid = spawn("git", "clone", "--mirror", remote, cache_dir,
+                  in: IO::NULL, [:out, :err] => IO::NULL)
+      _, status = Process.waitpid2(pid)
+      raise "git clone --mirror failed" unless status.success?
+    end
+
+    pid = spawn("git", "clone", cache_dir, destination,
+                in: IO::NULL, [:out, :err] => IO::NULL)
+    _, status = Process.waitpid2(pid)
+    raise "git clone --local failed" unless status.success?
+
+    pid = spawn("git", "checkout", "--detach", "--force", revision,
+                chdir: destination,
+                in: IO::NULL, [:out, :err] => IO::NULL)
+    _, status = Process.waitpid2(pid)
+    raise "git checkout failed" unless status.success?
+
+    @messages << "Using #{name} (git)\n"
+    @pending[name] -= 1
+  end
+
   def download_gem(catalogs, name, version)
     catalogs.each do |catalog|
       if fpath = catalog.cached_gem(name, version)

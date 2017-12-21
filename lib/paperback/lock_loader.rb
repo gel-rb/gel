@@ -105,9 +105,16 @@ class Paperback::LockLoader
         locks[name] = version
       else
         if section == :git
-          dir_name = File.basename(body["remote"].first, ".git")
-          # Massively cheating for now
-          dir = "~/.rbenv/gems/2.4.0/bundler/gems/#{dir_name}-#{body["revision"].first[0, 12]}"
+          remote = body["remote"].first
+          revision = body["revision"].first
+
+          dir = env.git_path(remote, revision)
+          if installer && !Dir.exist?(dir)
+            installer.load_git_gem(remote, revision, name, dir)
+
+            locks[name] = -> { Paperback::DirectGem.new(dir, name, version) }
+            next
+          end
         else
           dir = File.expand_path(body["remote"].first, File.dirname(filename))
         end
@@ -117,6 +124,10 @@ class Paperback::LockLoader
     end
 
     installer.wait(output) if installer
+
+    locks.each do |name, locked|
+      locks[name] = locked.call if locked.is_a?(Proc)
+    end
 
     locked_store.lock(locks)
 
