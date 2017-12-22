@@ -55,6 +55,18 @@ class Paperback::MultiStore
     nil
   end
 
+  def gems(name_version_pairs)
+    result = {}
+
+    @stores.each do |_, store|
+      result.update(store.gems(name_version_pairs)) do |l, r|
+        l
+      end
+    end
+
+    result
+  end
+
   def gem?(name, version, platform = nil)
     @stores.any? do |key, store|
       next if platform && !key.start_with?(platform)

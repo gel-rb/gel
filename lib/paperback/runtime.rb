@@ -1,11 +1,12 @@
 require_relative "../paperback"
 
-require "rbconfig"
 dir = ENV["PAPERBACK_STORE"] || "~/.local/paperback"
 dir = File.expand_path(dir)
 
-require "fileutils"
-FileUtils.mkdir_p(dir) unless Dir.exist?(dir)
+unless Dir.exist?(dir)
+  require "fileutils"
+  FileUtils.mkdir_p(dir)
+end
 
 stores = {}
 Paperback::Environment.store_set.each do |key|

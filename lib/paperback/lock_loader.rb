@@ -136,9 +136,7 @@ class Paperback::LockLoader
     if env
       env.open(locked_store)
 
-      locks.keys.each do |gem_name|
-        env.gem(gem_name) rescue nil
-      end
+      env.gems_from_lock(locks)
     end
   end
 end

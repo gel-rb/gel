@@ -146,6 +146,18 @@ class Paperback::Environment
     end
   end
 
+  def self.gems_from_lock(name_version_pairs)
+    gems = @store.gems(name_version_pairs)
+
+    dirs = []
+    gems.each do |name, g|
+      dirs += g.require_paths
+    end
+
+    activated_gems.update gems
+    $:.concat dirs
+  end
+
   def self.activate_gem(gem, why: nil)
     return if activated_gems[gem.name] && activated_gems[gem.name].version == gem.version
     raise "already activated #{gem.name} #{activated_gems[gem.name].version}" if activated_gems[gem.name]

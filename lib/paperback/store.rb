@@ -69,6 +69,24 @@ class Paperback::Store
     info && _gem(name, version, info)
   end
 
+  def gems(name_version_pairs)
+    result = {}
+
+    primary_pstore do |st|
+      name_version_pairs.each do |name, version|
+        x = st[name]
+        x &&= x[version]
+        result[name] = x if x
+      end
+    end
+
+    result.each do |k, v|
+      result[k] = _gem(k, name_version_pairs[k], v)
+    end
+
+    result
+  end
+
   def gem_root(name, version)
     "#{@root}/gems/#{name}-#{version}"
   end
