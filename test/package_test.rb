@@ -1,5 +1,7 @@
 require "test_helper"
 
+require "paperback/package/inspector"
+
 class PackageTest < Minitest::Test
   def test_parse_specification
     result = Paperback::Package::Inspector.new

@@ -1,4 +1,3 @@
-# TODO: This loads too much
 require_relative "../paperback"
 
 require "rbconfig"

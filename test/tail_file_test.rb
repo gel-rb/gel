@@ -1,5 +1,8 @@
 require "test_helper"
 
+require "paperback/tail_file"
+require "paperback/pinboard"
+
 class TailFileTest < Minitest::Test
   # Long enough to exceed PARTIAL_MINIMUM
   INITIAL_CONTENT = "abcdefghij" * 10_000

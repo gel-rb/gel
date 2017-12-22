@@ -13,23 +13,7 @@ require_relative "paperback/direct_gem"
 require_relative "paperback/locked_store"
 require_relative "paperback/multi_store"
 
-require_relative "paperback/catalog"
-require_relative "paperback/tail_file"
-require_relative "paperback/pinboard"
-
-require_relative "paperback/work_pool"
-require_relative "paperback/httpool"
-
 require_relative "paperback/gemspec_parser"
 require_relative "paperback/gemfile_parser"
 require_relative "paperback/lock_parser"
 require_relative "paperback/lock_loader"
-require_relative "paperback/installer"
-
-require_relative "paperback/package"
-require_relative "paperback/package/inspector"
-require_relative "paperback/package/installer"
-
-require_relative "paperback/support/tar"
-
-require_relative "paperback/version"

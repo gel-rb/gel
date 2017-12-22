@@ -53,6 +53,7 @@ class Paperback::LockLoader
     locks = {}
 
     if install
+      require_relative "installer"
       installer = Paperback::Installer.new(base_store)
     end
 
@@ -98,6 +99,7 @@ class Paperback::LockLoader
 
       if section == :gem
         if installer && !base_store.gem?(name, version, platform)
+          require_relative "catalog"
           catalogs = body["remote"].map { |r| Paperback::Catalog.new(URI(r)) }
           installer.install_gem(catalogs, name, platform ? "#{version}-#{platform}" : version)
         end

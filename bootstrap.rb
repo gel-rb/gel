@@ -16,6 +16,7 @@ when "gemfile"
 when "fetch"
   name, version = ARGV.shift, ARGV.shift
 
+  require_relative "lib/paperback/catalog"
   cache_location = Paperback::Catalog.new("https://rubygems.org/").download_gem(name, version)
   require "fileutils"
   FileUtils.cp cache_location, "#{name}-#{version}.gem"

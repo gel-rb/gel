@@ -1,6 +1,8 @@
 require "zlib"
 require "yaml"
 
+require_relative "support/tar"
+
 module Paperback
   class Package
     class Specification

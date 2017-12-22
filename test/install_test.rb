@@ -1,5 +1,8 @@
 require "test_helper"
 
+require "paperback/package"
+require "paperback/package/inspector"
+
 class InstallTest < Minitest::Test
   def test_install_single_package
     Dir.mktmpdir do |dir|

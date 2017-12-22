@@ -2,6 +2,8 @@ require "strscan"
 require "uri"
 require "net/http"
 
+require_relative "httpool"
+
 class Paperback::TailFile
   # The number of redirects etc we'll follow before giving up
   MAXIMUM_CHAIN = 8

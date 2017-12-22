@@ -1,5 +1,9 @@
 require "monitor"
 
+require_relative "work_pool"
+require_relative "package"
+require_relative "package/installer"
+
 class Paperback::Installer
   DOWNLOAD_CONCURRENCY = 6
   COMPILE_CONCURRENCY = 4

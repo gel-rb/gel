@@ -40,6 +40,9 @@ def with_empty_multi_store
 end
 
 def with_fixture_gems_installed(paths)
+  require "paperback/package"
+  require "paperback/package/installer"
+
   with_empty_store do |store|
     paths.each do |path|
       result = Paperback::Package::Installer.new(store)

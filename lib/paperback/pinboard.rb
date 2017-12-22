@@ -1,3 +1,6 @@
+require_relative "httpool"
+require_relative "tail_file"
+
 # For each URI, this stores:
 #   * the local filename
 #   * the current etag
