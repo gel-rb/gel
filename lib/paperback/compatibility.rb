@@ -1,2 +1,2 @@
 $:[0, 0] = File.expand_path("compatibility", __dir__)
-require "rubygems"
+require_relative "compatibility/rubygems"

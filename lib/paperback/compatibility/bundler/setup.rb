@@ -1,2 +1,2 @@
-require "bundler"
+require_relative "../bundler"
 Bundler.setup

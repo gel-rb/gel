@@ -5,7 +5,7 @@ class Paperback::LockedStore
     @inner = inner
     @locked_versions = nil
 
-    @lib_cache = Hash.new {|h,k| h[k] = [] }
+    @lib_cache = Hash.new { |h, k| h[k] = [] }
     @full_cache = false
   end
 
@@ -18,20 +18,22 @@ class Paperback::LockedStore
 
     inner_versions = {}
     locks.each do |name, version|
-      next if version.is_a?(Paperback::StoreGem)
-      inner_versions[name] = version
+      if version.is_a?(Paperback::StoreGem)
+        version.libs do |file, subdir|
+          @lib_cache[file] << [version, subdir]
+        end
+      else
+        inner_versions[name] = version
+      end
     end
 
     g = @inner.gems(inner_versions)
-    z = Hash.new { |h, k| h[k] = Hash.new { |hh, kk| hh[kk] = [g[k], kk] } }
-    @inner.libs_for_gems(inner_versions) do |name, version, file, subdir|
-      @lib_cache[file] << z[name][subdir]
-    end
-
-    locks.each do |name, version|
-      next unless version.is_a?(Paperback::StoreGem)
-      version.libs do |file, subdir|
-        @lib_cache[file] << [version, subdir]
+    @inner.libs_for_gems(inner_versions) do |name, version, subs|
+      subs.each do |subdir, files|
+        v = [g[name], subdir]
+        files.each do |file|
+          @lib_cache[file] << v
+        end
       end
     end
   end

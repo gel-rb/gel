@@ -1,11 +1,12 @@
 require "fileutils"
 require "net/http"
+require "uri"
 
 require_relative "httpool"
 
 class Paperback::Catalog
   def initialize(uri, httpool: Paperback::Httpool.new)
-    @uri = uri
+    @uri = URI(uri)
     @httpool = httpool
   end
 

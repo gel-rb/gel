@@ -1,13 +1,14 @@
-require "pstore"
+require "sdbm"
+require "pathname"
 
 class Paperback::Store
   attr_reader :root
 
   def initialize(root)
     @root = File.expand_path(root)
-    @primary_pstore = PStore.new("#{root}/.pstore", true)
-    @bin_pstore = PStore.new("#{root}/bin.pstore", true)
-    @lib_pstore = PStore.new("#{root}/lib.pstore", true)
+    @primary_sdbm = SDBM.new("#{root}/store")
+    @lib_sdbm = SDBM.new("#{root}/libs")
+    @rlib_path = Pathname.new("#{root}/meta")
   end
 
   def add_gem(name, version, bindir, executables, require_paths, dependencies, extensions)
@@ -23,20 +24,22 @@ class Paperback::Store
     dependencies = _dependencies
     extensions = !!extensions
 
-    primary_pstore(true) do |st|
-      h = st[name] || {}
-      raise "already installed" if h[version]
+    primary_db(true) do |st|
+      vs = st["v/#{name}"]
+      vs = vs ? Marshal.load(vs) : []
+      raise "already installed" if vs.include?(version)
+      vs << version
+      vs.sort_by! { |v| Paperback::Support::GemVersion.new(v) }
+      vs.reverse!
+      st["v/#{name}"] = Marshal.dump(vs)
+
       d = {}
       d[:bindir] = bindir unless bindir == "bin"
       d[:executables] = executables unless executables.empty?
       d[:require_paths] = require_paths unless require_paths == ["lib"]
       d[:dependencies] = dependencies unless dependencies.empty?
       d[:extensions] = extensions if extensions
-      h[version] = d
-      h.keys.sort_by { |v| Paperback::Support::GemVersion.new(v) }.reverse_each do |v|
-        h[v] = h.delete(v)
-      end
-      st[name] = h
+      st["i/#{name}/#{version}"] = Marshal.dump(d)
 
       yield if block_given?
     end
@@ -47,14 +50,27 @@ class Paperback::Store
     version = version.is_a?(Array) ? version.map { |v| normalize_string(v) } : normalize_string(version)
     files = files.map { |v| normalize_string(v) }
 
-    lib_pstore(true) do |st|
-      files.each do |file|
-        h = st[file] || {}
-        d = h[name] || []
-        raise "already installed" if d.include?(version)
-        d << version
-        h[name] = d.sort_by { |v,_| Paperback::Support::GemVersion.new(v) }.reverse
-        st[file] = h
+    lib_db(true) do |st|
+      rlib_db(true) do |rst|
+        files.each do |file|
+          h = st[file]
+          h = h ? Marshal.load(h) : {}
+          d = h[name] || []
+          raise "already installed" if d.include?(version)
+          d << version
+          h[name] = d.sort_by { |v, _| Paperback::Support::GemVersion.new(v) }.reverse
+          st[file] = Marshal.dump(h)
+        end
+
+        v, d = version
+        f = rst.join("#{name}-#{v}")
+        ls = f.exist? ? Marshal.load(f.read) : []
+        unless sls = ls.assoc(d)
+          sls = [d, []]
+          ls << sls
+        end
+        sls.last.concat files
+        f.binwrite Marshal.dump(ls)
       end
     end
   end
@@ -72,16 +88,10 @@ class Paperback::Store
   def gems(name_version_pairs)
     result = {}
 
-    primary_pstore do |st|
-      name_version_pairs.each do |name, version|
-        x = st[name]
-        x &&= x[version]
-        result[name] = x if x
+    name_version_pairs.each do |name, version|
+      if info = gem_info(name, version)
+        result[name] = _gem(name, version, info)
       end
-    end
-
-    result.each do |k, v|
-      result[k] = _gem(k, name_version_pairs[k], v)
     end
 
     result
@@ -99,27 +109,20 @@ class Paperback::Store
   end
 
   def libs_for_gems(versions)
-    lib_pstore do |st|
-      st.roots.each do |file|
-        h = st[file]
-        h.each do |fname, fversions|
-          next unless version = versions[fname]
-          fversions.each do |fversion|
-            if fversion.is_a?(Array)
-              fversion, subdir = fversion
-              yield fname, fversion, file, subdir if fversion == version
-            else
-              yield fname, fversion, file if fversion == version
-            end
-          end
+    rlib_db do |rst|
+      versions.each do |name, version|
+        f = rst.join("#{name}-#{version}")
+        if f.exist?
+          yield name, version, Marshal.load(f.binread)
         end
       end
     end
   end
 
   def gems_for_lib(file)
-    lib_pstore do |st|
+    lib_db do |st|
       if h = st[file]
+        h = Marshal.load(h)
         h.each do |name, versions|
           versions.each do |version|
             if version.is_a?(Array)
@@ -137,12 +140,19 @@ class Paperback::Store
   def each(gem_name = nil)
     return enum_for(__callee__, gem_name) unless block_given?
 
-    primary_pstore do |st|
-      gems = gem_name ? [gem_name] : st.roots
-      gems.each do |name|
-        next unless st[name]
-        st[name].each do |version, info|
-          yield _gem(name, version, info)
+    primary_db do |st|
+      if gem_name
+        return unless vs = st["v/#{gem_name}"]
+        vs = Marshal.load(vs)
+        vs.each do |version|
+          info = Marshal.load(st["i/#{gem_name}/#{version}"])
+          yield _gem(gem_name, version, info)
+        end
+      else
+        block = Proc.new
+        st.each_pair do |k, info|
+          next unless k =~ /\Av\/(.*)\z/
+          each($1, &block)
         end
       end
     end
@@ -157,10 +167,9 @@ class Paperback::Store
   end
 
   def gem_info(name, version)
-    primary_pstore do |st|
-      return unless h = st[name]
-      return unless d = h[version]
-      d
+    primary_db do |st|
+      d = st["i/#{name}/#{version}"]
+      d && Marshal.load(d)
     end
   end
 
@@ -173,22 +182,17 @@ class Paperback::Store
     d
   end
 
-  def primary_pstore(write = false)
-    @primary_pstore.transaction(!write) do
-      yield @primary_pstore
-    end
+  def primary_db(write = false)
+    yield @primary_sdbm
   end
 
-  def lib_pstore(write = false)
-    @lib_pstore.transaction(!write) do
-      yield @lib_pstore
-    end
+  def lib_db(write = false)
+    yield @lib_sdbm
   end
 
-  def bin_pstore(write = false)
-    @bin_pstore.transaction(!write) do
-      yield @bin_pstore
-    end
+  def rlib_db(write = false)
+    @rlib_path.mkdir if write && !@rlib_path.exist?
+    yield @rlib_path
   end
 
   # Almost every string we store is pure ASCII, and binary strings

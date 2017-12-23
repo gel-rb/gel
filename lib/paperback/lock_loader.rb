@@ -1,5 +1,3 @@
-require "uri"
-
 class Paperback::LockLoader
   attr_reader :filename
   attr_reader :gemfile
@@ -59,7 +57,7 @@ class Paperback::LockLoader
 
     filtered_gems = Hash.new(nil)
     top_gems = []
-    if gemfile
+    if gemfile && env
       gemfile.gems.each do |name, *|
         filtered_gems[name] = false
       end
@@ -77,7 +75,7 @@ class Paperback::LockLoader
 
     gems = {}
     each_gem do |section, body, name, version, platform, deps|
-      next unless env.platform?(platform)
+      next if env && !env.platform?(platform)
 
       gems[name] = [section, body, version, platform, deps]
 
@@ -100,7 +98,7 @@ class Paperback::LockLoader
       if section == :gem
         if installer && !base_store.gem?(name, version, platform)
           require_relative "catalog"
-          catalogs = body["remote"].map { |r| Paperback::Catalog.new(URI(r)) }
+          catalogs = body["remote"].map { |r| Paperback::Catalog.new(r) }
           installer.install_gem(catalogs, name, platform ? "#{version}-#{platform}" : version)
         end
 

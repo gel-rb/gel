@@ -11,7 +11,7 @@ end
 stores = {}
 Paperback::Environment.store_set.each do |key|
   subdir = File.join(dir, key)
-  FileUtils.mkdir_p(subdir) unless Dir.exist?(subdir)
+  Dir.mkdir(subdir) unless Dir.exist?(subdir)
   stores[key] = Paperback::Store.new(subdir)
 end
 store = Paperback::MultiStore.new(dir, stores)

@@ -43,6 +43,28 @@ class ActivateTest < Minitest::Test
     end
   end
 
+  def test_basic_gem_activation_loads_older_when_requested
+    with_fixture_gems_installed(["rack-0.1.0.gem", "rack-2.0.3.gem"]) do |store|
+      assert_raises(LoadError) { require "rack" }
+      assert_raises(LoadError) { require "rack/utils" }
+
+      output = read_from_fork do |ch|
+        Paperback::Environment.open(store)
+        Paperback::Environment.gem "rack", "< 2"
+
+        # Avoid requiring "rack" itself, because 0.1.0's rack.rb
+        # directly manipulates $:, which is confusing
+        require "rack/utils"
+
+        ch.puts $:.grep(/\brack/).join(":")
+        ch.puts $".grep(/\brack\/utils/).join(":")
+      end.lines.map(&:chomp)
+
+      assert_equal "#{store.root}/gems/rack-0.1.0/lib", output.shift
+      assert_equal "#{store.root}/gems/rack-0.1.0/lib/rack/utils.rb", output.shift
+    end
+  end
+
   def test_automatic_gem_activation
     with_fixture_gems_installed(["rack-2.0.3.gem", "rack-0.1.0.gem"]) do |store|
       assert_raises(LoadError) { require "rack" }

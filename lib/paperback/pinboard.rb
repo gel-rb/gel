@@ -1,3 +1,5 @@
+require "pstore"
+
 require_relative "httpool"
 require_relative "tail_file"
 
