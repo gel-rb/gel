@@ -2,7 +2,7 @@ require "test_helper"
 
 class LockActivateTest < Minitest::Test
   def test_activate_simple_lockfile
-    lockfile = Tempfile.new
+    lockfile = Tempfile.new("")
     lockfile.write(<<LOCKFILE)
 GEM
   remote: https://rubygems.org/
@@ -41,7 +41,7 @@ LOCKFILE
 
   def test_activate_lockfile_with_path
     Dir.mktmpdir("rack-") do |temp_dir|
-      lockfile = Tempfile.new
+      lockfile = Tempfile.new("")
       lockfile.write(<<LOCKFILE)
 PATH
   remote: #{temp_dir}
@@ -92,7 +92,7 @@ gem "rack"
 gem "rack-test", platforms: :rbx
 GEMFILE
 
-    lockfile = Tempfile.new
+    lockfile = Tempfile.new("")
     lockfile.write(<<LOCKFILE)
 GEM
   remote: https://rubygems.org/
@@ -132,7 +132,7 @@ LOCKFILE
 gem "rack-test", platforms: :rbx
 GEMFILE
 
-    lockfile = Tempfile.new
+    lockfile = Tempfile.new("")
     lockfile.write(<<LOCKFILE)
 GEM
   remote: https://rubygems.org/

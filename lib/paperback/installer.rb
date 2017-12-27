@@ -211,6 +211,8 @@ class Paperback::Installer
 
     pools.values.map do |pool|
       Thread.new do
+        Thread.current.abort_on_exception = true
+
         pool.wait(&update_status)
         pools.values.each(&:tick!)
         pool.stop

@@ -2,7 +2,7 @@ require "test_helper"
 
 class LockInstallTest < Minitest::Test
   def test_install_simple_lockfile
-    lockfile = Tempfile.new
+    lockfile = Tempfile.new("")
     lockfile.write(<<LOCKFILE)
 GEM
   remote: https://rubygems.org/
@@ -46,7 +46,7 @@ LOCKFILE
   end
 
   def test_arch_aware_installation
-    lockfile = Tempfile.new
+    lockfile = Tempfile.new("")
     lockfile.write(<<LOCKFILE)
 GEM
   remote: https://rubygems.org/

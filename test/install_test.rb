@@ -1,7 +1,7 @@
 require "test_helper"
 
 require "paperback/package"
-require "paperback/package/inspector"
+require "paperback/package/installer"
 
 class InstallTest < Minitest::Test
   def test_install_single_package

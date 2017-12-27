@@ -27,7 +27,7 @@ class Paperback::WorkPool
       while @workers.size < @concurrency
         @workers << Thread.new do
           Thread.current.name = @name if @name && Thread.current.respond_to?(:name=)
-          Thread.current.report_on_exception = true
+          Thread.current.abort_on_exception = true
 
           catch(:stop) do
             loop do
