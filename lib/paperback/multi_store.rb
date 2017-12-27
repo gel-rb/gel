@@ -6,7 +6,7 @@ class Paperback::MultiStore
   attr_reader :root
 
   def initialize(root, stores)
-    @root = root
+    @root = File.realpath(File.expand_path(root)) if root
     @stores = stores
   end
 

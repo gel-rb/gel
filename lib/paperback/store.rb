@@ -5,7 +5,7 @@ class Paperback::Store
   attr_reader :root
 
   def initialize(root)
-    @root = File.expand_path(root)
+    @root = File.realpath(File.expand_path(root))
     @primary_sdbm = SDBM.new("#{root}/store")
     @lib_sdbm = SDBM.new("#{root}/libs")
     @rlib_path = Pathname.new("#{root}/meta")

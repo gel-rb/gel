@@ -8,6 +8,8 @@ unless Dir.exist?(dir)
   FileUtils.mkdir_p(dir)
 end
 
+dir = File.realpath(dir)
+
 stores = {}
 Paperback::Environment.store_set.each do |key|
   subdir = File.join(dir, key)
