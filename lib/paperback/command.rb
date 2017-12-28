@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Paperback::Command
   def self.run(command_line)
     command_line = command_line.dup

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Paperback::LockedStore
   attr_reader :inner
 

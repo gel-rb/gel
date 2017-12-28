@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # This file doesn't attempt to actually provide the RubyGems API.
 #
 # It supplies a few utility methods and classes that have become widely

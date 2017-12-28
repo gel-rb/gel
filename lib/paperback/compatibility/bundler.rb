@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bundler
   def self.setup
     Paperback::Environment.activate(output: $stderr)

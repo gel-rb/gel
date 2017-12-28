@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Paperback::DirectGem < Paperback::StoreGem
   def load_gemspec(filename)
     Paperback::GemspecParser.parse(File.read(filename), filename)

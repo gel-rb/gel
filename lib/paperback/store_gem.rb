@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Paperback::StoreGem
   EXTENSION_SUBDIR_TOKEN = "..".freeze
 

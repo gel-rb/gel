@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative "../paperback"
 
 dir = ENV["PAPERBACK_STORE"] || "~/.local/paperback"

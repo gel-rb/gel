@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Paperback::GemfileParser
   def self.parse(content, filename = nil, lineno = nil)
     result = GemfileContent.new(filename)

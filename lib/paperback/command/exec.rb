@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Paperback::Command::Exec < Paperback::Command
   def run(command_line)
     gemfile = Paperback::Environment.find_gemfile

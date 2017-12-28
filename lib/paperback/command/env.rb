@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Paperback::Command::Env < Paperback::Command
   def run(command_line)
     raise "TODO"
