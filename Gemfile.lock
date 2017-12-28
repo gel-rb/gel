@@ -2,6 +2,7 @@ PATH
   remote: .
   specs:
     paperback (0.1.0)
+      molinillo
 
 GEM
   remote: https://rubygems.org/
@@ -12,6 +13,7 @@ GEM
       safe_yaml (~> 1.0.0)
     hashdiff (0.3.7)
     minitest (5.10.3)
+    molinillo (0.6.4)
     public_suffix (3.0.1)
     rake (12.3.0)
     safe_yaml (1.0.4)
@@ -21,7 +23,7 @@ GEM
       hashdiff
 
 DEPENDENCIES
+  minitest (~> 5.0)
   paperback!
-  minitest
-  rake
+  rake (~> 12.0)
   webmock
