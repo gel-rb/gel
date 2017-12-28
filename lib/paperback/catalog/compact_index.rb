@@ -1,5 +1,6 @@
 require "set"
 require "fileutils"
+require "monitor"
 
 require_relative "../pinboard"
 
@@ -13,14 +14,20 @@ class Paperback::Catalog::CompactIndex
     @needs_update = true
     @updating = false
     @active_gems = Set.new
+    @pending_gems = Set.new
 
-    @gem_info = Hash.new { |h, k| h[k] = {} }
+    @monitor = Monitor.new
+    @refresh_cond = @monitor.new_cond
+
+    @gem_info = {}
   end
 
   def update
-    return false unless @needs_update
-    @needs_update = false
-    @updating = true
+    @monitor.synchronize do
+      return false unless @needs_update
+      @needs_update = false
+      @updating = true
+    end
 
     pinboard.async_file(uri("versions"), tail: true) do |f|
       new_tokens = {}
@@ -37,10 +44,12 @@ class Paperback::Catalog::CompactIndex
         new_tokens[name] = token
       end
 
-      @gem_tokens.update new_tokens
-      @updating = false
+      @monitor.synchronize do
+        @gem_tokens.update new_tokens
+        @updating = false
+      end
 
-      @active_gems.each do |name|
+      (@active_gems | @pending_gems).each do |name|
         refresh_gem(name)
       end
     end
@@ -48,11 +57,35 @@ class Paperback::Catalog::CompactIndex
     true
   end
 
+  def gem_info(gem_name)
+    @monitor.synchronize do
+      return @gem_info[gem_name] if @gem_info.key?(gem_name)
+    end
+
+    refresh_gem gem_name
+
+    @monitor.synchronize do
+      @refresh_cond.wait_until { @gem_info.key?(gem_name) }
+      @gem_info[gem_name]
+    end
+  end
+
   def refresh_gem(gem_name)
-    already_active = !@active_gems.add?(gem_name)
+    update
+
+    already_active = nil
+    @monitor.synchronize do
+      if @updating && !@gem_tokens.key?(gem_name)
+        @pending_gems << gem_name
+        return
+      end
+
+      already_active = !@active_gems.add?(gem_name)
+    end
 
     pinboard.async_file(uri("info", gem_name), token: @gem_tokens[gem_name], only_updated: already_active) do |f|
       dependency_names = Set.new
+      info = {}
 
       started = false
       f.each_line do |line|
@@ -82,11 +115,16 @@ class Paperback::Catalog::CompactIndex
           dependency_names << name
         end
 
-        @gem_info[gem_name][version] = attrs
+        info[version] = attrs
       end
 
       dependency_names.each do |dep|
         refresh_gem dep
+      end
+
+      @monitor.synchronize do
+        @gem_info[gem_name] = info
+        @refresh_cond.broadcast
       end
     end
   end
@@ -94,11 +132,13 @@ class Paperback::Catalog::CompactIndex
   private
 
   def pinboard
-    @pinboard ||=
-      begin
-        FileUtils.mkdir_p(pinboard_dir)
-        Paperback::Pinboard.new(pinboard_dir, httpool: @httpool)
-      end
+    @pinboard || @monitor.synchronize do
+      @pinboard ||=
+        begin
+          FileUtils.mkdir_p(pinboard_dir)
+          Paperback::Pinboard.new(pinboard_dir, monitor: @monitor, httpool: @httpool)
+        end
+    end
   end
 
   def pinboard_dir

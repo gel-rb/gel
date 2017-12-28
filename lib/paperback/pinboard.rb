@@ -1,4 +1,5 @@
 require "sdbm"
+require "monitor"
 
 require_relative "httpool"
 require_relative "tail_file"
@@ -13,15 +14,16 @@ class Paperback::Pinboard
   UPDATE_CONCURRENCY = 8
 
   attr_reader :root
-  def initialize(root, httpool: Paperback::Httpool.new)
+  def initialize(root, monitor: Monitor.new, httpool: Paperback::Httpool.new)
     @root = root
+    @monitor = monitor
     @httpool = httpool
 
     @db = SDBM.new("#{root}/pins")
     @files = {}
     @waiting = Hash.new { |h, k| h[k] = [] }
 
-    @update_pool = Paperback::WorkPool.new(UPDATE_CONCURRENCY, name: "paperback-pinboard")
+    @update_pool = Paperback::WorkPool.new(UPDATE_CONCURRENCY, monitor: @monitor, name: "paperback-pinboard")
   end
 
   def file(uri, token: nil, tail: true)
@@ -52,6 +54,7 @@ class Paperback::Pinboard
         @update_pool.queue(uri.path) do
           tail_file.update(!tail)
         end
+        @update_pool.start
       end
 
       block = Proc.new
