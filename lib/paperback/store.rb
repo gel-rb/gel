@@ -140,20 +140,26 @@ class Paperback::Store
   def each(gem_name = nil)
     return enum_for(__callee__, gem_name) unless block_given?
 
-    primary_db do |st|
-      if gem_name
+    if gem_name
+      primary_db do |st|
         return unless vs = st["v/#{gem_name}"]
         vs = Marshal.load(vs)
         vs.each do |version|
           info = Marshal.load(st["i/#{gem_name}/#{version}"])
           yield _gem(gem_name, version, info)
         end
-      else
-        block = Proc.new
-        st.each_pair do |k, info|
-          next unless k =~ /\Av\/(.*)\z/
-          each($1, &block)
+      end
+    else
+      gem_names = []
+      primary_db do |st|
+        st.each_key do |k|
+          gem_names << $1 if k =~ /\Av\/(.*)\z/
         end
+      end
+
+      block = Proc.new
+      gem_names.each do |n|
+        each(n, &block)
       end
     end
   end
