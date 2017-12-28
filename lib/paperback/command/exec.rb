@@ -44,8 +44,8 @@ class Paperback::Command::Exec < Paperback::Command
   def execute_inline(original_command, expanded_command, *arguments)
     return unless File.exist?(expanded_command) && File.executable?(expanded_command)
     File.open(expanded_command, "rb") do |f|
-      first_line = f.gets.chomp
-      return unless first_line =~ /\A#!.*\bruby\b/
+      return unless f.read(2) == "#!"
+      return unless f.gets.chomp =~ /\bruby\b/
     end
 
     Paperback::Environment.activate(output: $stderr)
