@@ -1,4 +1,4 @@
-require "pstore"
+require "sdbm"
 
 require_relative "httpool"
 require_relative "tail_file"
@@ -17,7 +17,7 @@ class Paperback::Pinboard
     @root = root
     @httpool = httpool
 
-    @pstore = PStore.new("#{root}/.pstore", true)
+    @db = SDBM.new("#{root}/pins")
     @files = {}
     @waiting = Hash.new { |h, k| h[k] = [] }
 
@@ -25,7 +25,7 @@ class Paperback::Pinboard
   end
 
   def file(uri, token: nil, tail: true)
-    unless @pstore.transaction(true) { @pstore[uri.to_s] }
+    unless @db[uri.to_s]
       add uri, token: token
     end
 
@@ -41,7 +41,7 @@ class Paperback::Pinboard
 
   def async_file(uri, token: nil, tail: true, only_updated: false)
     if stale(uri, token)
-      unless @pstore.transaction(true) { @pstore[uri.to_s] }
+      unless @db[uri.to_s]
         add uri, token: token
       end
 
@@ -68,14 +68,12 @@ class Paperback::Pinboard
   def add(uri, token: nil)
     filename = mangle_uri(uri)
 
-    @pstore.transaction(false) do
-      @pstore[uri.to_s] ||= {
-        filename: filename,
-        etag: nil,
-        token: token,
-        stale: true,
-      }
-    end
+    @db[uri.to_s] ||= Marshal.dump({
+      filename: filename,
+      etag: nil,
+      token: token,
+      stale: true,
+    })
   end
 
   def filename(uri)
@@ -87,27 +85,22 @@ class Paperback::Pinboard
   end
 
   def stale(uri, token)
-    @pstore.transaction(false) do
-      h = @pstore[uri.to_s]
-      return true unless h
-      return h[:stale] if token && h[:token] == token || token == false
-      h = h.merge(token: token, stale: true)
-      @pstore[uri.to_s] = h
-    end
+    h = @db[uri.to_s]
+    return true unless h
+    h = Marshal.load(h)
+    return h[:stale] if token && h[:token] == token || token == false
+    h = h.merge(token: token, stale: true)
+    @db[uri.to_s] = Marshal.dump(h)
 
     true
   end
 
   def read(uri)
-    @pstore.transaction(true) do
-      @pstore[uri.to_s]
-    end
+    Marshal.load(@db[uri.to_s])
   end
 
   def updated(uri, etag, changed = true)
-    @pstore.transaction(false) do
-      @pstore[uri.to_s] = @pstore[uri.to_s].merge(etag: etag, stale: false)
-    end
+    @db[uri.to_s] = Marshal.dump(Marshal.load(@db[uri.to_s]).merge(etag: etag, stale: false))
 
     return if @waiting[uri].empty?
     File.open(filename(uri), "r") do |f|
