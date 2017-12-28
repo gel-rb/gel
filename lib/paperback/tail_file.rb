@@ -56,7 +56,7 @@ class Paperback::TailFile
 
         case response
         when Net::HTTPNotModified
-          pinboard.updated(uri, response["ETag"])
+          pinboard.updated(uri, response["ETag"], false)
 
           return # no-op
 
@@ -85,8 +85,9 @@ class Paperback::TailFile
           f.pos = 0
           f.truncate(0)
           f.write response.body
+          f.flush
 
-          pinboard.updated(uri, response["ETag"])
+          pinboard.updated(uri, response["ETag"], true)
 
           return # Done
 
@@ -131,7 +132,7 @@ class Paperback::TailFile
               # Good overlap, but nothing new
               debug "Overlap is good, but no new content"
 
-              pinboard.updated(uri, @etag) # keep old etag
+              pinboard.updated(uri, @etag, false) # keep old etag
 
               return # Done
             else
@@ -151,8 +152,9 @@ class Paperback::TailFile
               debug "Using remaining #{rest.size} bytes"
 
               f.write(rest)
+              f.flush
 
-              pinboard.updated(uri, response["ETag"])
+              pinboard.updated(uri, response["ETag"], true)
 
               return # Done
             else

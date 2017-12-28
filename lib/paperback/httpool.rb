@@ -23,7 +23,12 @@ class Paperback::Httpool
     http = synchronize do
       (@pool[ident] ||= []).pop
     end
-    http ||= Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https")
+
+    actual_host = uri.host
+    # https://github.com/rubygems/rubygems.org/issues/1698#issuecomment-348744676  ¯\_(ツ)_/¯
+    actual_host = "index.rubygems.org" if actual_host.downcase == "rubygems.org"
+
+    http ||= Net::HTTP.start(actual_host, uri.port, use_ssl: uri.scheme == "https")
     http.request(request)
   ensure
     if http

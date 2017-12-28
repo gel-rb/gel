@@ -88,6 +88,15 @@ class Paperback::WorkPool
     end
   end
 
+  def join
+    wait
+    @monitor.synchronize do
+      if e = @errors.first
+        raise e.last
+      end
+    end
+  end
+
   def status
     @monitor.synchronize do
       { active: @workers.map { |w| w[:active] }.compact, queued: @queue.size }

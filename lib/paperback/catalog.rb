@@ -1,6 +1,7 @@
 require "fileutils"
 require "net/http"
 require "uri"
+require "digest"
 
 require_relative "httpool"
 
@@ -8,6 +9,10 @@ class Paperback::Catalog
   def initialize(uri, httpool: Paperback::Httpool.new)
     @uri = URI(uri)
     @httpool = httpool
+  end
+
+  def compact_index
+    Paperback::Catalog::CompactIndex.new(@uri, uri_identifier, httpool: @httpool)
   end
 
   def cached_gem(name, version)
@@ -65,3 +70,5 @@ class Paperback::Catalog
     raise "Too many redirects for #{original_uri}"
   end
 end
+
+require_relative "catalog/compact_index"

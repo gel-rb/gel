@@ -16,10 +16,10 @@ DEPENDENCIES
 LOCKFILE
     lockfile.close
 
-    stub_request(:get, "https://rubygems.org/gems/rack-2.0.3.gem").
+    stub_request(:get, "https://index.rubygems.org/gems/rack-2.0.3.gem").
       to_return(body: File.open(fixture_file("rack-2.0.3.gem")))
 
-    stub_request(:get, "https://rubygems.org/gems/rack-test-0.6.3.gem").
+    stub_request(:get, "https://index.rubygems.org/gems/rack-test-0.6.3.gem").
       to_return(body: File.open(fixture_file("rack-test-0.6.3.gem")))
 
     loader = Paperback::LockLoader.new(lockfile.path)
@@ -63,13 +63,13 @@ DEPENDENCIES
 LOCKFILE
     lockfile.close
 
-    stub_request(:get, "https://rubygems.org/gems/atomic-1.1.16.gem").
+    stub_request(:get, "https://index.rubygems.org/gems/atomic-1.1.16.gem").
       to_return(body: File.open(fixture_file("atomic-1.1.16.gem")))
 
-    stub_request(:get, "https://rubygems.org/gems/rack-2.0.3.gem").
+    stub_request(:get, "https://index.rubygems.org/gems/rack-2.0.3.gem").
       to_return(body: File.open(fixture_file("rack-2.0.3.gem")))
 
-    stub_request(:get, "https://rubygems.org/gems/rack-test-0.6.3.gem").
+    stub_request(:get, "https://index.rubygems.org/gems/rack-test-0.6.3.gem").
       to_return(body: File.open(fixture_file("rack-test-0.6.3.gem")))
 
     loader = Paperback::LockLoader.new(lockfile.path)

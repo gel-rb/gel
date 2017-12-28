@@ -2,6 +2,7 @@ require "pstore"
 
 require_relative "httpool"
 require_relative "tail_file"
+require_relative "work_pool"
 
 # For each URI, this stores:
 #   * the local filename
@@ -9,15 +10,21 @@ require_relative "tail_file"
 #   * an external freshness token
 #   * a stale flag
 class Paperback::Pinboard
+  UPDATE_CONCURRENCY = 8
+
   attr_reader :root
   def initialize(root, httpool: Paperback::Httpool.new)
     @root = root
     @httpool = httpool
 
-    @pstore = PStore.new("#{root}/.pstore")
+    @pstore = PStore.new("#{root}/.pstore", true)
+    @files = {}
+    @waiting = Hash.new { |h, k| h[k] = [] }
+
+    @update_pool = Paperback::WorkPool.new(UPDATE_CONCURRENCY, name: "paperback-pinboard")
   end
 
-  def file(uri, token: nil, tail: true, &block)
+  def file(uri, token: nil, tail: true)
     unless @pstore.transaction(true) { @pstore[uri.to_s] }
       add uri, token: token
     end
@@ -25,14 +32,44 @@ class Paperback::Pinboard
     tail_file = Paperback::TailFile.new(uri, self, httpool: @httpool)
     tail_file.update(!tail) if stale(uri, token)
 
-    File.open(filename(uri), "r", &block)
+    if block_given?
+      File.open(filename(uri), "r") do |f|
+        yield f
+      end
+    end
+  end
+
+  def async_file(uri, token: nil, tail: true, only_updated: false)
+    if stale(uri, token)
+      unless @pstore.transaction(true) { @pstore[uri.to_s] }
+        add uri, token: token
+      end
+
+      already_queued = @files.key?(uri)
+      tail_file = @files[uri] ||= Paperback::TailFile.new(uri, self, httpool: @httpool)
+
+      unless already_queued
+        @update_pool.queue(uri.path) do
+          tail_file.update(!tail)
+        end
+      end
+
+      block = Proc.new
+      @waiting[uri] << lambda do |f, changed|
+        block.call(f) if changed || !only_updated
+      end
+    elsif block_given? && !only_updated
+      File.open(filename(uri), "r") do |f|
+        yield f
+      end
+    end
   end
 
   def add(uri, token: nil)
     filename = mangle_uri(uri)
 
     @pstore.transaction(false) do
-      @pstore[uri.to_s] = {
+      @pstore[uri.to_s] ||= {
         filename: filename,
         etag: nil,
         token: token,
@@ -52,7 +89,8 @@ class Paperback::Pinboard
   def stale(uri, token)
     @pstore.transaction(false) do
       h = @pstore[uri.to_s]
-      return h[:stale] if token && h[:token] == token
+      return true unless h
+      return h[:stale] if token && h[:token] == token || token == false
       h = h.merge(token: token, stale: true)
       @pstore[uri.to_s] = h
     end
@@ -66,9 +104,17 @@ class Paperback::Pinboard
     end
   end
 
-  def updated(uri, etag)
+  def updated(uri, etag, changed = true)
     @pstore.transaction(false) do
       @pstore[uri.to_s] = @pstore[uri.to_s].merge(etag: etag, stale: false)
+    end
+
+    return if @waiting[uri].empty?
+    File.open(filename(uri), "r") do |f|
+      @waiting[uri].each do |block|
+        f.rewind
+        block.call(f, changed)
+      end
     end
   end
 
