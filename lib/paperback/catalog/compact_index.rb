@@ -106,18 +106,16 @@ class Paperback::Catalog::CompactIndex
           [key, constraints]
         end
 
-        attrs = attrs.split(",").map do |entry|
-          key, value = entry.split(":", 2)
-          [key.to_sym, value]
-        end.to_h
-
-        attrs[:dependencies] = deps
+        attributes = { dependencies: deps }
+        attrs.scan(/(\w+):((?:[^,]+|,(?!\w+:))*)/) do |key, value|
+          attributes[key.to_sym] = value
+        end
 
         deps.each do |name, _|
           dependency_names << name
         end
 
-        info[version] = attrs
+        info[version] = attributes
       end
 
       dependency_names.each do |dep|
