@@ -12,6 +12,8 @@ class Paperback::WorkPool
     @monitor = monitor
     @name = name
 
+    @queue_order = nil
+
     @concurrency = concurrency
     @workers = []
     @shutdown = false
@@ -50,6 +52,7 @@ class Paperback::WorkPool
                 current_job[0].call
               rescue Exception => ex
                 @monitor.synchronize do
+                  $stderr.puts ex if $DEBUG
                   @errors << [current_job, ex]
                 end
               end

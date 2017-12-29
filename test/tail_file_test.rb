@@ -46,7 +46,6 @@ class TailFileTest < Minitest::Test
     end
 
     assert_equal({
-      filename: "example.org---content--ee76ec642069",
       etag: "\"initial\"",
       token: nil,
       stale: false,
@@ -89,7 +88,6 @@ class TailFileTest < Minitest::Test
     end
 
     assert_equal({
-      filename: "example.org---content--ee76ec642069",
       etag: "\"initial\"",
       token: nil,
       stale: false,
@@ -136,7 +134,6 @@ class TailFileTest < Minitest::Test
     end
 
     assert_equal({
-      filename: "example.org---content--ee76ec642069",
       etag: "\"appended\"",
       token: nil,
       stale: false,
@@ -194,7 +191,6 @@ class TailFileTest < Minitest::Test
     end
 
     assert_equal({
-      filename: "example.org---content--ee76ec642069",
       etag: "\"initial\"",
       token: nil,
       stale: false,
@@ -251,7 +247,6 @@ class TailFileTest < Minitest::Test
     end
 
     assert_equal({
-      filename: "example.org---content--ee76ec642069",
       etag: "\"reset\"",
       token: nil,
       stale: false,
@@ -319,7 +314,6 @@ class TailFileTest < Minitest::Test
     end
 
     assert_equal({
-      filename: "example.org---content--ee76ec642069",
       etag: "\"reset\"",
       token: nil,
       stale: false,
@@ -370,7 +364,6 @@ class NoPartialTailFileTest < Minitest::Test
     end
 
     assert_equal({
-      filename: "example.org---content--ee76ec642069",
       etag: "\"initial\"",
       token: nil,
       stale: false,
@@ -412,7 +405,6 @@ class NoPartialTailFileTest < Minitest::Test
     end
 
     assert_equal({
-      filename: "example.org---content--ee76ec642069",
       etag: "\"initial\"",
       token: nil,
       stale: false,
@@ -457,7 +449,6 @@ class NoPartialTailFileTest < Minitest::Test
     end
 
     assert_equal({
-      filename: "example.org---content--ee76ec642069",
       etag: "\"appended\"",
       token: nil,
       stale: false,
@@ -502,7 +493,6 @@ class NoPartialTailFileTest < Minitest::Test
     end
 
     assert_equal({
-      filename: "example.org---content--ee76ec642069",
       etag: "\"reset\"",
       token: nil,
       stale: false,

@@ -8,7 +8,6 @@ require_relative "tail_file"
 require_relative "work_pool"
 
 # For each URI, this stores:
-#   * the local filename
 #   * the current etag
 #   * an external freshness token
 #   * a stale flag
@@ -29,9 +28,7 @@ class Paperback::Pinboard
   end
 
   def file(uri, token: nil, tail: true)
-    unless @db[uri.to_s]
-      add uri, token: token
-    end
+    add uri, token: token
 
     tail_file = Paperback::TailFile.new(uri, self, httpool: @httpool)
     tail_file.update(!tail) if stale(uri, token)
@@ -45,9 +42,7 @@ class Paperback::Pinboard
 
   def async_file(uri, token: nil, tail: true, only_updated: false)
     if stale(uri, token)
-      unless @db[uri.to_s]
-        add uri, token: token
-      end
+      add uri, token: token
 
       already_queued = @files.key?(uri)
       tail_file = @files[uri] ||= Paperback::TailFile.new(uri, self, httpool: @httpool)
@@ -71,18 +66,15 @@ class Paperback::Pinboard
   end
 
   def add(uri, token: nil)
-    filename = mangle_uri(uri)
-
-    @db[uri.to_s] ||= Marshal.dump({
-      filename: filename,
+    @db[uri.to_s] ||= Marshal.dump(
       etag: nil,
       token: token,
       stale: true,
-    })
+    )
   end
 
   def filename(uri)
-    File.expand_path(read(uri)[:filename], @root)
+    File.expand_path(mangle_uri(uri), @root)
   end
 
   def etag(uri)
@@ -90,22 +82,25 @@ class Paperback::Pinboard
   end
 
   def stale(uri, token)
-    h = @db[uri.to_s]
-    return true unless h
-    h = Marshal.load(h)
-    return h[:stale] if token && h[:token] == token || token == false
-    h = h.merge(token: token, stale: true)
-    @db[uri.to_s] = Marshal.dump(h)
+    if h = read(uri)
+      if token && h[:token] == token || token == false
+        return h[:stale]
+      end
+
+      @db[uri.to_s] = Marshal.dump(h.merge(token: token, stale: true))
+    end
 
     true
   end
 
   def read(uri)
-    Marshal.load(@db[uri.to_s])
+    if v = @db[uri.to_s]
+      Marshal.load(v)
+    end
   end
 
   def updated(uri, etag, changed = true)
-    @db[uri.to_s] = Marshal.dump(Marshal.load(@db[uri.to_s]).merge(etag: etag, stale: false))
+    @db[uri.to_s] = Marshal.dump(read(uri).merge(etag: etag, stale: false))
 
     return if @waiting[uri].empty?
     File.open(filename(uri), "r") do |f|
