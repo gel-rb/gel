@@ -39,6 +39,7 @@ class Paperback::TailFile
       MAXIMUM_CHAIN.times do
         f.seek(0, IO::SEEK_SET) if force_reset
 
+        t = Time.now
         debug "GET #{uri}"
         request = Net::HTTP::Get.new(uri)
 
@@ -54,7 +55,7 @@ class Paperback::TailFile
         request["If-None-Match"] = @etag if @etag
 
         response = @httpool.request(uri, request)
-        debug "HTTP #{response.code} (#{response.message}) #{uri}"
+        debug "HTTP #{response.code} (#{response.message}) #{uri} [#{Time.now - t}s]"
 
         case response
         when Net::HTTPNotModified
