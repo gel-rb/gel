@@ -57,6 +57,12 @@ module Paperback::GemfileParser
       if file = Dir["#{File.dirname(@result.filename)}/*.gemspec"].first
         spec = Paperback::GemspecParser.parse(File.read(file), file)
         gem spec.name, spec.version, path: "."
+        spec.runtime_dependencies.each do |name, constraints|
+          gem name, constraints
+        end
+        spec.development_dependencies.each do |name, constraints|
+          gem name, constraints, group: :development
+        end
       end
     end
 
