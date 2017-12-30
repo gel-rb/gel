@@ -21,6 +21,8 @@ class Paperback::Catalog::CompactIndex
     @monitor = Monitor.new
     @refresh_cond = @monitor.new_cond
 
+    @done_refresh = {}
+
     @gem_info = {}
   end
 
@@ -60,15 +62,31 @@ class Paperback::Catalog::CompactIndex
   end
 
   def gem_info(gem_name)
+    gems_to_refresh = []
+
     @monitor.synchronize do
-      return @gem_info[gem_name] if @gem_info.key?(gem_name)
+      if @gem_info.key?(gem_name)
+        unless @done_refresh[gem_name]
+          gems_to_refresh = @gem_info[gem_name].values.flat_map { |v| v[:dependencies] }.map(&:first).uniq
+          @done_refresh[gem_name] = true
+        end
+        return @gem_info[gem_name]
+      end
     end
 
     refresh_gem gem_name
 
     @monitor.synchronize do
       @refresh_cond.wait_until { @gem_info.key?(gem_name) }
+      unless @done_refresh[gem_name]
+        gems_to_refresh = @gem_info[gem_name].values.flat_map { |v| v[:dependencies] }.map(&:first).uniq
+        @done_refresh[gem_name] = true
+      end
       @gem_info[gem_name]
+    end
+  ensure
+    gems_to_refresh.each do |dep_name|
+      refresh_gem dep_name
     end
   end
 
@@ -116,10 +134,6 @@ class Paperback::Catalog::CompactIndex
         end
 
         info[version] = attributes
-      end
-
-      dependency_names.each do |dep|
-        refresh_gem dep
       end
 
       @monitor.synchronize do
