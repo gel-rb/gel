@@ -9,12 +9,12 @@ require_relative "httpool"
 
 class Paperback::Catalog
   def initialize(uri, httpool: Paperback::Httpool.new)
-    @uri = URI(uri)
+    @uri = normalize_uri(uri)
     @httpool = httpool
   end
 
   def compact_index
-    Paperback::Catalog::CompactIndex.new(@uri, uri_identifier, httpool: @httpool)
+    @compact_index ||= Paperback::Catalog::CompactIndex.new(@uri, uri_identifier, httpool: @httpool)
   end
 
   def cached_gem(name, version)
@@ -39,6 +39,14 @@ class Paperback::Catalog
   end
 
   private
+
+  def normalize_uri(uri)
+    uri = URI(uri).dup
+    uri.scheme = uri.scheme.downcase
+    uri.host = uri.host.downcase
+    uri.path = "/" if uri.path == ""
+    uri
+  end
 
   def uri_identifier
     @uri.host + "-" + Digest(:SHA256).hexdigest(@uri.to_s)[0..10]
