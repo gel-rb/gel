@@ -85,6 +85,39 @@ class Paperback::Environment
       "Gemfile.lock"
   end
 
+  def self.lock(output: nil)
+    Paperback::Environment.load_gemfile
+    return if @active_lockfile
+
+    lockfile = Paperback::Environment.lockfile_name
+    if File.exist?(lockfile)
+      loader = Paperback::LockLoader.new(lockfile, gemfile)
+      # TODO
+    end
+
+    # HACK
+    $: << File.expand_path("../../tmp/bootstrap/store/ruby/gems/molinillo-0.6.4/lib", __dir__)
+
+    require_relative "catalog"
+    all_sources = (@gemfile.sources | @gemfile.gems.flat_map { |_, _, o| o[:source] }).compact
+    catalogs = all_sources.map { |s| Paperback::Catalog.new(s) }
+
+    require_relative "specification_provider"
+    provider = Paperback::SpecificationProvider.new(catalogs)
+
+    ui = Struct.new(:output) { include Molinillo::UI }.new(output || File.open(IO::NULL))
+
+    resolver = Molinillo::Resolver.new(provider, ui)
+
+    requirements = @gemfile.gems.select { |_, _, options| !options[:path] && !options[:git] }.map { |name, constraints, _| Paperback::SpecificationProvider::Dep.new(name, constraints) }
+
+    graph = resolver.resolve(requirements)
+
+    graph.each do |vertex|
+      p vertex.payload
+    end
+  end
+
   def self.activate(install: false, output: nil)
     Paperback::Environment.load_gemfile
     return if @active_lockfile
