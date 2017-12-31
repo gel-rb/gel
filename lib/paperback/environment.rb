@@ -103,7 +103,7 @@ class Paperback::Environment
     catalogs = all_sources.map { |s| Paperback::Catalog.new(s) }
 
     require_relative "specification_provider"
-    provider = Paperback::SpecificationProvider.new(catalogs)
+    provider = Paperback::SpecificationProvider.new(catalogs, ["ruby"])
 
     ui = Struct.new(:output) { include Molinillo::UI }.new(output || File.open(IO::NULL))
 

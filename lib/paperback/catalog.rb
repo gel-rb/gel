@@ -17,6 +17,10 @@ class Paperback::Catalog
     @compact_index ||= Paperback::Catalog::CompactIndex.new(@uri, uri_identifier, httpool: @httpool)
   end
 
+  def gem_info(name)
+    compact_index.gem_info(name)
+  end
+
   def cached_gem(name, version)
     path = cache_path(name, version)
     return path if File.exist?(path)

@@ -5,9 +5,9 @@ require "molinillo"
 class Paperback::SpecificationProvider
   include Molinillo::SpecificationProvider
 
-  Spec = Struct.new(:name, :version) do
+  Spec = Struct.new(:name, :version, :info) do
     def gem_version
-      @gem_version ||= Paperback::Support::GemVersion.new(version.split("-", 2).first)
+      @gem_version ||= Paperback::Support::GemVersion.new(version)
     end
   end
 
@@ -22,29 +22,52 @@ class Paperback::SpecificationProvider
     end
   end
 
-  def initialize(catalogs)
+  Ruby = Spec.new("ruby", RUBY_VERSION, [])
+
+  def initialize(catalogs, active_platforms)
     @catalogs = catalogs
+    @active_platforms = active_platforms
+
+    @cached_specs = Hash.new { |h, k| h[k] = {} }
   end
 
   def search_for(dependency)
     name = dependency.name
 
+    if name == "ruby"
+      return dependency.satisfied_by?(Ruby) ? [Ruby] : []
+    end
+
     result = []
     @catalogs.each do |catalog|
-      if info = catalog.compact_index.gem_info(name)
-        result += info.keys.select { |v| dependency.satisfied_by?(Spec.new(name, v)) }.map { |v| Spec.new(name, v) }
+      if info = catalog.gem_info(name)
+        @cached_specs[catalog][name] ||=
+          begin
+            grouped_versions = info.to_a.map do |full_version, attributes|
+              version, platform = full_version.split("-", 2)
+              platform ||= "ruby"
+              [version, platform, attributes]
+            end.group_by(&:first)
+
+            grouped_versions.map { |version, tuples| Spec.new(name, version, tuples.map { |_, p, a| [p, a] }) }
+          end
+
+        result += @cached_specs[catalog][name].select { |spec| dependency.satisfied_by?(spec) }
       end
     end
     result.sort_by { |spec| [spec.gem_version.prerelease? ? 0 : 1, spec.gem_version] }
   end
 
   def dependencies_for(specification)
-    @catalogs.each do |catalog|
-      info = catalog.compact_index.gem_info(specification.name)
-      info &&= info[specification.version]
-      return info[:dependencies].map { |n, cs| Dep.new(n, cs) } if info
+    info = specification.info
+    info = info.select { |p, i| @active_platforms.include?(p) }
+
+    deps = info.flat_map { |_, i| i[:dependencies] }.map { |n, cs| Dep.new(n, cs) }
+    ruby_constraints = info.flat_map { |_, i| (i[:ruby] || "").split(/\s*,\s*/) }
+    unless ruby_constraints.empty?
+      deps << Dep.new("ruby", ruby_constraints)
     end
-    []
+    deps
   end
 
   def requirement_satisfied_by?(requirement, activated, spec)
