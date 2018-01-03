@@ -7,10 +7,11 @@ require "monitor"
 require_relative "../pinboard"
 
 class Paperback::Catalog::CompactIndex
-  def initialize(uri, uri_identifier, httpool:)
+  def initialize(uri, uri_identifier, httpool:, work_pool:)
     @uri = uri
     @uri_identifier = uri_identifier
     @httpool = httpool
+    @work_pool = work_pool
 
     @gem_tokens = Hash.new("NONE")
     @needs_update = true
@@ -150,7 +151,7 @@ class Paperback::Catalog::CompactIndex
       @pinboard ||=
         begin
           FileUtils.mkdir_p(pinboard_dir)
-          Paperback::Pinboard.new(pinboard_dir, monitor: @monitor, httpool: @httpool)
+          Paperback::Pinboard.new(pinboard_dir, monitor: @monitor, httpool: @httpool, work_pool: @work_pool)
         end
     end
   end

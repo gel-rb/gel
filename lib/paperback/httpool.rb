@@ -30,8 +30,13 @@ class Paperback::Httpool
     # https://github.com/rubygems/rubygems.org/issues/1698#issuecomment-348744676  ¯\_(ツ)_/¯
     actual_host = "index.rubygems.org" if actual_host.downcase == "rubygems.org"
 
+    t = Time.now
     http ||= Net::HTTP.start(actual_host, uri.port, use_ssl: uri.scheme == "https")
-    http.request(request)
+    $stderr.puts "GET #{uri}" if $DEBUG
+    response = http.request(request)
+    $stderr.puts "HTTP #{response.code} (#{response.message}) #{uri} [#{Time.now - t}s]" if $DEBUG
+    response
+
   ensure
     if http
       synchronize do

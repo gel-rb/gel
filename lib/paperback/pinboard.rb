@@ -15,7 +15,7 @@ class Paperback::Pinboard
   UPDATE_CONCURRENCY = 8
 
   attr_reader :root
-  def initialize(root, monitor: Monitor.new, httpool: Paperback::Httpool.new)
+  def initialize(root, monitor: Monitor.new, httpool: Paperback::Httpool.new, work_pool: nil)
     @root = root
     @monitor = monitor
     @httpool = httpool
@@ -24,7 +24,7 @@ class Paperback::Pinboard
     @files = {}
     @waiting = Hash.new { |h, k| h[k] = [] }
 
-    @update_pool = Paperback::WorkPool.new(UPDATE_CONCURRENCY, monitor: @monitor, name: "paperback-pinboard")
+    @update_pool = work_pool || Paperback::WorkPool.new(UPDATE_CONCURRENCY, monitor: @monitor, name: "paperback-pinboard")
   end
 
   def file(uri, token: nil, tail: true)

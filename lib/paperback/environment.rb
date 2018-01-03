@@ -104,6 +104,13 @@ class Paperback::Environment
 
     require_relative "specification_provider"
     provider = Paperback::SpecificationProvider.new(catalogs, ["ruby"])
+    @gemfile.gems.select do |_, _, options|
+      !options[:path] && !options[:git]
+    end.each do |name, _, _|
+      catalogs.each do |catalog|
+        catalog.dependency_index.refresh_gem(name)
+      end
+    end
 
     ui = Struct.new(:output) { include Molinillo::UI }.new(output || File.open(IO::NULL))
 

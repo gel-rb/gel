@@ -39,8 +39,6 @@ class Paperback::TailFile
       MAXIMUM_CHAIN.times do
         f.seek(0, IO::SEEK_SET) if force_reset
 
-        t = Time.now
-        debug "GET #{uri}"
         request = Net::HTTP::Get.new(uri)
 
         requested_from = 0
@@ -55,7 +53,6 @@ class Paperback::TailFile
         request["If-None-Match"] = @etag if @etag
 
         response = @httpool.request(uri, request)
-        debug "HTTP #{response.code} (#{response.message}) #{uri} [#{Time.now - t}s]"
 
         case response
         when Net::HTTPNotModified
@@ -171,6 +168,13 @@ class Paperback::TailFile
 
         when Net::HTTPRedirection
           uri = URI(response["Location"])
+          next
+
+        when Net::HTTPTooManyRequests
+          # https://github.com/rubygems/rubygems-infrastructure/blob/adc0668c1f1539f281ffe86c6e0ad12743c5c8bd/cookbooks/rubygems-balancer/templates/default/site.conf.erb#L12
+          debug "Rate limited"
+
+          sleep 1 + rand
           next
 
         else

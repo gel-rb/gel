@@ -22,6 +22,24 @@ class Paperback::SpecificationProvider
     end
   end
 
+  LateDep = Struct.new(:name, :blocks) do
+    def dep
+      Dep.new(name, constraints)
+    end
+
+    def constraints
+      @constraints ||= blocks.flat_map(&:call)
+    end
+
+    def gem_requirement
+      dep.gem_requirement
+    end
+
+    def satisfied_by?(spec)
+      dep.satisfied_by?(spec)
+    end
+  end
+
   Ruby = Spec.new("ruby", RUBY_VERSION, [])
 
   def initialize(catalogs, active_platforms)
@@ -63,10 +81,16 @@ class Paperback::SpecificationProvider
     info = info.select { |p, i| @active_platforms.include?(p) }
 
     deps = info.flat_map { |_, i| i[:dependencies] }.map { |n, cs| Dep.new(n, cs) }
-    ruby_constraints = info.flat_map { |_, i| (i[:ruby] || "").split(/\s*,\s*/) }
+    ruby_constraints = info.flat_map { |_, i| i[:ruby].is_a?(String) ? i[:ruby].split(/\s*,\s*/) : [] }
     unless ruby_constraints.empty?
       deps << Dep.new("ruby", ruby_constraints)
     end
+
+    ruby_constraints = info.flat_map { |_, i| i[:ruby].is_a?(Proc) ? i[:ruby] : [] }
+    unless ruby_constraints.empty?
+      deps << LateDep.new("ruby", ruby_constraints)
+    end
+
     deps
   end
 
@@ -102,6 +126,7 @@ class Paperback::SpecificationProvider
     dependencies.sort_by do |dependency|
       name = name_for(dependency)
       [
+        dependency.is_a?(LateDep) ? 1 : 0,
         activated.vertex_named(name).payload ? 0 : 1,
         conflicts[name] ? 0 : 1,
       ]

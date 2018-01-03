@@ -8,17 +8,22 @@ require "digest"
 require_relative "httpool"
 
 class Paperback::Catalog
-  def initialize(uri, httpool: Paperback::Httpool.new)
+  def initialize(uri, httpool: Paperback::Httpool.new, work_pool: nil)
     @uri = normalize_uri(uri)
     @httpool = httpool
+    @work_pool = work_pool
   end
 
   def compact_index
-    @compact_index ||= Paperback::Catalog::CompactIndex.new(@uri, uri_identifier, httpool: @httpool)
+    @compact_index ||= Paperback::Catalog::CompactIndex.new(@uri, uri_identifier, httpool: @httpool, work_pool: @work_pool)
+  end
+
+  def dependency_index
+    @dependency_index ||= Paperback::Catalog::DependencyIndex.new(self, @uri, uri_identifier, httpool: @httpool, work_pool: @work_pool)
   end
 
   def gem_info(name)
-    compact_index.gem_info(name)
+    dependency_index.gem_info(name)
   end
 
   def cached_gem(name, version)
@@ -86,3 +91,4 @@ class Paperback::Catalog
 end
 
 require_relative "catalog/compact_index"
+require_relative "catalog/dependency_index"
