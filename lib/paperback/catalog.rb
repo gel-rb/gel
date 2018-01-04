@@ -22,8 +22,12 @@ class Paperback::Catalog
     @dependency_index ||= Paperback::Catalog::DependencyIndex.new(self, @uri, uri_identifier, httpool: @httpool, work_pool: @work_pool)
   end
 
+  def legacy_index
+    @legacy_index ||= Paperback::Catalog::LegacyIndex.new(self, @uri, uri_identifier, httpool: @httpool, work_pool: @work_pool)
+  end
+
   def gem_info(name)
-    dependency_index.gem_info(name)
+    legacy_index.gem_info(name)
   end
 
   def cached_gem(name, version)
@@ -92,3 +96,4 @@ end
 
 require_relative "catalog/compact_index"
 require_relative "catalog/dependency_index"
+require_relative "catalog/legacy_index"
