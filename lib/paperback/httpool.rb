@@ -33,6 +33,11 @@ class Paperback::Httpool
     t = Time.now
     http ||= Net::HTTP.start(actual_host, uri.port, use_ssl: uri.scheme == "https")
     $stderr.puts "GET #{uri}" if $DEBUG
+
+    if uri.user
+      request.basic_auth(uri.user, uri.password || "")
+    end
+
     response = http.request(request)
     $stderr.puts "HTTP #{response.code} (#{response.message}) #{uri} [#{Time.now - t}s]" if $DEBUG
     response
