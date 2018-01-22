@@ -25,6 +25,7 @@ class Paperback::Catalog::CompactIndex
     @done_refresh = {}
 
     @gem_info = {}
+    @error = nil
   end
 
   def update
@@ -34,7 +35,14 @@ class Paperback::Catalog::CompactIndex
       @updating = true
     end
 
-    pinboard.async_file(uri("versions"), tail: true) do |f|
+    error = lambda do |ex|
+      @monitor.synchronize do
+        @error = ex
+        @refresh_cond.broadcast
+      end
+    end
+
+    pinboard.async_file(uri("versions"), tail: true, error: error) do |f|
       new_tokens = {}
 
       started = false
@@ -66,24 +74,25 @@ class Paperback::Catalog::CompactIndex
     gems_to_refresh = []
 
     @monitor.synchronize do
-      if @gem_info.key?(gem_name)
+      if info = _info(gem_name)
         unless @done_refresh[gem_name]
-          gems_to_refresh = @gem_info[gem_name].values.flat_map { |v| v[:dependencies] }.map(&:first).uniq
+          gems_to_refresh = info.values.flat_map { |v| v[:dependencies] }.map(&:first).uniq
           @done_refresh[gem_name] = true
         end
-        return @gem_info[gem_name]
+        return info
       end
     end
 
     refresh_gem gem_name
 
     @monitor.synchronize do
-      @refresh_cond.wait_until { @gem_info.key?(gem_name) }
+      info = nil
+      @refresh_cond.wait_until { info = _info(gem_name) }
       unless @done_refresh[gem_name]
-        gems_to_refresh = @gem_info[gem_name].values.flat_map { |v| v[:dependencies] }.map(&:first).uniq
+        gems_to_refresh = info.values.flat_map { |v| v[:dependencies] }.map(&:first).uniq
         @done_refresh[gem_name] = true
       end
-      @gem_info[gem_name]
+      info
     end
   ensure
     gems_to_refresh.each do |dep_name|
@@ -104,7 +113,22 @@ class Paperback::Catalog::CompactIndex
       already_active = !@active_gems.add?(gem_name)
     end
 
-    pinboard.async_file(uri("info", gem_name), token: @gem_tokens[gem_name], only_updated: already_active) do |f|
+    unless @gem_tokens.key?(gem_name)
+      @monitor.synchronize do
+        @gem_info[gem_name] = {}
+        @refresh_cond.broadcast
+        return
+      end
+    end
+
+    error = lambda do |ex|
+      @monitor.synchronize do
+        @gem_info[gem_name] = ex
+        @refresh_cond.broadcast
+      end
+    end
+
+    pinboard.async_file(uri("info", gem_name), token: @gem_tokens[gem_name], only_updated: already_active, error: error) do |f|
       dependency_names = Set.new
       info = {}
 
@@ -145,6 +169,14 @@ class Paperback::Catalog::CompactIndex
   end
 
   private
+
+  def _info(gem_name)
+    raise @error if @error
+    if i = @gem_info[gem_name]
+      raise i if i.is_a?(Exception)
+      i
+    end
+  end
 
   def pinboard
     @pinboard || @monitor.synchronize do

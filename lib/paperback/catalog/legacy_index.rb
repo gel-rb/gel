@@ -47,6 +47,7 @@ class Paperback::Catalog::LegacyIndex
     @done_refresh = {}
 
     @gem_info = {}
+    @error = nil
 
     @work_pool ||= Paperback::WorkPool.new(UPDATE_CONCURRENCY, monitor: @monitor, name: "paperback-catalog")
   end
@@ -63,7 +64,15 @@ class Paperback::Catalog::LegacyIndex
 
     versions = {}
 
-    pinboard.async_file(uri("specs.4.8.gz"), tail: false) do |f|
+    error = lambda do |ex|
+      @monitor.synchronize do
+        @error = ex
+        @updating = false
+        @refresh_cond.broadcast
+      end
+    end
+
+    pinboard.async_file(uri("specs.4.8.gz"), tail: false, error: error) do |f|
       data = Zlib::GzipReader.new(f).read
       data = Marshal.load(data)
 
@@ -91,7 +100,7 @@ class Paperback::Catalog::LegacyIndex
       end
     end
 
-    pinboard.async_file(uri("prerelease_specs.4.8.gz"), tail: false) do |f|
+    pinboard.async_file(uri("prerelease_specs.4.8.gz"), tail: false, error: error) do |f|
       data = Zlib::GzipReader.new(f).read
       data = Marshal.load(data)
 
@@ -126,24 +135,25 @@ class Paperback::Catalog::LegacyIndex
     gems_to_refresh = []
 
     @monitor.synchronize do
-      if @gem_info.key?(gem_name) && @gem_info[gem_name].values.all? { |x| x.is_a?(Hash) }
+      if (info = _info(gem_name)) && info.values.all? { |x| x.is_a?(Hash) }
         unless @done_refresh[gem_name]
-          gems_to_refresh = @gem_info[gem_name].values.flat_map { |v| v[:dependencies] }.map(&:first).uniq
+          gems_to_refresh = info.values.flat_map { |v| v[:dependencies] }.map(&:first).uniq
           @done_refresh[gem_name] = true
         end
-        return @gem_info[gem_name]
+        return info
       end
     end
 
     refresh_gem gem_name
 
     @monitor.synchronize do
-      @refresh_cond.wait_until { @gem_info.key?(gem_name) && @gem_info[gem_name].values.all? { |x| x.is_a?(Hash) } }
+      info = nil
+      @refresh_cond.wait_until { (info = _info(gem_name)) && info.values.all? { |x| x.is_a?(Hash) } }
       unless @done_refresh[gem_name]
-        gems_to_refresh = @gem_info[gem_name].values.flat_map { |v| v[:dependencies] }.map(&:first).uniq
+        gems_to_refresh = info.values.flat_map { |v| v[:dependencies] }.map(&:first).uniq
         @done_refresh[gem_name] = true
       end
-      @gem_info[gem_name]
+      info
     end
   ensure
     gems_to_refresh.each do |dep_name|
@@ -161,7 +171,11 @@ class Paperback::Catalog::LegacyIndex
         return
       end
 
-      return unless info = @gem_info[gem_name]
+      unless info = @gem_info[gem_name]
+        @gem_info[gem_name] = {}
+        @refresh_cond.broadcast
+        return
+      end
 
       versions = info.keys.select { |v| info[v].nil? }
       versions.each do |v|
@@ -175,7 +189,12 @@ class Paperback::Catalog::LegacyIndex
     end
 
     versions.each do |v|
-      pinboard.async_file(uri("quick", "Marshal.4.8", "#{gem_name}-#{v}.gemspec.rz"), token: false, tail: false) do |f|
+      error = lambda do |ex|
+        @gem_info[gem_name][v] = ex
+        @refresh_cond.broadcast
+      end
+
+      pinboard.async_file(uri("quick", "Marshal.4.8", "#{gem_name}-#{v}.gemspec.rz"), token: false, tail: false, error: error) do |f|
         data = Zlib::Inflate.inflate(f.read)
         # TODO: Extract the data we need without a full unmarshal
         spec = Marshal.load(data)
@@ -192,6 +211,18 @@ class Paperback::Catalog::LegacyIndex
   end
 
   private
+
+  def _info(gem_name)
+    raise @error if @error
+    if i = @gem_info[gem_name]
+      raise i if i.is_a?(Exception)
+      if i.values.all? { |v| v.is_a?(Hash) }
+        i
+      elsif e = i.values.grep(Exception).first
+        raise e
+      end
+    end
+  end
 
   def pinboard
     @pinboard || @monitor.synchronize do

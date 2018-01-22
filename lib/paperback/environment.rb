@@ -108,7 +108,9 @@ class Paperback::Environment
       !options[:path] && !options[:git]
     end.each do |name, _, _|
       catalogs.each do |catalog|
-        catalog.dependency_index.refresh_gem(name)
+        catalog.instance_variable_get(:@indexes).each do |index|
+          index.instance_variable_get(:@pending_gems) << name
+        end
       end
     end
 

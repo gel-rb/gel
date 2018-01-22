@@ -44,6 +44,7 @@ class Paperback::Catalog::DependencyIndex
     @done_refresh = {}
 
     @gem_info = {}
+    @error = nil
 
     @work_pool ||= Paperback::WorkPool.new(UPDATE_CONCURRENCY, monitor: @monitor, name: "paperback-catalog")
   end
@@ -52,12 +53,12 @@ class Paperback::Catalog::DependencyIndex
     gems_to_refresh = []
 
     @monitor.synchronize do
-      if @gem_info.key?(gem_name)
+      if info = _info(gem_name)
         unless @done_refresh[gem_name]
-          gems_to_refresh = @gem_info[gem_name].values.flat_map { |v| v[:dependencies] }.map(&:first).uniq
+          gems_to_refresh = info.values.flat_map { |v| v[:dependencies] }.map(&:first).uniq
           @done_refresh[gem_name] = true
         end
-        return @gem_info[gem_name]
+        return info
       end
     end
 
@@ -65,12 +66,13 @@ class Paperback::Catalog::DependencyIndex
     force_refresh_including gem_name
 
     @monitor.synchronize do
-      @refresh_cond.wait_until { @gem_info.key?(gem_name) }
+      info = nil
+      @refresh_cond.wait_until { info = _info(gem_name) }
       unless @done_refresh[gem_name]
-        gems_to_refresh = @gem_info[gem_name].values.flat_map { |v| v[:dependencies] }.map(&:first).uniq
+        gems_to_refresh = info.values.flat_map { |v| v[:dependencies] }.map(&:first).uniq
         @done_refresh[gem_name] = true
       end
-      @gem_info[gem_name]
+      info
     end
   ensure
     gems_to_refresh.each do |dep_name|
@@ -82,7 +84,7 @@ class Paperback::Catalog::DependencyIndex
     gems_to_refresh = []
 
     @monitor.synchronize do
-      return if @gem_info.key?(gem_name) || @active_gems.include?(gem_name)
+      return if _info(gem_name) || @active_gems.include?(gem_name)
 
       gems_to_refresh << gem_name
       @pending_gems.delete gem_name
@@ -102,8 +104,19 @@ class Paperback::Catalog::DependencyIndex
   def refresh_some_gems(gems)
     gem_list = gems.map { |g| CGI.escape(g) }.join(",")
     @work_pool.queue(gem_list) do
-      response = @catalog.send(:http_get, "api/v1/dependencies?gems=#{gem_list}")
+      response =
+        begin
+          @catalog.send(:http_get, "api/v1/dependencies?gems=#{gem_list}")
+        rescue => ex
+          @monitor.synchronize do
+            @error = ex
+            @refresh_cond.broadcast
+          end
+          next
+        end
+
       new_info = {}
+      gems.each { |g| new_info[g] = {} }
 
       new_dependencies = Set.new
 
@@ -150,11 +163,19 @@ class Paperback::Catalog::DependencyIndex
 
   def refresh_gem(gem_name)
     @monitor.synchronize do
-      @pending_gems << gem_name unless @gem_info.key?(gem_name) || @active_gems.include?(gem_name)
+      @pending_gems << gem_name unless _info(gem_name) || @active_gems.include?(gem_name)
     end
   end
 
   private
+
+  def _info(name)
+    raise @error if @error
+    if i = @gem_info[name]
+      raise i if i.is_a?(Exception)
+      i
+    end
+  end
 
   def pinboard
     @pinboard || @monitor.synchronize do

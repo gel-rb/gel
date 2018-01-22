@@ -12,6 +12,12 @@ class Paperback::Catalog
     @uri = normalize_uri(uri)
     @httpool = httpool
     @work_pool = work_pool
+
+    @indexes = [
+      Paperback::Catalog::CompactIndex.new(@uri, uri_identifier, httpool: @httpool, work_pool: @work_pool),
+      Paperback::Catalog::DependencyIndex.new(self, @uri, uri_identifier, httpool: @httpool, work_pool: @work_pool),
+      Paperback::Catalog::LegacyIndex.new(self, @uri, uri_identifier, httpool: @httpool, work_pool: @work_pool),
+    ]
   end
 
   def compact_index
@@ -27,7 +33,14 @@ class Paperback::Catalog
   end
 
   def gem_info(name)
-    legacy_index.gem_info(name)
+    @indexes.first.gem_info(name)
+  rescue Net::HTTPServerException
+    if @indexes.size > 1
+      @indexes.shift
+      retry
+    else
+      raise
+    end
   end
 
   def cached_gem(name, version)

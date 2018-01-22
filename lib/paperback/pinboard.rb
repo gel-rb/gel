@@ -40,7 +40,7 @@ class Paperback::Pinboard
     end
   end
 
-  def async_file(uri, token: nil, tail: true, only_updated: false)
+  def async_file(uri, token: nil, tail: true, only_updated: false, error: nil)
     if stale(uri, token)
       add uri, token: token
 
@@ -49,7 +49,15 @@ class Paperback::Pinboard
 
       unless already_queued
         @update_pool.queue(uri.path) do
-          tail_file.update(!tail)
+          begin
+            tail_file.update(!tail)
+          rescue => ex
+            if error
+              error.call(ex)
+            else
+              raise
+            end
+          end
         end
         @update_pool.start
       end
