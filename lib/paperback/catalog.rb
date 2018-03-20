@@ -1,6 +1,7 @@
 require "fileutils"
 require "net/http"
 require "uri"
+require "digest"
 
 require_relative "httpool"
 

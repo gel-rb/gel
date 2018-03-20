@@ -16,7 +16,7 @@ TODO: Write usage instructions here
 
 ## Development
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `bin/rake test` to run the tests.
+After checking out the repo, run `bin/setup` to install dependencies and `bin/rake fixtures` to set up the tests. Then, run `bin/rake test` to run the tests.
 
 ## Contributing
 
