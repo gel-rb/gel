@@ -61,7 +61,7 @@ class Paperback::Catalog
   end
 
   def to_s
-    uri.to_s
+    @uri.to_s
   end
 
   private

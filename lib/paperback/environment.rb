@@ -118,12 +118,74 @@ class Paperback::Environment
 
     resolver = Molinillo::Resolver.new(provider, ui)
 
-    requirements = @gemfile.gems.select { |_, _, options| !options[:path] && !options[:git] }.map { |name, constraints, _| Paperback::SpecificationProvider::Dep.new(name, constraints) }
+    full_requirements = @gemfile.gems.select do |_, _, options|
+      !options[:path] && !options[:git]
+    end.map do |name, constraints, _|
+      Paperback::SpecificationProvider::Dep.new(name, constraints)
+    end
 
-    graph = resolver.resolve(requirements)
+    platform_requirements = @gemfile.gems.select do |_, _, options|
+      !options[:path] && !options[:git] && (!options[:platforms] || options[:platforms].include?(:mri))
+    end.map do |name, constraints, _|
+      Paperback::SpecificationProvider::Dep.new(name, constraints)
+    end
 
-    graph.each do |vertex|
-      p vertex.payload
+    graph = resolver.resolve(platform_requirements)
+
+    lock_content = []
+
+    lock_content << "GEM"
+    catalogs.each do |catalog|
+      lock_content << "  remote: #{catalog.to_s}"
+    end
+    lock_content << "  specs:"
+    graph.sort_by { |v| v.payload.name }.each do |vertex|
+      payload = vertex.payload
+      next if payload.name == "bundler" || payload.name == "ruby"
+
+      lock_content << "    #{payload.name} (#{payload.version})"
+      payload.info.each do |(platform, attributes)|
+        next unless platform == "ruby"
+
+        deps = attributes[:dependencies]
+        next unless deps && deps.first
+
+        dep_lines = deps.map do |(dep_name, dep_requirements)|
+          next dep_name if dep_requirements == [">= 0"]
+
+          req = Paperback::Support::GemRequirement.new(dep_requirements)
+          req_strings = req.requirements.sort_by { |(_op, ver)| ver }.map { |(op, ver)| "#{op} #{ver}" }
+
+          "#{dep_name} (#{req_strings.join(", ")})"
+        end
+
+        dep_lines.sort.each do |line|
+          lock_content << "      #{line}"
+        end
+      end
+    end
+
+    lock_content << ""
+    lock_content << "PLATFORMS"
+    lock_content << "  ruby"
+    lock_content << ""
+    lock_content << "DEPENDENCIES"
+    full_requirements.sort_by(&:name).each do |req|
+      if req.constraints == []
+        lock_content << "  #{req.name}"
+      else
+        lock_content << "  #{req.name} (#{req.constraints.join(", ")})"
+      end
+    end
+    lock_content << ""
+    lock_content << "RUBY VERSION"
+    lock_content << "   #{RUBY_DESCRIPTION.split.first(2).join(" ")}"
+    lock_content << ""
+    lock_content << "BUNDLED WITH"
+    lock_content << "   1.999"
+
+    File.open(lockfile, "w") do |output|
+      output.write(lock_content.join("\n") << "\n")
     end
   end
 
