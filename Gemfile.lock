@@ -3,6 +3,7 @@ PATH
   specs:
     paperback (0.1.0)
       molinillo
+      pub_grub (= 0.3.0)
 
 GEM
   remote: https://rubygems.org/
@@ -14,6 +15,7 @@ GEM
     hashdiff (0.3.7)
     minitest (5.10.3)
     molinillo (0.6.4)
+    pub_grub (0.3.0)
     public_suffix (3.0.1)
     rake (12.3.0)
     safe_yaml (1.0.4)
