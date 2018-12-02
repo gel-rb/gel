@@ -92,7 +92,6 @@ class Paperback::Environment
     end
 
     # HACK
-    $: << File.expand_path("../../tmp/bootstrap/store/ruby/gems/molinillo-0.6.4/lib", __dir__)
     $: << File.expand_path("../../tmp/bootstrap/store/ruby/gems/pub_grub-0.3.0/lib", __dir__)
 
     require_relative "catalog"
