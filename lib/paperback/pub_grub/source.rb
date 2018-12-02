@@ -25,7 +25,7 @@ module Paperback::PubGrub
       @specs_by_package_version = {}
     end
 
-    def versions_for(package, range)
+    def versions_for(package, range=PubGrub::VersionRange.any)
       return [@root_version] if package == @root
 
       fetch_package_info(package)
@@ -62,9 +62,23 @@ module Paperback::PubGrub
 
     def incompatibilities_for(package, version)
       deps = dependencies_for(package, version)
+
+      # Versions sorted by value, not preference
+      sorted_versions = versions_for(package)
+      sorted_versions.sort!
+
       deps.map do |dep_name, constraints|
-        # TODO: This should expand to include similar neighbouring packages
-        self_constraint = PubGrub::VersionConstraint.exact(package, version)
+        # Build a range for all versions of this package with the same dependency
+        low = high = sorted_versions.index(version)
+        high += 1
+
+        self_range = PubGrub::VersionRange.new(
+          min: sorted_versions[low],
+          max: sorted_versions[high],
+          include_min: true,
+          include_max: false
+        )
+        self_constraint = PubGrub::VersionConstraint.new(package, range: self_range)
 
         dep_package = @packages[dep_name]
         if !dep_package
