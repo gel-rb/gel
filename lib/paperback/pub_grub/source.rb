@@ -69,8 +69,8 @@ module Paperback::PubGrub
       deps.map do |dep_name, constraints|
         # Build a range for all versions of this package with the same dependency
         low = high = sorted_versions.index(version)
-        while low >= 0 &&
-            dependencies_for(package, sorted_versions[low])[dep_name] == constraints
+        while low > 0 &&
+            dependencies_for(package, sorted_versions[low-1])[dep_name] == constraints
           low -= 1
         end
 
@@ -81,7 +81,7 @@ module Paperback::PubGrub
 
         self_range =
           PubGrub::VersionRange.new(
-          min: low < 0 ? nil : sorted_versions[low],
+          min: low == 0 ? nil : sorted_versions[low],
           max: sorted_versions[high],
           include_min: true,
           include_max: false
