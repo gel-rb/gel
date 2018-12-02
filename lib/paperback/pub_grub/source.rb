@@ -10,46 +10,6 @@ module Paperback::PubGrub
       end
     end
 
-    Dep = Struct.new(:name, :constraints) do
-      def gem_requirement
-        @gem_requirement ||= Paperback::Support::GemRequirement.new(constraints)
-      end
-
-      def satisfied_by?(spec)
-        return false unless name == spec.name
-        gem_requirement.satisfied_by?(spec.gem_version)
-      end
-
-      def to_range
-        constraints.flatten.map do |constraint|
-          op, ver = Paperback::Support::GemRequirement.parse(constraint)
-          case op
-          when "~>"
-            # TODO: not sure this is correct for prereleases
-            PubGrub::VersionRange.new(min: ver, max: ver.bump, include_min: true)
-          when ">"
-            PubGrub::VersionRange.new(min: ver)
-          when ">="
-            if ver == Gem::Version.new("0")
-              PubGrub::VersionRange.any
-            else
-              PubGrub::VersionRange.new(min: ver, include_min: true)
-            end
-          when "<"
-            PubGrub::VersionRange.new(max: ver)
-          when "<="
-            PubGrub::VersionRange.new(max: ver, include_max: true)
-          when "="
-            PubGrub::VersionRange.new(min: ver, max: ver, include_min: true, include_max: true)
-          when "!="
-            PubGrub::VersionRange.new(min: ver, max: ver, include_min: true, include_max: true).invert
-          else
-            raise "bad version specifier: #{op}"
-          end
-        end.inject(:intersect) || PubGrub::VersionRange.any
-      end
-    end
-
     attr_reader :root, :root_version
 
     def initialize(gemfile, catalogs, active_platforms)
@@ -87,7 +47,12 @@ module Paperback::PubGrub
         spec = @specs_by_package_version[package][version.to_s]
         info = spec.info
         info = info.select { |p, i| @active_platforms.include?(p) }
-        deps = info.flat_map { |_, i| i[:dependencies] }.map { |n, cs| Dep.new(n, cs) }
+
+        deps = {}
+        info.flat_map { |_, i| i[:dependencies] }.each do |n, cs|
+          deps[n] ||= []
+          deps[n].concat cs
+        end
 
         # FIXME: ruby_constraints ???
 
@@ -97,17 +62,17 @@ module Paperback::PubGrub
 
     def incompatibilities_for(package, version)
       deps = dependencies_for(package, version)
-      deps.map do |dep|
+      deps.map do |dep_name, constraints|
         # TODO: This should expand to include similar neighbouring packages
         self_constraint = PubGrub::VersionConstraint.exact(package, version)
 
-        dep_package = @packages[dep.name]
+        dep_package = @packages[dep_name]
         if !dep_package
-          # TODO: PubGrub is albe to handle this gracefully
+          # TODO: PubGrub is able to handle this gracefully
           raise "Unknown package"
         end
 
-        dep_constraint = PubGrub::VersionConstraint.new(dep_package, range: dep.to_range)
+        dep_constraint = PubGrub::VersionConstraint.new(dep_package, range: to_range(constraints))
 
         PubGrub::Incompatibility.new([
           PubGrub::Term.new(self_constraint, true),
@@ -147,19 +112,54 @@ module Paperback::PubGrub
     end
 
     def root_deps
+      deps = {}
+
       full_requirements = @gemfile.gems.select do |_, _, options|
         !options[:path] && !options[:git]
       end.map do |name, constraints, _|
-        Dep.new(name, constraints.flatten)
+        deps[name] ||= []
+        deps[name].concat constraints.flatten
       end
 
       platform_requirements = @gemfile.gems.select do |_, _, options|
         !options[:path] && !options[:git] && (!options[:platforms] || options[:platforms].include?(:mri))
       end.map do |name, constraints, _|
-        Dep.new(name, constraints.flatten)
+        deps[name] ||= []
+        deps[name].concat constraints.flatten
       end
 
-      (full_requirements + platform_requirements).uniq
+      deps.values.each(&:uniq!)
+
+      deps
+    end
+
+    def to_range(constraints)
+      Array(constraints).flatten.map do |constraint|
+        op, ver = Paperback::Support::GemRequirement.parse(constraint)
+        case op
+        when "~>"
+          # TODO: not sure this is correct for prereleases
+          PubGrub::VersionRange.new(min: ver, max: ver.bump, include_min: true)
+        when ">"
+          PubGrub::VersionRange.new(min: ver)
+        when ">="
+          if ver == Gem::Version.new("0")
+            PubGrub::VersionRange.any
+          else
+            PubGrub::VersionRange.new(min: ver, include_min: true)
+          end
+        when "<"
+          PubGrub::VersionRange.new(max: ver)
+        when "<="
+          PubGrub::VersionRange.new(max: ver, include_max: true)
+        when "="
+          PubGrub::VersionRange.new(min: ver, max: ver, include_min: true, include_max: true)
+        when "!="
+          PubGrub::VersionRange.new(min: ver, max: ver, include_min: true, include_max: true).invert
+        else
+          raise "bad version specifier: #{op}"
+        end
+      end.inject(:intersect) || PubGrub::VersionRange.any
     end
   end
 end

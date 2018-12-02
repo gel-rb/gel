@@ -126,9 +126,7 @@ class Paperback::Environment
       deps = source.dependencies_for(package, version)
       next unless deps && deps.first
 
-      dep_lines = deps.map do |dep|
-        dep_name = dep.name
-        dep_requirements = dep.constraints
+      dep_lines = deps.map do |dep_name, dep_requirements|
         next dep_name if dep_requirements == [">= 0"]
 
         req = Paperback::Support::GemRequirement.new(dep_requirements)
@@ -149,11 +147,11 @@ class Paperback::Environment
     lock_content << "DEPENDENCIES"
 
     root_deps = source.dependencies_for(source.root, source.root_version)
-    root_deps.sort_by(&:name).each do |dep|
-      if dep.constraints == []
-        lock_content << "  #{dep.name}"
+    root_deps.sort_by { |name,_| name }.each do |name, constraints|
+      if constraints == []
+        lock_content << "  #{name}"
       else
-        lock_content << "  #{dep.name} (#{dep.constraints.join(", ")})"
+        lock_content << "  #{name} (#{constraints.join(", ")})"
       end
     end
     lock_content << ""
