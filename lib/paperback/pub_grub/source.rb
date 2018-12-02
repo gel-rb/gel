@@ -89,11 +89,6 @@ module Paperback::PubGrub
         self_constraint = PubGrub::VersionConstraint.new(package, range: self_range)
 
         dep_package = @packages[dep_name]
-        if !dep_package
-          # TODO: PubGrub is able to handle this gracefully
-          raise "Unknown package"
-        end
-
         dep_constraint = PubGrub::VersionConstraint.new(dep_package, range: to_range(constraints))
 
         PubGrub::Incompatibility.new([
