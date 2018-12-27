@@ -161,8 +161,8 @@ class Paperback::Environment
     lock_content << "BUNDLED WITH"
     lock_content << "   1.999"
 
-    File.open(lockfile, "w") do |output|
-      output.write(lock_content.join("\n") << "\n")
+    File.open(lockfile, "w") do |f|
+      f.write(lock_content.join("\n") << "\n")
     end
   end
 
