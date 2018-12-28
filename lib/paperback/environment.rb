@@ -92,7 +92,7 @@ class Paperback::Environment
     end
 
     # HACK
-    $: << File.expand_path("../../tmp/bootstrap/store/ruby/gems/pub_grub-0.3.0/lib", __dir__)
+    $: << File.expand_path("../../tmp/bootstrap/store/ruby/gems/pub_grub-0.4.1/lib", __dir__)
 
     require_relative "catalog"
     all_sources = (gemfile.sources | gemfile.gems.flat_map { |_, _, o| o[:source] }).compact
