@@ -69,7 +69,7 @@ class Paperback::LockLoader
       end
     elsif pair = lock_content.assoc("DEPENDENCIES")
       _, list = pair
-      top_gems = list.map { |name| name.chomp("!") }
+      top_gems = list.map { |name| name.split(" ", 2)[0].chomp("!") }
       top_gems.each do |name|
         filtered_gems[name] = true
       end
