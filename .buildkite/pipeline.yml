@@ -1,11 +1,18 @@
-steps:
+_templates:
   - &rake
-    name: ":ruby: 2.3"
     command: "bin/rake"
     plugins:
       docker-compose#v2.6.0:
         run: app
         config: .buildkite/docker-compose.yml
+
+steps:
+  - <<: *rake
+    name: "JRuby"
+    env:
+      RUBY_IMAGE: "jruby:latest"
+  - <<: *rake
+    name: ":ruby: 2.3"
     env:
       RUBY_IMAGE: "ruby:2.3"
   - <<: *rake
@@ -20,7 +27,3 @@ steps:
     name: ":ruby: 2.6"
     env:
       RUBY_IMAGE: "ruby:2.6"
-  - <<: *rake
-    name: "JRuby"
-    env:
-      RUBY_IMAGE: "jruby:latest"
