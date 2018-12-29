@@ -55,6 +55,8 @@ def with_fixture_gems_installed(paths)
 end
 
 def read_from_fork
+  skip "Can't fork" if jruby?
+
   r, w = IO.pipe
 
   child_pid = fork do
@@ -70,6 +72,12 @@ def read_from_fork
   w.close
   r.read
 ensure
-  _, status = Process.waitpid2(child_pid)
-  raise "child failed: #{status.inspect}" unless status.success?
+  if child_pid
+    _, status = Process.waitpid2(child_pid)
+    raise "child failed: #{status.inspect}" unless status.success?
+  end
+end
+
+def jruby?
+  RUBY_ENGINE == "jruby"
 end

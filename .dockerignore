@@ -1,5 +1,4 @@
 /.buildkite/
 /.dockerignore
 /pkg/
-/test/fixtures/*.gem
 /tmp/

@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
-require "sdbm"
+begin
+  require "sdbm"
+rescue LoadError
+end
 require "pstore"
 require "pathname"
 
@@ -10,7 +13,7 @@ class Paperback::DB
   def self.new(root, name)
     return super unless self == Paperback::DB
 
-    SDBM.new(root, name)
+    PStore.new(root, name)
   end
 
   def initialize(root, name)

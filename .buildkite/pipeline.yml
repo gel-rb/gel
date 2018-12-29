@@ -7,16 +7,20 @@ steps:
         run: app
         config: .buildkite/docker-compose.yml
     env:
-      RUBY_IMAGE: "2.3"
+      RUBY_IMAGE: "ruby:2.3"
   - <<: *rake
     name: ":ruby: 2.4"
     env:
-      RUBY_IMAGE: "2.4"
+      RUBY_IMAGE: "ruby:2.4"
   - <<: *rake
     name: ":ruby: 2.5"
     env:
-      RUBY_IMAGE: "2.5"
+      RUBY_IMAGE: "ruby:2.5"
   - <<: *rake
     name: ":ruby: 2.6"
     env:
-      RUBY_IMAGE: "2.6"
+      RUBY_IMAGE: "ruby:2.6"
+  - <<: *rake
+    name: "JRuby"
+    env:
+      RUBY_IMAGE: "jruby:latest"

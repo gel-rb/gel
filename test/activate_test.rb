@@ -156,6 +156,8 @@ class ActivateTest < Minitest::Test
   end
 
   def test_activate_gem_with_extensions
+    skip if jruby?
+
     with_fixture_gems_installed(["fast_blank-1.0.0.gem"]) do |store|
       assert_raises(LoadError) { require "fast_blank" }
       assert_raises(NoMethodError) { "x".blank? }

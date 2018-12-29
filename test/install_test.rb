@@ -62,6 +62,8 @@ class InstallTest < Minitest::Test
   end
 
   def test_installing_an_extension
+    skip if jruby?
+
     Dir.mktmpdir do |dir|
       store = Paperback::Store.new(dir)
       result = Paperback::Package::Installer.new(store)

@@ -24,7 +24,7 @@ Paperback::Environment::IGNORE_LIST.concat ENV["PAPERBACK_IGNORE"].split if ENV[
 
 Paperback::Environment.open(Paperback::LockedStore.new(store))
 
-if ENV["PAPERBACK_LOCKFILE"]
+if ENV["PAPERBACK_LOCKFILE"] && ENV["PAPERBACK_LOCKFILE"] != ""
   Paperback::Environment.activate(output: $stderr)
 end
 

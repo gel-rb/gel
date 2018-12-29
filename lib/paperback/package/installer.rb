@@ -170,7 +170,7 @@ class Paperback::Package::Installer
     end
 
     def install
-      loadable_file_types = ["rb", RbConfig::CONFIG["DLEXT"], RbConfig::CONFIG["DLEXT2"]].reject(&:empty?)
+      loadable_file_types = ["rb", RbConfig::CONFIG["DLEXT"], RbConfig::CONFIG["DLEXT2"]].compact.reject(&:empty?)
       loadable_file_types_re = /\.#{Regexp.union loadable_file_types}\z/
       loadable_file_types_pattern = "*.{#{loadable_file_types.join(",")}}"
 
