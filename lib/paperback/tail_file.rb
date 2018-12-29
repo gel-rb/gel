@@ -28,6 +28,12 @@ class Paperback::TailFile
 
     @filename = pinboard.filename(uri)
     @etag = pinboard.etag(uri)
+
+    @done = false
+  end
+
+  def done?
+    @done
   end
 
   def update(force_reset = false)
@@ -56,6 +62,7 @@ class Paperback::TailFile
 
         case response
         when Net::HTTPNotModified
+          @done = true
           pinboard.updated(uri, response["ETag"], false)
 
           return # no-op
@@ -87,6 +94,7 @@ class Paperback::TailFile
           f.write response.body
           f.flush
 
+          @done = true
           pinboard.updated(uri, response["ETag"], true)
 
           return # Done
@@ -132,6 +140,7 @@ class Paperback::TailFile
               # Good overlap, but nothing new
               debug "Overlap is good, but no new content"
 
+              @done = true
               pinboard.updated(uri, @etag, false) # keep old etag
 
               return # Done
@@ -154,6 +163,7 @@ class Paperback::TailFile
               f.write(rest)
               f.flush
 
+              @done = true
               pinboard.updated(uri, response["ETag"], true)
 
               return # Done

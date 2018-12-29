@@ -41,7 +41,9 @@ class Paperback::Pinboard
   end
 
   def async_file(uri, token: nil, tail: true, only_updated: false, error: nil)
-    if stale(uri, token)
+    already_done = @files.key?(uri) && @files[uri].done?
+
+    if !already_done && stale(uri, token)
       add uri, token: token
 
       already_queued = @files.key?(uri)

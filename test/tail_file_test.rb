@@ -321,6 +321,90 @@ class TailFileTest < Minitest::Test
       stale: false,
     }, @pinboard.read(@uri))
   end
+
+  def test_interleaved_async_requests
+    start_time = Time.now
+
+    requested_files = []
+
+    stubbed_request {
+      stub_request(:get, "https://example.org/a").
+        with(headers: { "Accept-Encoding" => /gzip/ }).
+        to_return(
+          body: proc { requested_files << "a"; sleep 0.2; INITIAL_CONTENT },
+        )
+    }
+
+    stubbed_request {
+      stub_request(:get, "https://example.org/b").
+        with(headers: { "Accept-Encoding" => /gzip/ }).
+        to_return(
+          body: proc { requested_files << "b"; sleep 0.1; INITIAL_CONTENT },
+        )
+    }
+
+    stubbed_request {
+      stub_request(:get, "https://example.org/c").
+        with(headers: { "Accept-Encoding" => /gzip/ }).
+        to_return(
+          body: proc { requested_files << "c"; sleep 0.3; INITIAL_CONTENT },
+        )
+    }
+
+    received_files = []
+
+    @pinboard.async_file(URI("https://example.org/a")) do |f|
+      received_files << "a1"
+    end
+
+    @pinboard.async_file(URI("https://example.org/a")) do |f|
+      received_files << "a2"
+    end
+
+    @pinboard.async_file(URI("https://example.org/b")) do |f|
+      received_files << "b1"
+    end
+
+    @pinboard.async_file(URI("https://example.org/b")) do |f|
+      received_files << "b2"
+    end
+
+    @pinboard.async_file(URI("https://example.org/c")) do |f|
+      received_files << "c1"
+    end
+
+    @pinboard.async_file(URI("https://example.org/c")) do |f|
+      received_files << "c2"
+    end
+
+    @pinboard.instance_variable_get(:@update_pool).join
+
+    assert_equal %w(b1 b2 a1 a2 c1 c2), received_files
+    assert_equal %w(a b c), requested_files.sort
+
+    # The requests occur in parallel, so they should all finish in
+    # slightly longer than the slowest request duration
+    assert_operator Time.now - start_time, :<, 0.32
+
+    @pinboard.async_file(URI("https://example.org/a")) do |f|
+      received_files << "a3"
+    end
+
+    @pinboard.async_file(URI("https://example.org/b")) do |f|
+      received_files << "b3"
+    end
+
+    @pinboard.async_file(URI("https://example.org/c")) do |f|
+      received_files << "c3"
+    end
+
+    @pinboard.instance_variable_get(:@update_pool).join
+
+    # The extra requests are served by the already-loaded files, so the
+    # "3" blocks are called, but no more requests occur.
+    assert_equal %w(b1 b2 a1 a2 c1 c2 a3 b3 c3), received_files
+    assert_equal %w(a b c), requested_files.sort
+  end
 end
 
 class NoPartialTailFileTest < Minitest::Test
