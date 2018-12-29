@@ -109,7 +109,7 @@ class Paperback::Environment
     end.each do |name, _, _|
       catalogs.each do |catalog|
         catalog.instance_variable_get(:@indexes).each do |index|
-          index.instance_variable_get(:@pending_gems) << name
+          catalog.send(index).instance_variable_get(:@pending_gems) << name
         end
       end
     end
@@ -171,10 +171,11 @@ class Paperback::Environment
     lock_content << ""
     lock_content << "DEPENDENCIES"
     full_requirements.sort_by(&:name).each do |req|
-      if req.constraints == []
+      constraints = req.constraints.flatten
+      if constraints == []
         lock_content << "  #{req.name}"
       else
-        lock_content << "  #{req.name} (#{req.constraints.join(", ")})"
+        lock_content << "  #{req.name} (#{constraints.join(", ")})"
       end
     end
     lock_content << ""

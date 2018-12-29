@@ -14,9 +14,9 @@ class Paperback::Catalog
     @work_pool = work_pool
 
     @indexes = [
-      Paperback::Catalog::CompactIndex.new(@uri, uri_identifier, httpool: @httpool, work_pool: @work_pool),
-      Paperback::Catalog::DependencyIndex.new(self, @uri, uri_identifier, httpool: @httpool, work_pool: @work_pool),
-      Paperback::Catalog::LegacyIndex.new(self, @uri, uri_identifier, httpool: @httpool, work_pool: @work_pool),
+      :compact_index,
+      :dependency_index,
+      :legacy_index,
     ]
   end
 
@@ -29,11 +29,15 @@ class Paperback::Catalog
   end
 
   def legacy_index
-    @legacy_index ||= Paperback::Catalog::LegacyIndex.new(self, @uri, uri_identifier, httpool: @httpool, work_pool: @work_pool)
+    @legacy_index ||= Paperback::Catalog::LegacyIndex.new(@uri, uri_identifier, httpool: @httpool, work_pool: @work_pool)
+  end
+
+  def index
+    send(@indexes.first)
   end
 
   def gem_info(name)
-    @indexes.first.gem_info(name)
+    index.gem_info(name)
   rescue Net::HTTPServerException
     if @indexes.size > 1
       @indexes.shift

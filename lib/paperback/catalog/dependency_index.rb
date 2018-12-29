@@ -1,69 +1,29 @@
 # frozen_string_literal: true
 
 require "set"
-require "fileutils"
-require "monitor"
 require "cgi"
 require "zlib"
 
 require_relative "../pinboard"
 
+require_relative "common"
 require_relative "marshal_hacks"
 
 class Paperback::Catalog::DependencyIndex
+  include Paperback::Catalog::Common
+
   LIST_MAX = 40
   UPDATE_CONCURRENCY = 8
 
-  def initialize(catalog, uri, uri_identifier, httpool:, work_pool:)
+  def initialize(catalog, *args)
+    super(*args)
+
     @catalog = catalog
-    @uri = uri
-    @uri_identifier = uri_identifier
-    @httpool = httpool
-    @work_pool = work_pool
 
     @active_gems = Set.new
     @pending_gems = Set.new
 
-    @monitor = Monitor.new
-    @refresh_cond = @monitor.new_cond
-
-    @done_refresh = {}
-
-    @gem_info = {}
-    @error = nil
-
     @work_pool ||= Paperback::WorkPool.new(UPDATE_CONCURRENCY, monitor: @monitor, name: "paperback-catalog")
-  end
-
-  def gem_info(gem_name)
-    gems_to_refresh = []
-
-    @monitor.synchronize do
-      if info = _info(gem_name)
-        unless @done_refresh[gem_name]
-          gems_to_refresh = info.values.flat_map { |v| v[:dependencies] }.map(&:first).uniq
-          @done_refresh[gem_name] = true
-        end
-        return info
-      end
-    end
-
-    refresh_gem gem_name
-    force_refresh_including gem_name
-
-    @monitor.synchronize do
-      info = nil
-      @refresh_cond.wait_until { info = _info(gem_name) }
-      unless @done_refresh[gem_name]
-        gems_to_refresh = info.values.flat_map { |v| v[:dependencies] }.map(&:first).uniq
-        @done_refresh[gem_name] = true
-      end
-      info
-    end
-  ensure
-    gems_to_refresh.each do |dep_name|
-      refresh_gem dep_name
-    end
   end
 
   def force_refresh_including(gem_name)
@@ -147,37 +107,17 @@ class Paperback::Catalog::DependencyIndex
     @work_pool.start
   end
 
-  def refresh_gem(gem_name)
+  def refresh_gem(gem_name, immediate = false)
     @monitor.synchronize do
       @pending_gems << gem_name unless _info(gem_name) || @active_gems.include?(gem_name)
     end
+
+    force_refresh_including gem_name if immediate
   end
 
   private
 
-  def _info(name)
-    raise @error if @error
-    if i = @gem_info[name]
-      raise i if i.is_a?(Exception)
-      i
-    end
-  end
-
-  def pinboard
-    @pinboard || @monitor.synchronize do
-      @pinboard ||=
-        begin
-          FileUtils.mkdir_p(pinboard_dir)
-          Paperback::Pinboard.new(pinboard_dir, monitor: @monitor, httpool: @httpool, work_pool: @work_pool)
-        end
-    end
-  end
-
   def pinboard_dir
     File.expand_path("~/.cache/paperback/quick/#{@uri_identifier}")
-  end
-
-  def uri(*parts)
-    URI(File.join(@uri.to_s, *parts))
   end
 end

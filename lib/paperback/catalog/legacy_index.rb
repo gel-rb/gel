@@ -1,24 +1,20 @@
 # frozen_string_literal: true
 
 require "set"
-require "fileutils"
-require "monitor"
-require "cgi"
 require "zlib"
 
 require_relative "../pinboard"
 
+require_relative "common"
 require_relative "marshal_hacks"
 
 class Paperback::Catalog::LegacyIndex
+  include Paperback::Catalog::Common
+
   UPDATE_CONCURRENCY = 8
 
-  def initialize(catalog, uri, uri_identifier, httpool:, work_pool:)
-    @catalog = catalog
-    @uri = uri
-    @uri_identifier = uri_identifier
-    @httpool = httpool
-    @work_pool = work_pool
+  def initialize(uri, uri_identifier, httpool:, work_pool:)
+    super
 
     @needs_update = true
     @updating = false
@@ -26,14 +22,6 @@ class Paperback::Catalog::LegacyIndex
     @pending_gems = Set.new
 
     @gem_versions = {}
-
-    @monitor = Monitor.new
-    @refresh_cond = @monitor.new_cond
-
-    @done_refresh = {}
-
-    @gem_info = {}
-    @error = nil
 
     @work_pool ||= Paperback::WorkPool.new(UPDATE_CONCURRENCY, monitor: @monitor, name: "paperback-catalog")
   end
@@ -58,7 +46,7 @@ class Paperback::Catalog::LegacyIndex
       end
     end
 
-    pinboard.async_file(uri("specs.4.8.gz"), tail: false, error: error) do |f|
+    spec_file_handler = lambda do |f|
       data = Zlib::GzipReader.new(f).read
       data = Marshal.load(data)
 
@@ -86,68 +74,13 @@ class Paperback::Catalog::LegacyIndex
       end
     end
 
-    pinboard.async_file(uri("prerelease_specs.4.8.gz"), tail: false, error: error) do |f|
-      data = Zlib::GzipReader.new(f).read
-      data = Marshal.load(data)
-
-      data.each do |name, version, platform|
-        v = version.to_s
-        v += "-#{platform}" unless platform == "ruby"
-        (versions[name] ||= {})[v] = nil
-      end
-
-      done = false
-      @monitor.synchronize do
-        prerelease_specs = true
-        if specs && prerelease_specs
-          done = true
-          @gem_info.update versions
-          @updating = false
-          @refresh_cond.broadcast
-        end
-      end
-
-      if done
-        (@active_gems | @pending_gems).each do |name|
-          refresh_gem(name)
-        end
-      end
-    end
+    pinboard.async_file(uri("specs.4.8.gz"), tail: false, error: error, &spec_file_handler)
+    pinboard.async_file(uri("prerelease_specs.4.8.gz"), tail: false, error: error, &spec_file_handler)
 
     true
   end
 
-  def gem_info(gem_name)
-    gems_to_refresh = []
-
-    @monitor.synchronize do
-      if (info = _info(gem_name)) && info.values.all? { |x| x.is_a?(Hash) }
-        unless @done_refresh[gem_name]
-          gems_to_refresh = info.values.flat_map { |v| v[:dependencies] }.map(&:first).uniq
-          @done_refresh[gem_name] = true
-        end
-        return info
-      end
-    end
-
-    refresh_gem gem_name
-
-    @monitor.synchronize do
-      info = nil
-      @refresh_cond.wait_until { (info = _info(gem_name)) && info.values.all? { |x| x.is_a?(Hash) } }
-      unless @done_refresh[gem_name]
-        gems_to_refresh = info.values.flat_map { |v| v[:dependencies] }.map(&:first).uniq
-        @done_refresh[gem_name] = true
-      end
-      info
-    end
-  ensure
-    gems_to_refresh.each do |dep_name|
-      refresh_gem dep_name
-    end
-  end
-
-  def refresh_gem(gem_name)
+  def refresh_gem(gem_name, immediate = true)
     update
 
     versions = nil
@@ -199,9 +132,7 @@ class Paperback::Catalog::LegacyIndex
   private
 
   def _info(gem_name)
-    raise @error if @error
-    if i = @gem_info[gem_name]
-      raise i if i.is_a?(Exception)
+    if i = super
       if i.values.all? { |v| v.is_a?(Hash) }
         i
       elsif e = i.values.grep(Exception).first
@@ -210,21 +141,7 @@ class Paperback::Catalog::LegacyIndex
     end
   end
 
-  def pinboard
-    @pinboard || @monitor.synchronize do
-      @pinboard ||=
-        begin
-          FileUtils.mkdir_p(pinboard_dir)
-          Paperback::Pinboard.new(pinboard_dir, monitor: @monitor, httpool: @httpool, work_pool: @work_pool)
-        end
-    end
-  end
-
   def pinboard_dir
     File.expand_path("~/.cache/paperback/quick/#{@uri_identifier}")
-  end
-
-  def uri(*parts)
-    URI(File.join(@uri.to_s, *parts))
   end
 end

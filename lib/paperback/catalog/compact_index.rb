@@ -1,31 +1,22 @@
 # frozen_string_literal: true
 
 require "set"
-require "fileutils"
-require "monitor"
 
 require_relative "../pinboard"
 
+require_relative "common"
+
 class Paperback::Catalog::CompactIndex
+  include Paperback::Catalog::Common
+
   def initialize(uri, uri_identifier, httpool:, work_pool:)
-    @uri = uri
-    @uri_identifier = uri_identifier
-    @httpool = httpool
-    @work_pool = work_pool
+    super
 
     @gem_tokens = Hash.new("NONE")
     @needs_update = true
     @updating = false
     @active_gems = Set.new
     @pending_gems = Set.new
-
-    @monitor = Monitor.new
-    @refresh_cond = @monitor.new_cond
-
-    @done_refresh = {}
-
-    @gem_info = {}
-    @error = nil
   end
 
   def update
@@ -70,37 +61,7 @@ class Paperback::Catalog::CompactIndex
     true
   end
 
-  def gem_info(gem_name)
-    gems_to_refresh = []
-
-    @monitor.synchronize do
-      if info = _info(gem_name)
-        unless @done_refresh[gem_name]
-          gems_to_refresh = info.values.flat_map { |v| v[:dependencies] }.map(&:first).uniq
-          @done_refresh[gem_name] = true
-        end
-        return info
-      end
-    end
-
-    refresh_gem gem_name
-
-    @monitor.synchronize do
-      info = nil
-      @refresh_cond.wait_until { info = _info(gem_name) }
-      unless @done_refresh[gem_name]
-        gems_to_refresh = info.values.flat_map { |v| v[:dependencies] }.map(&:first).uniq
-        @done_refresh[gem_name] = true
-      end
-      info
-    end
-  ensure
-    gems_to_refresh.each do |dep_name|
-      refresh_gem dep_name
-    end
-  end
-
-  def refresh_gem(gem_name)
+  def refresh_gem(gem_name, immediate = true)
     update
 
     already_active = nil
@@ -170,29 +131,7 @@ class Paperback::Catalog::CompactIndex
 
   private
 
-  def _info(gem_name)
-    raise @error if @error
-    if i = @gem_info[gem_name]
-      raise i if i.is_a?(Exception)
-      i
-    end
-  end
-
-  def pinboard
-    @pinboard || @monitor.synchronize do
-      @pinboard ||=
-        begin
-          FileUtils.mkdir_p(pinboard_dir)
-          Paperback::Pinboard.new(pinboard_dir, monitor: @monitor, httpool: @httpool, work_pool: @work_pool)
-        end
-    end
-  end
-
   def pinboard_dir
     File.expand_path("~/.cache/paperback/index/#{@uri_identifier}")
-  end
-
-  def uri(*parts)
-    URI(File.join(@uri.to_s, *parts))
   end
 end
