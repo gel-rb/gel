@@ -24,16 +24,16 @@ LOCKFILE
     stub_request(:get, "https://index.rubygems.org/gems/rack-test-0.6.3.gem").
       to_return(body: File.open(fixture_file("rack-test-0.6.3.gem")))
 
-    loader = Paperback::LockLoader.new(lockfile.path)
     with_empty_store do |store|
-      output = read_from_fork do |ch|
+      output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path)
+        loader = Paperback::LockLoader.new(lock_path)
         loader.activate(Paperback::Environment, store, install: true)
 
-        ch.puts $:.grep(/\brack(?!-test)/).join(":")
-        ch.puts $:.grep(/rack-test/).join(":")
-        ch.puts $:.grep(/hoe/).join(":")
-        ch.puts $".grep(/rack\/test\//).join(":")
-      end.lines.map(&:chomp)
+        puts $:.grep(/\brack(?!-test)/).join(":")
+        puts $:.grep(/rack-test/).join(":")
+        puts $:.grep(/hoe/).join(":")
+        puts $".grep(/rack\/test\//).join(":")
+      END
 
       # Both gems listed in the lockfile are activated
       assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
@@ -48,6 +48,8 @@ LOCKFILE
   end
 
   def test_arch_aware_installation
+    skip "We (and this test) are not actually arch-aware yet" if jruby?
+
     lockfile = Tempfile.new("")
     lockfile.write(<<LOCKFILE)
 GEM
@@ -74,17 +76,17 @@ LOCKFILE
     stub_request(:get, "https://index.rubygems.org/gems/rack-test-0.6.3.gem").
       to_return(body: File.open(fixture_file("rack-test-0.6.3.gem")))
 
-    loader = Paperback::LockLoader.new(lockfile.path)
     with_empty_multi_store do |store|
-      output = read_from_fork do |ch|
+      output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path)
+        loader = Paperback::LockLoader.new(lock_path)
         loader.activate(Paperback::Environment, store, install: true)
 
-        ch.puts $:.grep(/\brack(?!-test)/).join(":")
-        ch.puts $:.grep(/rack-test/).join(":")
-        ch.puts $:.grep(/atomic/).join(":")
-        ch.puts $:.grep(/hoe/).join(":")
-        ch.puts $".grep(/rack\/test\//).join(":")
-      end.lines.map(&:chomp)
+        puts $:.grep(/\brack(?!-test)/).join(":")
+        puts $:.grep(/rack-test/).join(":")
+        puts $:.grep(/atomic/).join(":")
+        puts $:.grep(/hoe/).join(":")
+        puts $".grep(/rack\/test\//).join(":")
+      END
 
       # All gems listed in the lockfile are activated
       assert_equal "#{store.root}/ruby/gems/rack-2.0.3/lib", output.shift

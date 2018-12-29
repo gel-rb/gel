@@ -10,14 +10,14 @@ class MultiStoreTest < Minitest::Test
                                        "ruby-#{RbConfig::CONFIG["ruby_version"]}" => store_1,
                                        "ruby" => store_2)
 
-        output = read_from_fork do |ch|
-          Paperback::Environment.open(multi)
+        output = subprocess_output(<<-'END', store: multi)
+          Paperback::Environment.open(store)
           require Paperback::Environment.resolve_gem_path("rack/test")
 
-          ch.puts $:.grep(/\brack(?!-test)/).join(":")
-          ch.puts $:.grep(/rack-test/).join(":")
-          ch.puts $".grep(/rack\/test\/ut/).join(":")
-        end.lines.map(&:chomp)
+          puts $:.grep(/\brack(?!-test)/).join(":")
+          puts $:.grep(/rack-test/).join(":")
+          puts $".grep(/rack\/test\/ut/).join(":")
+        END
 
         assert_equal "#{store_1.root}/gems/rack-2.0.3/lib", output.shift
         assert_equal "#{store_2.root}/gems/rack-test-0.6.3/lib", output.shift

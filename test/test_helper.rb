@@ -56,27 +56,87 @@ def with_fixture_gems_installed(paths)
   end
 end
 
-def read_from_fork
-  skip "Can't fork" if jruby?
+if respond_to?(:fork, true)
+  def subprocess_output(code, **kwargs)
+    source = caller_locations.first
 
-  r, w = IO.pipe
+    read_from_fork do |ch|
+      $stdout = ch
 
-  child_pid = fork do
-    r.close
+      b = binding
 
-    yield w
+      kwargs.each do |name, value|
+        b.local_variable_set(name, value)
+      end
+
+      eval code, b, source.path, source.lineno + 1
+    end.lines.map(&:chomp)
+  end
+
+  def read_from_fork
+    r, w = IO.pipe
+
+    child_pid = fork do
+      r.close
+
+      yield w
+
+      w.close
+
+      exit! true
+    end
+
+    w.close
+    r.read
+  ensure
+    if child_pid
+      _, status = Process.waitpid2(child_pid)
+      raise "child failed: #{status.inspect}" unless status.success?
+    end
+  end
+else
+  def reconstruct_in_subprocess(object)
+    case object
+    when Paperback::MultiStore
+      "Paperback::MultiStore.new(#{reconstruct_in_subprocess(object.root)}, #{reconstruct_in_subprocess(object.instance_variable_get(:@stores))})"
+    when Paperback::Store
+      "Paperback::Store.new(#{reconstruct_in_subprocess(object.root)})"
+    when String, Integer, NilClass
+      object.inspect
+    when Array
+      "[#{object.map { |item| reconstruct_in_subprocess(item) }.join(", ") }]"
+    when Hash
+      "{#{object.map { |key, value|
+        "#{reconstruct_in_subprocess(key)} => #{reconstruct_in_subprocess(value)}"
+      }.join(", ")}}"
+    else
+      raise "Unknown object #{object.class}"
+    end
+  end
+
+  def subprocess_output(code, **kwargs)
+    source = caller_locations.first
+
+    wrapped_code = kwargs.map { |name, value| "#{name} = #{reconstruct_in_subprocess(value)}\n" }.join +
+      "eval(#{code.inspect}, binding, #{source.path.inspect}, #{source.lineno + 1})"
+
+    r, w = IO.pipe
+
+    pid = spawn(
+      { "RUBYOPT" => nil, "PAPERBACK_STORE" => nil, "PAPERBACK_LOCKFILE" => nil },
+      RbConfig.ruby, "--disable=gems",
+      "-I", File.expand_path("../lib", __dir__),
+      "-r", "paperback",
+      "-r", "paperback/compatibility",
+      "-e", wrapped_code,
+      in: IO::NULL,
+      out: w,
+    )
 
     w.close
 
-    exit! true
-  end
-
-  w.close
-  r.read
-ensure
-  if child_pid
-    _, status = Process.waitpid2(child_pid)
-    raise "child failed: #{status.inspect}" unless status.success?
+    _, status = Process.waitpid2(pid)
+    r.read.lines.map(&:chomp)
   end
 end
 

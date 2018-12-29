@@ -18,16 +18,16 @@ DEPENDENCIES
 LOCKFILE
     lockfile.close
 
-    loader = Paperback::LockLoader.new(lockfile.path)
     with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
-      output = read_from_fork do |ch|
+      output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path)
+        loader = Paperback::LockLoader.new(lock_path)
         loader.activate(Paperback::Environment, store)
 
-        ch.puts $:.grep(/\brack(?!-test)/).join(":")
-        ch.puts $:.grep(/rack-test/).join(":")
-        ch.puts $:.grep(/hoe/).join(":")
-        ch.puts $".grep(/rack\/test\//).join(":")
-      end.lines.map(&:chomp)
+        puts $:.grep(/\brack(?!-test)/).join(":")
+        puts $:.grep(/rack-test/).join(":")
+        puts $:.grep(/hoe/).join(":")
+        puts $".grep(/rack\/test\//).join(":")
+      END
 
       # Both gems listed in the lockfile are activated
       assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
@@ -62,16 +62,16 @@ DEPENDENCIES
 LOCKFILE
       lockfile.close
 
-      loader = Paperback::LockLoader.new(lockfile.path)
       with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
-        output = read_from_fork do |ch|
+        output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path)
+          loader = Paperback::LockLoader.new(lock_path)
           loader.activate(Paperback::Environment, store)
 
-          ch.puts $:.grep(/\brack(?!-test)/).join(":")
-          ch.puts $:.grep(/rack-test/).join(":")
-          ch.puts $:.grep(/hoe/).join(":")
-          ch.puts $".grep(/rack\/test\//).join(":")
-        end.lines.map(&:chomp)
+          puts $:.grep(/\brack(?!-test)/).join(":")
+          puts $:.grep(/rack-test/).join(":")
+          puts $:.grep(/hoe/).join(":")
+          puts $".grep(/rack\/test\//).join(":")
+        END
 
         # rack is activated from the lockfile-specified path
         assert_equal "#{temp_dir}/lib", output.shift
@@ -109,15 +109,15 @@ DEPENDENCIES
 LOCKFILE
     lockfile.close
 
-    loader = Paperback::LockLoader.new(lockfile.path, Paperback::GemfileParser.parse(gemfile_content))
     with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
-      output = read_from_fork do |ch|
+      output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path, gemfile_content: gemfile_content)
+        loader = Paperback::LockLoader.new(lock_path, Paperback::GemfileParser.parse(gemfile_content))
         loader.activate(Paperback::Environment, store)
 
-        ch.puts $:.grep(/\brack(?!-test)/).join(":")
-        ch.puts $:.grep(/rack-test/).join(":")
-        ch.puts $:.grep(/hoe/).join(":")
-      end.lines.map(&:chomp)
+        puts $:.grep(/\brack(?!-test)/).join(":")
+        puts $:.grep(/rack-test/).join(":")
+        puts $:.grep(/hoe/).join(":")
+      END
 
       # rack is activated because the Gemfile references it directly,
       # for all platforms. rack-test is excluded by its platform option.
@@ -148,15 +148,15 @@ DEPENDENCIES
 LOCKFILE
     lockfile.close
 
-    loader = Paperback::LockLoader.new(lockfile.path, Paperback::GemfileParser.parse(gemfile_content))
     with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
-      output = read_from_fork do |ch|
+      output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path, gemfile_content: gemfile_content)
+        loader = Paperback::LockLoader.new(lock_path, Paperback::GemfileParser.parse(gemfile_content))
         loader.activate(Paperback::Environment, store)
 
-        ch.puts $:.grep(/\brack(?!-test)/).join(":")
-        ch.puts $:.grep(/rack-test/).join(":")
-        ch.puts $:.grep(/hoe/).join(":")
-      end.lines.map(&:chomp)
+        puts $:.grep(/\brack(?!-test)/).join(":")
+        puts $:.grep(/rack-test/).join(":")
+        puts $:.grep(/hoe/).join(":")
+      END
 
       # Neither gem is activated; rack-test is not wanted by this
       # platform, and rack is just a dependency

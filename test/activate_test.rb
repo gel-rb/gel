@@ -8,16 +8,16 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "rack" }
       assert_raises(LoadError) { require "rack/request" }
 
-      output = read_from_fork do |ch|
+      output = subprocess_output(<<-'END', store: store)
         Paperback::Environment.open(store)
         Paperback::Environment.gem "rack", "2.0.3"
 
         require "rack"
         require "rack/request"
 
-        ch.puts $:.grep(/\brack/).join(":")
-        ch.puts $".grep(/\brack\/request/).join(":")
-      end.lines.map(&:chomp)
+        puts $:.grep(/\brack/).join(":")
+        puts $".grep(/\brack\/request/).join(":")
+      END
 
       assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
       assert_equal "#{store.root}/gems/rack-2.0.3/lib/rack/request.rb", output.shift
@@ -29,16 +29,16 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "rack" }
       assert_raises(LoadError) { require "rack/request" }
 
-      output = read_from_fork do |ch|
+      output = subprocess_output(<<-'END', store: store)
         Paperback::Environment.open(store)
         Paperback::Environment.gem "rack"
 
         require "rack"
         require "rack/request"
 
-        ch.puts $:.grep(/\brack/).join(":")
-        ch.puts $".grep(/\brack\/request/).join(":")
-      end.lines.map(&:chomp)
+        puts $:.grep(/\brack/).join(":")
+        puts $".grep(/\brack\/request/).join(":")
+      END
 
       assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
       assert_equal "#{store.root}/gems/rack-2.0.3/lib/rack/request.rb", output.shift
@@ -50,7 +50,7 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "rack" }
       assert_raises(LoadError) { require "rack/utils" }
 
-      output = read_from_fork do |ch|
+      output = subprocess_output(<<-'END', store: store)
         Paperback::Environment.open(store)
         Paperback::Environment.gem "rack", "< 2"
 
@@ -58,9 +58,9 @@ class ActivateTest < Minitest::Test
         # directly manipulates $:, which is confusing
         require "rack/utils"
 
-        ch.puts $:.grep(/\brack/).join(":")
-        ch.puts $".grep(/\brack\/utils/).join(":")
-      end.lines.map(&:chomp)
+        puts $:.grep(/\brack/).join(":")
+        puts $".grep(/\brack\/utils/).join(":")
+      END
 
       assert_equal "#{store.root}/gems/rack-0.1.0/lib", output.shift
       assert_equal "#{store.root}/gems/rack-0.1.0/lib/rack/utils.rb", output.shift
@@ -72,13 +72,13 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "rack" }
       assert_raises(LoadError) { require "rack/request" }
 
-      output = read_from_fork do |ch|
+      output = subprocess_output(<<-'END', store: store)
         Paperback::Environment.open(store)
         require Paperback::Environment.resolve_gem_path("rack/request")
 
-        ch.puts $:.grep(/\brack/).join(":")
-        ch.puts $".grep(/\brack\/request/).join(":")
-      end.lines.map(&:chomp)
+        puts $:.grep(/\brack/).join(":")
+        puts $".grep(/\brack\/request/).join(":")
+      END
 
       assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
       assert_equal "#{store.root}/gems/rack-2.0.3/lib/rack/request.rb", output.shift
@@ -90,13 +90,13 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "rack" }
       assert_raises(LoadError) { require "rack/request" }
 
-      output = read_from_fork do |ch|
+      output = subprocess_output(<<-'END', store: store)
         Paperback::Environment.open(store)
         require Paperback::Environment.resolve_gem_path("rack/request")
 
-        ch.puts $:.grep(/\brack/).join(":")
-        ch.puts $".grep(/\brack\/request/).join(":")
-      end.lines.map(&:chomp)
+        puts $:.grep(/\brack/).join(":")
+        puts $".grep(/\brack\/request/).join(":")
+      END
 
       assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
       assert_equal "#{store.root}/gems/rack-2.0.3/lib/rack/request.rb", output.shift
@@ -107,14 +107,14 @@ class ActivateTest < Minitest::Test
     with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem"]) do |store|
       assert_raises(LoadError) { require "rack/test" }
 
-      output = read_from_fork do |ch|
+      output = subprocess_output(<<-'END', store: store)
         Paperback::Environment.open(store)
         require Paperback::Environment.resolve_gem_path("rack/test")
 
-        ch.puts $:.grep(/\brack(?!-test)/).join(":")
-        ch.puts $:.grep(/rack-test/).join(":")
-        ch.puts $".grep(/rack\/test\/ut/).join(":")
-      end.lines.map(&:chomp)
+        puts $:.grep(/\brack(?!-test)/).join(":")
+        puts $:.grep(/rack-test/).join(":")
+        puts $".grep(/rack\/test\/ut/).join(":")
+      END
 
       assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
       assert_equal "#{store.root}/gems/rack-test-0.6.3/lib", output.shift
@@ -126,15 +126,15 @@ class ActivateTest < Minitest::Test
     with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-0.1.0.gem", "rack-2.0.3.gem"]) do |store|
       assert_raises(LoadError) { require "rack/test" }
 
-      output = read_from_fork do |ch|
+      output = subprocess_output(<<-'END', store: store)
         Paperback::Environment.open(store)
         Paperback::Environment.gem "rack", "0.1.0"
         begin
           require Paperback::Environment.resolve_gem_path("rack/test")
         rescue => ex
-          ch.puts ex
+          puts ex
         end
-      end.lines.map(&:chomp)
+      END
 
       assert_equal "already loaded gem rack 0.1.0, which is incompatible with: >= 1.0 (required by rack-test 0.6.3; provides \"rack/test\")", output.shift
     end
@@ -144,14 +144,14 @@ class ActivateTest < Minitest::Test
     with_fixture_gems_installed(["rack-2.0.3.gem"]) do |store|
       assert_raises(LoadError) { require "rack" }
 
-      output = read_from_fork do |ch|
+      output = subprocess_output(<<-'END', store: store)
         Paperback::Environment.open(store)
         begin
           Paperback::Environment.gem "rack", "< 1.0"
         rescue => ex
-          ch.puts ex
+          puts ex
         end
-      end.lines.map(&:chomp)
+      END
 
       assert_equal "unable to satisfy requirements for gem rack: < 1.0", output.shift
     end
@@ -164,14 +164,14 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "fast_blank" }
       assert_raises(NoMethodError) { "x".blank? }
 
-      output = read_from_fork do |ch|
+      output = subprocess_output(<<-'END', store: store)
         Paperback::Environment.open(store)
         require Paperback::Environment.resolve_gem_path("fast_blank")
 
-        ch.puts $:.grep(/fast_blank/).join(":")
+        puts $:.grep(/fast_blank/).join(":")
 
-        ch.puts ["x", "", " "].map(&:blank?).join(",")
-      end.lines.map(&:chomp)
+        puts ["x", "", " "].map(&:blank?).join(",")
+      END
 
       assert_equal ["#{store.root}/gems/fast_blank-1.0.0/lib",
                     "#{store.root}/ext/fast_blank-1.0.0"], output.shift.split(":")

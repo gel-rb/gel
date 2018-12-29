@@ -74,23 +74,23 @@ GEMFILE
   end
 
   def test_autorequire_real
-    result = Paperback::GemfileParser.parse(<<GEMFILE, __FILE__, __LINE__ + 1)
+    with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
+      output = subprocess_output(<<-'END', store: store)
+        result = Paperback::GemfileParser.parse(<<GEMFILE, __FILE__, __LINE__ + 1)
 gem "rack", require: "rack/query_parser"
 gem "rack-test"
 gem "hoe", require: false
 GEMFILE
 
-    with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
-      output = read_from_fork do |ch|
         Paperback::Environment.open(store)
         Paperback::Environment.gem "rack"
         Paperback::Environment.gem "rack-test"
         result.autorequire(Paperback::Environment)
 
-        ch.puts $".grep(/\brack\//).first
-        ch.puts $".grep(/rack\/test\//).first
-        ch.puts $".grep(/\bhoe\b/).first
-      end.lines.map(&:chomp)
+        puts $".grep(/\brack\//).first
+        puts $".grep(/rack\/test\//).first
+        puts $".grep(/\bhoe\b/).first
+      END
 
       # The first file loaded from rack is the one that was requested
       assert_equal "#{store.root}/gems/rack-2.0.3/lib/rack/query_parser.rb", output.shift
