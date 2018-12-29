@@ -12,7 +12,7 @@ class Paperback::Environment
   end
   self.gemfile = nil
   @active_lockfile = false
-  @architectures = ["ruby".freeze].freeze
+  @architectures = ["ruby"].freeze
 
   GEMFILE_PLATFORMS = begin
     v = RbConfig::CONFIG["ruby_version"].split(".")[0..1].inject(:+)
@@ -136,7 +136,7 @@ class Paperback::Environment
 
     lock_content << "GEM"
     catalogs.each do |catalog|
-      lock_content << "  remote: #{catalog.to_s}"
+      lock_content << "  remote: #{catalog}"
     end
     lock_content << "  specs:"
     graph.sort_by { |v| v.payload.name }.each do |vertex|

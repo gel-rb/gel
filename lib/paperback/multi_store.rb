@@ -3,7 +3,7 @@
 require "rbconfig"
 
 class Paperback::MultiStore
-  VERSION = "#{RbConfig::CONFIG["ruby_version"]}".freeze
+  VERSION = "#{RbConfig::CONFIG["ruby_version"]}"
 
   attr_reader :root
 

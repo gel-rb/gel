@@ -13,7 +13,11 @@ class Paperback::DB
   def self.new(root, name)
     return super unless self == Paperback::DB
 
-    PStore.new(root, name)
+    if defined? ::SDBM
+      SDBM.new(root, name)
+    else
+      PStore.new(root, name)
+    end
   end
 
   def initialize(root, name)
@@ -221,7 +225,7 @@ class Paperback::DB::File < Paperback::DB
   def [](key)
     child = @path.join(key)
     if child.exist?
-      Marshal.load(child.read)
+      Marshal.load(child.binread)
     end
   end
 

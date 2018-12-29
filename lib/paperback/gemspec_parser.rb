@@ -15,7 +15,7 @@ class Paperback::GemspecParser
       VERSION = "2.99.0"
 
       module Platform
-        RUBY = "ruby".freeze
+        RUBY = "ruby"
       end
 
       module Specification

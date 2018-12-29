@@ -253,7 +253,7 @@ class Paperback::Installer
     st = pool.status
     return if st[:active].empty? && st[:queued].zero?
 
-    msg = "#{label}:".dup
+    msg = +"#{label}:"
     msg << " #{st[:active].join(" ")}" unless st[:active].empty?
     msg << " +#{st[:queued]}" unless st[:queued].zero?
     msg

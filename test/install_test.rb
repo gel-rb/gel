@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 require "paperback/package"
@@ -54,7 +56,7 @@ class InstallTest < Minitest::Test
   def test_mode_on_installed_files
     with_fixture_gems_installed(["rack-2.0.3.gem"]) do |store|
       assert_equal 0644, File.stat("#{store.root}/gems/rack-2.0.3/lib/rack.rb").mode & 03777
-      assert !File.executable?("#{store.root}/gems/rack-2.0.3/lib/rack.rb")
+      refute File.executable?("#{store.root}/gems/rack-2.0.3/lib/rack.rb")
 
       assert_equal 0755, File.stat("#{store.root}/gems/rack-2.0.3/bin/rackup").mode & 03777
       assert File.executable?("#{store.root}/gems/rack-2.0.3/bin/rackup")

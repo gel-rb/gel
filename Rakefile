@@ -23,12 +23,10 @@ FIXTURE_GEMS = [
 ]
 
 task :fixtures do
-  Dir.chdir "test/fixtures" do
-    FIXTURE_GEMS.each do |name, version|
-      filename = "#{name}-#{version}.gem"
-      next if File.exist?(filename)
-      system "curl", "-s", "-o", filename, "https://rubygems.org/gems/#{filename}"
-    end
+  FIXTURE_GEMS.each do |name, version|
+    filename = "test/fixtures/#{name}-#{version}.gem"
+    next if File.exist?(filename)
+    system "curl", "-s", "-o", filename, "https://rubygems.org/gems/#{name}-#{version}.gem"
   end
 end
 

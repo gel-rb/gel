@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 
 class LockedActivateTest < Minitest::Test
@@ -55,4 +57,3 @@ class LockedActivateTest < Minitest::Test
     end
   end
 end
-

@@ -1,6 +1,9 @@
+# frozen_string_literal: true
+
 class Gem::Dependency
   attr_accessor :name, :type, :requirement
 end
+
 class Gem::Specification
   attr_accessor :required_ruby_version
   attr_accessor :dependencies

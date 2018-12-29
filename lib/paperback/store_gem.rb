@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Paperback::StoreGem
-  EXTENSION_SUBDIR_TOKEN = "..".freeze
+  EXTENSION_SUBDIR_TOKEN = ".."
 
   attr_reader :root, :name, :version, :extensions, :info
 

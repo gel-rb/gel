@@ -1,0 +1,17 @@
+inherit_gem:
+  rubocop-rails_config:
+    - config/rails.yml
+
+AllCops:
+  TargetRubyVersion: 2.3
+  Exclude:
+    - 'lib/paperback/support/**/*'
+
+Rails:
+  Enabled: false
+
+Layout/IndentationConsistency:
+  EnforcedStyle: normal
+
+Style/FrozenStringLiteralComment:
+  Enabled: true

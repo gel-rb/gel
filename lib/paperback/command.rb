@@ -17,7 +17,7 @@ class Paperback::Command
 
   def self.extract_word(arguments)
     if idx = arguments.index { |w| w =~ /^[^-]/ }
-      return arguments.delete_at(idx)
+      arguments.delete_at(idx)
     end
   end
 end
