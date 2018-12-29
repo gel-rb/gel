@@ -1,16 +1,15 @@
 # frozen_string_literal: true
 
-require "sdbm"
-require "pathname"
+require_relative "db"
 
 class Paperback::Store
   attr_reader :root
 
   def initialize(root)
     @root = File.realpath(File.expand_path(root))
-    @primary_sdbm = SDBM.new("#{root}/store")
-    @lib_sdbm = SDBM.new("#{root}/libs")
-    @rlib_path = Pathname.new("#{root}/meta")
+    @primary_db = Paperback::DB.new(root, "store")
+    @lib_db = Paperback::DB.new(root, "libs")
+    @rlib_db = Paperback::DB::File.new(root, "meta")
   end
 
   def add_gem(name, version, bindir, executables, require_paths, dependencies, extensions)
@@ -26,14 +25,13 @@ class Paperback::Store
     dependencies = _dependencies
     extensions = !!extensions
 
-    primary_db(true) do |st|
-      vs = st["v/#{name}"]
-      vs = vs ? Marshal.load(vs) : []
+    @primary_db.writing do
+      vs = @primary_db["v/#{name}"] || []
       raise "already installed" if vs.include?(version)
       vs << version
       vs.sort_by! { |v| Paperback::Support::GemVersion.new(v) }
       vs.reverse!
-      st["v/#{name}"] = Marshal.dump(vs)
+      @primary_db["v/#{name}"] = vs
 
       d = {}
       d[:bindir] = bindir unless bindir == "bin"
@@ -41,7 +39,7 @@ class Paperback::Store
       d[:require_paths] = require_paths unless require_paths == ["lib"]
       d[:dependencies] = dependencies unless dependencies.empty?
       d[:extensions] = extensions if extensions
-      st["i/#{name}/#{version}"] = Marshal.dump(d)
+      @primary_db["i/#{name}/#{version}"] = d
 
       yield if block_given?
     end
@@ -52,27 +50,25 @@ class Paperback::Store
     version = version.is_a?(Array) ? version.map { |v| normalize_string(v) } : normalize_string(version)
     files = files.map { |v| normalize_string(v) }
 
-    lib_db(true) do |st|
-      rlib_db(true) do |rst|
+    @lib_db.writing do
+      @rlib_db.writing do |rst|
         files.each do |file|
-          h = st[file]
-          h = h ? Marshal.load(h) : {}
+          h = @lib_db[file] || {}
           d = h[name] || []
           raise "already installed" if d.include?(version)
           d << version
           h[name] = d.sort_by { |v, _| Paperback::Support::GemVersion.new(v) }.reverse
-          st[file] = Marshal.dump(h)
+          @lib_db[file] = h
         end
 
         v, d = version
-        f = rst.join("#{name}-#{v}")
-        ls = f.exist? ? Marshal.load(f.read) : []
+        ls = @rlib_db["#{name}-#{v}"] || []
         unless sls = ls.assoc(d)
           sls = [d, []]
           ls << sls
         end
         sls.last.concat files
-        f.binwrite Marshal.dump(ls)
+        @rlib_db["#{name}-#{v}"] = ls
       end
     end
   end
@@ -111,28 +107,24 @@ class Paperback::Store
   end
 
   def libs_for_gems(versions)
-    rlib_db do |rst|
+    @rlib_db.reading do
       versions.each do |name, version|
-        f = rst.join("#{name}-#{version}")
-        if f.exist?
-          yield name, version, Marshal.load(f.binread)
+        if libs = @rlib_db["#{name}-#{version}"]
+          yield name, version, libs
         end
       end
     end
   end
 
   def gems_for_lib(file)
-    lib_db do |st|
-      if h = st[file]
-        h = Marshal.load(h)
-        h.each do |name, versions|
-          versions.each do |version|
-            if version.is_a?(Array)
-              version, subdir = version
-              yield gem(name, version), subdir
-            else
-              yield gem(name, version)
-            end
+    if h = @lib_db[file]
+      h.each do |name, versions|
+        versions.each do |version|
+          if version.is_a?(Array)
+            version, subdir = version
+            yield gem(name, version), subdir
+          else
+            yield gem(name, version)
           end
         end
       end
@@ -143,20 +135,17 @@ class Paperback::Store
     return enum_for(__callee__, gem_name) unless block_given?
 
     if gem_name
-      primary_db do |st|
-        return unless vs = st["v/#{gem_name}"]
-        vs = Marshal.load(vs)
+      @primary_db.reading do
+        return unless vs = @primary_db["v/#{gem_name}"]
         vs.each do |version|
-          info = Marshal.load(st["i/#{gem_name}/#{version}"])
+          info = @primary_db["i/#{gem_name}/#{version}"]
           yield _gem(gem_name, version, info)
         end
       end
     else
       gem_names = []
-      primary_db do |st|
-        st.each_key do |k|
-          gem_names << $1 if k =~ /\Av\/(.*)\z/
-        end
+      @primary_db.each_key do |k|
+        gem_names << $1 if k =~ /\Av\/(.*)\z/
       end
 
       block = Proc.new
@@ -175,10 +164,7 @@ class Paperback::Store
   end
 
   def gem_info(name, version)
-    primary_db do |st|
-      d = st["i/#{name}/#{version}"]
-      d && Marshal.load(d)
-    end
+    @primary_db["i/#{name}/#{version}"]
   end
 
   def inflate_info(d)
@@ -188,19 +174,6 @@ class Paperback::Store
     d[:require_paths] = ["lib"] unless d.key?(:require_paths)
     d[:dependencies] = {} unless d.key?(:dependencies)
     d
-  end
-
-  def primary_db(write = false)
-    yield @primary_sdbm
-  end
-
-  def lib_db(write = false)
-    yield @lib_sdbm
-  end
-
-  def rlib_db(write = false)
-    @rlib_path.mkdir if write && !@rlib_path.exist?
-    yield @rlib_path
   end
 
   # Almost every string we store is pure ASCII, and binary strings

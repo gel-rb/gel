@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require "sdbm"
 require "monitor"
 
+require_relative "db"
 require_relative "httpool"
 require_relative "tail_file"
 require_relative "work_pool"
@@ -20,7 +20,7 @@ class Paperback::Pinboard
     @monitor = monitor
     @httpool = httpool
 
-    @db = SDBM.new("#{root}/pins")
+    @db = Paperback::DB.new(root, "pins")
     @files = {}
     @waiting = Hash.new { |h, k| h[k] = [] }
 
@@ -74,11 +74,11 @@ class Paperback::Pinboard
   end
 
   def add(uri, token: nil)
-    @db[uri.to_s] ||= Marshal.dump(
+    @db[uri.to_s] ||= {
       etag: nil,
       token: token,
       stale: true,
-    )
+    }
   end
 
   def filename(uri)
@@ -95,20 +95,18 @@ class Paperback::Pinboard
         return h[:stale]
       end
 
-      @db[uri.to_s] = Marshal.dump(h.merge(token: token, stale: true))
+      @db[uri.to_s] = h.merge(token: token, stale: true)
     end
 
     true
   end
 
   def read(uri)
-    if v = @db[uri.to_s]
-      Marshal.load(v)
-    end
+    @db[uri.to_s]
   end
 
   def updated(uri, etag, changed = true)
-    @db[uri.to_s] = Marshal.dump(read(uri).merge(etag: etag, stale: false))
+    @db[uri.to_s] = read(uri).merge(etag: etag, stale: false)
 
     return if @waiting[uri].empty?
     File.open(filename(uri), "r") do |f|
