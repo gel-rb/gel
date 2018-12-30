@@ -146,7 +146,7 @@ class Paperback::Environment
     lock_content << ""
     lock_content << "DEPENDENCIES"
 
-    root_deps = source.dependencies_for(source.root, source.root_version)
+    root_deps = source.root_dependencies
     root_deps.sort_by { |name,_| name }.each do |name, constraints|
       if constraints == []
         lock_content << "  #{name}"
