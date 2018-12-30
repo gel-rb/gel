@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "git_depot"
+
 class Paperback::LockLoader
   attr_reader :filename
   attr_reader :gemfile
@@ -94,6 +96,8 @@ class Paperback::LockLoader
 
     top_gems.each(&walk)
 
+    git_depot = Paperback::GitDepot.new(base_store)
+
     gems.each do |name, (section, body, version, platform, _deps)|
       next unless filtered_gems[name]
 
@@ -110,9 +114,9 @@ class Paperback::LockLoader
           remote = body["remote"].first
           revision = body["revision"].first
 
-          dir = env.git_path(remote, revision)
+          dir = git_depot.git_path(remote, revision)
           if installer && !Dir.exist?(dir)
-            installer.load_git_gem(remote, revision, name, dir)
+            installer.load_git_gem(remote, revision, name)
 
             locks[name] = -> { Paperback::DirectGem.new(dir, name, version) }
             next

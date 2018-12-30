@@ -5,9 +5,13 @@ require "molinillo"
 class Paperback::SpecificationProvider
   include Molinillo::SpecificationProvider
 
-  Spec = Struct.new(:name, :version, :info) do
+  Spec = Struct.new(:catalog, :name, :version, :info) do
     def gem_version
       @gem_version ||= Paperback::Support::GemVersion.new(version)
+    end
+
+    def to_s
+      "#{name} #{version} #{info.inspect}"
     end
   end
 
@@ -19,6 +23,12 @@ class Paperback::SpecificationProvider
     def satisfied_by?(spec)
       return false unless name == spec.name
       gem_requirement.satisfied_by?(spec.gem_version)
+    end
+
+    def to_s
+      req_strings = gem_requirement.requirements.sort_by { |(_op, ver)| ver }.map { |(op, ver)| "#{op} #{ver}" }
+
+      "#{name} (#{req_strings.join(", ")})"
     end
   end
 
@@ -40,7 +50,7 @@ class Paperback::SpecificationProvider
     end
   end
 
-  Ruby = Spec.new("ruby", RUBY_VERSION, [])
+  Ruby = Spec.new(nil, "ruby", RUBY_VERSION, [])
 
   def initialize(catalogs, active_platforms)
     @catalogs = catalogs
@@ -58,6 +68,11 @@ class Paperback::SpecificationProvider
 
     result = []
     @catalogs.each do |catalog|
+      if catalog.nil?
+        break unless result.empty?
+        next
+      end
+
       if info = catalog.gem_info(name)
         @cached_specs[catalog][name] ||=
           begin
@@ -67,7 +82,7 @@ class Paperback::SpecificationProvider
               [version, platform, attributes]
             end.group_by(&:first)
 
-            grouped_versions.map { |version, tuples| Spec.new(name, version, tuples.map { |_, p, a| [p, a] }) }
+            grouped_versions.map { |version, tuples| Spec.new(catalog, name, version, tuples.map { |_, p, a| [p, a] }) }
           end
 
         result += @cached_specs[catalog][name].select { |spec| dependency.satisfied_by?(spec) }

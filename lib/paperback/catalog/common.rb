@@ -51,7 +51,7 @@ module Paperback::Catalog::Common
       @done_refresh[gem_name] = true
     end
 
-    gems_to_refresh
+    gems_to_refresh || []
   end
 
   def _info(name)
