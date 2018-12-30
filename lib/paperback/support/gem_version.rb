@@ -208,14 +208,16 @@ class Paperback::Support::GemVersion
   # series of digits or ASCII letters separated by dots.
 
   def initialize version
+    version = version.to_s.strip
+
     unless self.class.correct?(version)
       raise ArgumentError, "Malformed version number string #{version}"
     end
 
     # If version is an empty string convert it to 0
-    version = 0 if version =~ /\A\s*\Z/
+    version = "0" if version.empty?
 
-    @version = version.to_s.strip.gsub("-",".pre.")
+    @version = version.gsub("-",".pre.")
     @segments = nil
   end
 

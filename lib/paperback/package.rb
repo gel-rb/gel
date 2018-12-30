@@ -55,7 +55,11 @@ module Paperback
       #--
       # Based on YAML.safe_load
       def self.load(yaml, filename)
-        result = ::YAML.parse(yaml, filename)
+        result = if Psych::VERSION < "3.1" # Ruby 2.5 & below
+                   ::YAML.parse(yaml, filename)
+                 else
+                   ::YAML.parse(yaml, filename: filename)
+                 end
         return unless result
 
         class_loader = self.new
@@ -121,7 +125,12 @@ module Paperback
         Paperback::Support::Tar::TarReader.new(io) do |package_reader|
           sums = with_file(package_reader, "checksums.yaml.gz", nil) do |sum_stream|
             yaml = Zlib::GzipReader.new(sum_stream).read
-            ::YAML.safe_load(yaml, [], [], false, "#{filename}:checksums.yaml.gz")
+
+            if Psych::VERSION < "3.1" # Ruby 2.5 & below
+              ::YAML.safe_load(yaml, [], [], false, "#{filename}:checksums.yaml.gz")
+            else
+              ::YAML.safe_load(yaml, filename: "#{filename}:checksums.yaml.gz")
+            end
           end
 
           spec = with_file(package_reader, "metadata.gz", sums) do |meta_stream|
