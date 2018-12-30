@@ -97,40 +97,19 @@ class Paperback::Environment
 
     # HACK
     $: << File.expand_path("../../tmp/bootstrap/store/ruby/gems/molinillo-0.6.4/lib", __dir__)
+    $: << File.expand_path("../../tmp/bootstrap/store/ruby/gems/pub_grub-0.3.0/lib", __dir__)
 
     require_relative "catalog"
     all_sources = (@gemfile.sources | @gemfile.gems.flat_map { |_, _, o| o[:source] }).compact
     catalogs = all_sources.map { |s| Paperback::Catalog.new(s) }
 
-    require_relative "specification_provider"
-    provider = Paperback::SpecificationProvider.new(catalogs, ["ruby"])
-    @gemfile.gems.select do |_, _, options|
-      !options[:path] && !options[:git]
-    end.each do |name, _, _|
-      catalogs.each do |catalog|
-        catalog.instance_variable_get(:@indexes).each do |index|
-          catalog.send(index).instance_variable_get(:@pending_gems) << name
-        end
-      end
-    end
+    require_relative "pub_grub/source"
 
-    ui = Struct.new(:output) { include Molinillo::UI }.new(output || File.open(IO::NULL))
+    source = Paperback::PubGrub::Source.new(gemfile, catalogs, ["ruby"])
+    solver = PubGrub::VersionSolver.new(source: source)
 
-    resolver = Molinillo::Resolver.new(provider, ui)
-
-    full_requirements = @gemfile.gems.select do |_, _, options|
-      !options[:path] && !options[:git]
-    end.map do |name, constraints, _|
-      Paperback::SpecificationProvider::Dep.new(name, constraints)
-    end
-
-    platform_requirements = @gemfile.gems.select do |_, _, options|
-      !options[:path] && !options[:git] && (!options[:platforms] || options[:platforms].include?(:mri))
-    end.map do |name, constraints, _|
-      Paperback::SpecificationProvider::Dep.new(name, constraints)
-    end
-
-    graph = resolver.resolve(platform_requirements)
+    solution = solver.solve
+    solution.delete(source.root)
 
     lock_content = []
 
@@ -139,29 +118,28 @@ class Paperback::Environment
       lock_content << "  remote: #{catalog}"
     end
     lock_content << "  specs:"
-    graph.sort_by { |v| v.payload.name }.each do |vertex|
-      payload = vertex.payload
-      next if payload.name == "bundler" || payload.name == "ruby"
 
-      lock_content << "    #{payload.name} (#{payload.version})"
-      payload.info.each do |(platform, attributes)|
-        next unless platform == "ruby"
+    solution.sort_by { |package, _| package.name }.each do |package, version|
+      name = package.name
+      next if name == "bundler" || name == "ruby"
+      lock_content << "    #{name} (#{version})"
 
-        deps = attributes[:dependencies]
-        next unless deps && deps.first
+      deps = source.dependencies_for(package, version)
+      next unless deps && deps.first
 
-        dep_lines = deps.map do |(dep_name, dep_requirements)|
-          next dep_name if dep_requirements == [">= 0"]
+      dep_lines = deps.map do |dep|
+        dep_name = dep.name
+        dep_requirements = dep.constraints
+        next dep_name if dep_requirements == [">= 0"]
 
-          req = Paperback::Support::GemRequirement.new(dep_requirements)
-          req_strings = req.requirements.sort_by { |(_op, ver)| ver }.map { |(op, ver)| "#{op} #{ver}" }
+        req = Paperback::Support::GemRequirement.new(dep_requirements)
+        req_strings = req.requirements.sort_by { |(_op, ver)| ver }.map { |(op, ver)| "#{op} #{ver}" }
 
-          "#{dep_name} (#{req_strings.join(", ")})"
-        end
+        "#{dep_name} (#{req_strings.join(", ")})"
+      end
 
-        dep_lines.sort.each do |line|
-          lock_content << "      #{line}"
-        end
+      dep_lines.sort.each do |line|
+        lock_content << "      #{line}"
       end
     end
 
@@ -170,12 +148,13 @@ class Paperback::Environment
     lock_content << "  ruby"
     lock_content << ""
     lock_content << "DEPENDENCIES"
-    full_requirements.sort_by(&:name).each do |req|
-      constraints = req.constraints.flatten
-      if constraints == []
-        lock_content << "  #{req.name}"
+
+    root_deps = source.dependencies_for(source.root, source.root_version)
+    root_deps.sort_by(&:name).each do |dep|
+      if dep.constraints == []
+        lock_content << "  #{dep.name}"
       else
-        lock_content << "  #{req.name} (#{constraints.join(", ")})"
+        lock_content << "  #{dep.name} (#{dep.constraints.join(", ")})"
       end
     end
     lock_content << ""
