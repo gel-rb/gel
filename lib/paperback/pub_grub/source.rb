@@ -1,9 +1,10 @@
 # frozen_string_literal: true
 
 require "pub_grub"
+require "pub_grub/basic_package_source"
 
 module Paperback::PubGrub
-  class Source
+  class Source < ::PubGrub::BasicPackageSource
     Spec = Struct.new(:name, :version, :info) do
       def gem_version
         @gem_version ||= Paperback::Support::GemVersion.new(version)
@@ -23,79 +24,62 @@ module Paperback::PubGrub
 
       @cached_specs = Hash.new { |h, k| h[k] = {} }
       @specs_by_package_version = {}
+
+      super()
     end
 
-    def versions_for(package, range=PubGrub::VersionRange.any)
-      return [@root_version] if package == @root
-
+    def all_versions_for(package)
       fetch_package_info(package)
 
       @specs_by_package_version[package].
         values.
         map(&:gem_version).
-        select { |version| range.include?(version) }.
         sort_by { |version| [version.prerelease? ? 0 : 1, version] }.
         reverse
     end
 
     def dependencies_for(package, version)
-      if package == @root
-        root_deps
-      else
-        fetch_package_info(package) # probably already done, can't hurt
+      fetch_package_info(package) # probably already done, can't hurt
 
-        spec = @specs_by_package_version[package][version.to_s]
-        info = spec.info
-        info = info.select { |p, i| @active_platforms.include?(p) }
+      spec = @specs_by_package_version[package][version.to_s]
+      info = spec.info
+      info = info.select { |p, i| @active_platforms.include?(p) }
 
-        deps = {}
-        info.flat_map { |_, i| i[:dependencies] }.each do |n, cs|
-          deps[n] ||= []
-          deps[n].concat cs
-        end
-
-        # FIXME: ruby_constraints ???
-
-        deps
+      deps = {}
+      info.flat_map { |_, i| i[:dependencies] }.each do |n, cs|
+        deps[n] ||= []
+        deps[n].concat cs
       end
+
+      # FIXME: ruby_constraints ???
+
+      deps
     end
 
-    def incompatibilities_for(package, version)
-      # Versions sorted by value, not preference
-      sorted_versions = versions_for(package)
-      sorted_versions.sort!
+    def root_dependencies
+      deps = {}
 
-      deps = dependencies_for(package, version)
-      deps.map do |dep_name, constraints|
-        # Build a range for all versions of this package with the same dependency
-        low = high = sorted_versions.index(version)
-        while low > 0 &&
-            dependencies_for(package, sorted_versions[low-1])[dep_name] == constraints
-          low -= 1
-        end
-
-        while high < sorted_versions.size &&
-            dependencies_for(package, sorted_versions[high])[dep_name] == constraints
-          high += 1
-        end
-
-        self_range =
-          PubGrub::VersionRange.new(
-          min: low == 0 ? nil : sorted_versions[low],
-          max: sorted_versions[high],
-          include_min: true,
-          include_max: false
-        )
-        self_constraint = PubGrub::VersionConstraint.new(package, range: self_range)
-
-        dep_package = @packages[dep_name]
-        dep_constraint = PubGrub::VersionConstraint.new(dep_package, range: to_range(constraints))
-
-        PubGrub::Incompatibility.new([
-          PubGrub::Term.new(self_constraint, true),
-          PubGrub::Term.new(dep_constraint, false)
-        ], cause: :dependency)
+      full_requirements = @gemfile.gems.select do |_, _, options|
+        !options[:path] && !options[:git]
+      end.map do |name, constraints, _|
+        deps[name] ||= []
+        deps[name].concat constraints.flatten
       end
+
+      platform_requirements = @gemfile.gems.select do |_, _, options|
+        !options[:path] && !options[:git] && (!options[:platforms] || options[:platforms].include?(:mri))
+      end.map do |name, constraints, _|
+        deps[name] ||= []
+        deps[name].concat constraints.flatten
+      end
+
+      deps.values.each(&:uniq!)
+
+      deps
+    end
+
+    def parse_dependency(package, requirement)
+      ::PubGrub::VersionConstraint.new(@packages[package], range: to_range(requirement))
     end
 
     private
@@ -126,28 +110,6 @@ module Paperback::PubGrub
         # TODO: are we going to find specs in multiple catalogs this way?
         @specs_by_package_version[package][spec.version] = spec
       end
-    end
-
-    def root_deps
-      deps = {}
-
-      full_requirements = @gemfile.gems.select do |_, _, options|
-        !options[:path] && !options[:git]
-      end.map do |name, constraints, _|
-        deps[name] ||= []
-        deps[name].concat constraints.flatten
-      end
-
-      platform_requirements = @gemfile.gems.select do |_, _, options|
-        !options[:path] && !options[:git] && (!options[:platforms] || options[:platforms].include?(:mri))
-      end.map do |name, constraints, _|
-        deps[name] ||= []
-        deps[name].concat constraints.flatten
-      end
-
-      deps.values.each(&:uniq!)
-
-      deps
     end
 
     def to_range(constraints)
