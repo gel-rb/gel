@@ -43,8 +43,12 @@ class Paperback::DB
 end
 
 module Paperback::DB::AutoTransaction
-  def initialize(*)
+  def initialize(root, name)
+    @root = root
+    @name = name
+
     super
+
     @transaction = nil
     @monitor = Monitor.new
   end
@@ -127,6 +131,16 @@ module Paperback::DB::AutoTransaction
     else
       writing { super }
     end
+  end
+
+  private
+
+  def marshal_dump
+    [@root, @name]
+  end
+
+  def marshal_load((root, name))
+    initialize(root, name)
   end
 end
 

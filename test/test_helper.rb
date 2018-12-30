@@ -94,30 +94,32 @@ if respond_to?(:fork, true)
       raise "child failed: #{status.inspect}" unless status.success?
     end
   end
-else
-  def reconstruct_in_subprocess(object)
-    case object
-    when Paperback::MultiStore
-      "Paperback::MultiStore.new(#{reconstruct_in_subprocess(object.root)}, #{reconstruct_in_subprocess(object.instance_variable_get(:@stores))})"
-    when Paperback::Store
-      "Paperback::Store.new(#{reconstruct_in_subprocess(object.root)})"
-    when String, Integer, NilClass
-      object.inspect
-    when Array
-      "[#{object.map { |item| reconstruct_in_subprocess(item) }.join(", ") }]"
-    when Hash
-      "{#{object.map { |key, value|
-        "#{reconstruct_in_subprocess(key)} => #{reconstruct_in_subprocess(value)}"
-      }.join(", ")}}"
-    else
-      raise "Unknown object #{object.class}"
-    end
-  end
-
+elsif defined?(org.jruby.Ruby)
   def subprocess_output(code, **kwargs)
     source = caller_locations.first
 
-    wrapped_code = kwargs.map { |name, value| "#{name} = #{reconstruct_in_subprocess(value)}\n" }.join +
+    io = StringIO.new
+
+    config = org.jruby.RubyInstanceConfig.new
+    config.input = StringIO.new.tap(&:close_write).to_input_stream
+    config.output = java.io.PrintStream.new(io.to_output_stream)
+
+    config.disable_gems = true
+    config.load_paths = [File.expand_path("../lib", __dir__)]
+    config.required_libraries << "paperback" << "paperback/compatibility"
+
+    wrapped_code = kwargs.map { |name, value| "#{name} = Marshal.load(#{Marshal.dump(value).inspect})\n" }.join +
+      "eval(#{code.inspect}, binding, #{source.path.inspect}, #{source.lineno + 1})"
+
+    org.jruby.Ruby.new_instance(config).eval_scriptlet(wrapped_code)
+
+    io.string.lines.map(&:chomp)
+  end
+else
+  def subprocess_output(code, **kwargs)
+    source = caller_locations.first
+
+    wrapped_code = kwargs.map { |name, value| "#{name} = Marshal.load(#{Marshal.dump(value).inspect})\n" }.join +
       "eval(#{code.inspect}, binding, #{source.path.inspect}, #{source.lineno + 1})"
 
     r, w = IO.pipe
@@ -135,7 +137,7 @@ else
 
     w.close
 
-    _, status = Process.waitpid2(pid)
+    Process.waitpid2(pid)
     r.read.lines.map(&:chomp)
   end
 end
