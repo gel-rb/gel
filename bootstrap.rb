@@ -2,8 +2,15 @@
 
 require_relative "lib/paperback"
 
+def usage
+  puts "USAGE: ruby bootstrap.rb gemfile"
+  exit 1
+end
+
 case ARGV.shift
 when "gemfile"
+  usage unless ARGV.length == 0
+
   Dir.chdir __dir__
   Dir.mkdir "tmp" unless Dir.exist?("tmp")
   Dir.mkdir "tmp/bootstrap" unless Dir.exist?("tmp/bootstrap")
@@ -16,5 +23,5 @@ when "gemfile"
   loader.activate(nil, store, install: true, output: $stderr)
 
 else
-  raise "unknown"
+  usage
 end
