@@ -2,6 +2,7 @@
 
 require "pub_grub"
 require "pub_grub/basic_package_source"
+require "pub_grub/rubygems"
 
 module Paperback::PubGrub
   class Source < ::PubGrub::BasicPackageSource
@@ -114,32 +115,8 @@ module Paperback::PubGrub
     end
 
     def to_range(constraints)
-      Array(constraints).flatten.map do |constraint|
-        op, ver = Paperback::Support::GemRequirement.parse(constraint)
-        case op
-        when "~>"
-          # TODO: not sure this is correct for prereleases
-          PubGrub::VersionRange.new(min: ver, max: ver.bump, include_min: true)
-        when ">"
-          PubGrub::VersionRange.new(min: ver)
-        when ">="
-          if ver == Gem::Version.new("0")
-            PubGrub::VersionRange.any
-          else
-            PubGrub::VersionRange.new(min: ver, include_min: true)
-          end
-        when "<"
-          PubGrub::VersionRange.new(max: ver)
-        when "<="
-          PubGrub::VersionRange.new(max: ver, include_max: true)
-        when "="
-          PubGrub::VersionRange.new(min: ver, max: ver, include_min: true, include_max: true)
-        when "!="
-          PubGrub::VersionRange.new(min: ver, max: ver, include_min: true, include_max: true).invert
-        else
-          raise "bad version specifier: #{op}"
-        end
-      end.inject(:intersect) || PubGrub::VersionRange.any
+      requirement = Paperback::Support::GemRequirement.new(constraints)
+      ::PubGrub::RubyGems.requirement_to_range(requirement)
     end
   end
 end
