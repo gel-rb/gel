@@ -53,7 +53,7 @@ module Paperback::DB::AutoTransaction
     @monitor = Monitor.new
   end
 
-  if Monitor.method_defined?(:mon_owned)
+  if Monitor.method_defined?(:mon_owned?) # Ruby 2.4+
     def owned?
       @monitor.mon_owned?
     end
