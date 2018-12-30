@@ -61,9 +61,7 @@ module Paperback::PubGrub
     def root_dependencies
       deps = {}
 
-      full_requirements = @gemfile.gems.select do |_, _, options|
-        !options[:path] && !options[:git]
-      end.map do |name, constraints, _|
+      full_requirements = @gemfile.gems.map do |name, constraints, _|
         deps[name] ||= []
         deps[name].concat constraints.flatten
       end

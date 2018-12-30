@@ -33,7 +33,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  rack (2.0.3)
+  rack (= 2.0.3)
 
 BUNDLED WITH
    1.999

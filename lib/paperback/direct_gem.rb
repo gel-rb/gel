@@ -2,7 +2,7 @@
 
 class Paperback::DirectGem < Paperback::StoreGem
   def load_gemspec(filename)
-    Paperback::GemspecParser.parse(File.read(filename), filename)
+    Paperback::GemspecParser.parse(File.read(filename), filename, isolate: false)
   end
 
   def initialize(root, name, version = nil)

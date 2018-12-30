@@ -40,11 +40,6 @@ class Paperback::Environment
     @store = store
   end
 
-  def self.git_path(remote, revision)
-    short = File.basename(remote, ".git")
-    File.join(@store.root, "git", "#{short}-#{revision[0..12]}")
-  end
-
   def self.search_upwards(name, dir = Dir.pwd)
     until (file = File.join(dir, name)) && File.exist?(file)
       next_dir = File.dirname(dir)
@@ -96,7 +91,27 @@ class Paperback::Environment
 
     require_relative "catalog"
     all_sources = (gemfile.sources | gemfile.gems.flat_map { |_, _, o| o[:source] }).compact
-    catalogs = all_sources.map { |s| Paperback::Catalog.new(s, **catalog_options) }
+    server_catalogs = all_sources.map { |s| Paperback::Catalog.new(s, **catalog_options) }
+
+    git_sources = gemfile.gems.map { |_, _, o|
+      if o[:git]
+        [o[:git], o[:branch] || o[:ref]]
+      end
+    }.compact.uniq
+
+    path_sources = gemfile.gems.map { |_, _, o| o[:path] }.compact
+
+    require_relative "git_depot"
+    git_depot = Paperback::GitDepot.new(Paperback::Environment.store)
+
+    require_relative "path_catalog"
+    require_relative "git_catalog"
+
+    catalogs =
+      path_sources.map { |path| Paperback::PathCatalog.new(path) } +
+      git_sources.map { |remote, ref| Paperback::GitCatalog.new(git_depot, remote, ref) } +
+      [nil] +
+      server_catalogs
 
     require_relative "pub_grub/source"
 
@@ -115,33 +130,67 @@ class Paperback::Environment
 
     lock_content = []
 
+    output_specs_for = lambda do |vertices|
+      lock_content << "  specs:"
+      vertices.each do |vertex|
+        payload = vertex.payload
+        next if payload.name == "bundler" || payload.name == "ruby"
+
+        lock_content << "    #{payload.name} (#{payload.version})"
+        payload.info.each do |(platform, attributes)|
+          next unless platform == "ruby"
+
+          deps = attributes[:dependencies]
+          next unless deps && deps.first
+
+          dep_lines = deps.map do |(dep_name, dep_requirements)|
+            next dep_name if dep_requirements == [">= 0"] || dep_requirements == []
+
+            req = Paperback::Support::GemRequirement.new(dep_requirements)
+            req_strings = req.requirements.sort_by { |(_op, ver)| ver }.map { |(op, ver)| "#{op} #{ver}" }
+
+            "#{dep_name} (#{req_strings.join(", ")})"
+          end
+
+          dep_lines.sort.each do |line|
+            lock_content << "      #{line}"
+          end
+        end
+      end
+    end
+
+    grouped_graph = graph.sort_by { |v| v.payload.name }.group_by { |v|
+      v.payload.catalog.is_a?(Paperback::Catalog) ? nil : v.payload.catalog
+    }
+    server_gems = grouped_graph.delete(nil)
+
+    grouped_graph.keys.sort_by do |catalog|
+      case catalog
+      when Paperback::GitCatalog
+        [1, catalog.remote, catalog.revision]
+      when Paperback::PathCatalog
+        [2, catalog.path]
+      end
+    end.each do |catalog|
+      case catalog
+      when Paperback::GitCatalog
+        lock_content << "GIT"
+        lock_content << "  remote: #{catalog.remote}"
+        lock_content << "  revision: #{catalog.revision}"
+      when Paperback::PathCatalog
+        lock_content << "PATH"
+        lock_content << "  remote: #{catalog.path}"
+      end
+
+      output_specs_for.call(grouped_graph[catalog])
+      lock_content << ""
+    end
+
     lock_content << "GEM"
-    catalogs.each do |catalog|
+    server_catalogs.each do |catalog|
       lock_content << "  remote: #{catalog}"
     end
-    lock_content << "  specs:"
-
-    solution.sort_by { |package, _| package.name }.each do |package, version|
-      name = package.name
-      next if name == "bundler" || name == "ruby"
-      lock_content << "    #{name} (#{version})"
-
-      deps = source.dependencies_for(package, version)
-      next unless deps && deps.first
-
-      dep_lines = deps.map do |dep_name, dep_requirements|
-        next dep_name if dep_requirements == [">= 0"]
-
-        req = Paperback::Support::GemRequirement.new(dep_requirements)
-        req_strings = req.requirements.sort_by { |(_op, ver)| ver }.map { |(op, ver)| "#{op} #{ver}" }
-
-        "#{dep_name} (#{req_strings.join(", ")})"
-      end
-
-      dep_lines.sort.each do |line|
-        lock_content << "      #{line}"
-      end
-    end
+    output_specs_for.call(server_gems)
 
     lock_content << ""
     lock_content << "PLATFORMS"
@@ -152,10 +201,15 @@ class Paperback::Environment
 
     root_deps = source.root_dependencies
     root_deps.sort_by { |name,_| name }.each do |name, constraints|
+      constraints = req.constraints.flatten
+      bang = "!" if options[:path] || options[:git]
       if constraints == []
-        lock_content << "  #{name}"
+        lock_content << "  #{req.name}#{bang}"
       else
-        lock_content << "  #{name} (#{constraints.join(", ")})"
+        r = Paperback::Support::GemRequirement.new(constraints)
+        req_strings = r.requirements.sort_by { |(_op, ver)| ver }.map { |(op, ver)| "#{op} #{ver}" }
+
+        lock_content << "  #{req.name} (#{req_strings.join(", ")})#{bang}"
       end
     end
 

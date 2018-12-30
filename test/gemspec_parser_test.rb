@@ -39,7 +39,7 @@ end
 GEMSPEC
 
   def test_simple_parse
-    gemspec = Paperback::GemspecParser.parse(EXAMPLE, __FILE__, EXAMPLE_LINE, root: File.expand_path("..", __dir__))
+    gemspec = Paperback::GemspecParser.parse(EXAMPLE, __FILE__, EXAMPLE_LINE, root: File.expand_path("..", __dir__), isolate: false)
 
     assert_equal "paperback", gemspec.name
     assert_equal Paperback::VERSION, gemspec.version
