@@ -31,11 +31,12 @@ module Paperback::PubGrub
     def all_versions_for(package)
       fetch_package_info(package)
 
-      @specs_by_package_version[package].
-        values.
-        map(&:gem_version).
-        sort_by { |version| [version.prerelease? ? 0 : 1, version] }.
-        reverse
+      @specs_by_package_version[package].values.map(&:gem_version)
+    end
+
+    def sort_versions_by_preferred(package, sorted_versions)
+      prereleases, releases = sorted_versions.reverse.partition(&:prerelease?)
+      releases.concat(prereleases)
     end
 
     def dependencies_for(package, version)
