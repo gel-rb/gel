@@ -107,7 +107,14 @@ class Paperback::Environment
     source = Paperback::PubGrub::Source.new(gemfile, catalogs, ["ruby"])
     solver = PubGrub::VersionSolver.new(source: source)
 
-    solution = solver.solve
+    output.print 'Resolving dependencies...'
+    until solver.solved?
+      solver.work
+      output.print "." unless PubGrub.logger.debug?
+    end
+    output.puts
+
+    solution = solver.result
     solution.delete(source.root)
 
     lock_content = []
