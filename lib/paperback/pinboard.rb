@@ -31,7 +31,7 @@ class Paperback::Pinboard
     add uri, token: token
 
     tail_file = Paperback::TailFile.new(uri, self, httpool: @httpool)
-    tail_file.update(!tail) if stale(uri, token)
+    tail_file.update(force_reset: !tail) if stale(uri, token)
 
     if block_given?
       File.open(filename(uri), "r") do |f|
@@ -52,7 +52,7 @@ class Paperback::Pinboard
       unless already_queued
         @update_pool.queue(uri.path) do
           begin
-            tail_file.update(!tail)
+            tail_file.update(force_reset: !tail)
           rescue => ex
             if error
               error.call(ex)

@@ -36,7 +36,7 @@ class Paperback::TailFile
     @done
   end
 
-  def update(force_reset = false)
+  def update(force_reset: false)
     uri = self.uri
 
     File.open(@filename, "a+b") do |f|

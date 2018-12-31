@@ -20,8 +20,6 @@ Paperback::Environment.store_set.each do |key|
 end
 store = Paperback::MultiStore.new(dir, stores)
 
-Paperback::Environment::IGNORE_LIST.concat ENV["PAPERBACK_IGNORE"].split if ENV["PAPERBACK_IGNORE"]
-
 Paperback::Environment.open(Paperback::LockedStore.new(store))
 
 if ENV["PAPERBACK_LOCKFILE"] && ENV["PAPERBACK_LOCKFILE"] != ""

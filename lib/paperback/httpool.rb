@@ -29,6 +29,7 @@ class Paperback::Httpool
     actual_host = uri.host
     # https://github.com/rubygems/rubygems.org/issues/1698#issuecomment-348744676  ¯\_(ツ)_/¯
     actual_host = "index.rubygems.org" if actual_host.downcase == "rubygems.org"
+    request["Host"] = "index.rubygems.org" if request["Host"] == "rubygems.org"
 
     t = Time.now
     http ||= Net::HTTP.start(actual_host, uri.port, use_ssl: uri.scheme == "https")
