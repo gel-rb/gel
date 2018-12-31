@@ -57,10 +57,22 @@ def with_fixture_gems_installed(paths)
 end
 
 if respond_to?(:fork, true)
+  module RequireHack
+    def require(path)
+    end
+  end
+
   def subprocess_output(code, **kwargs)
     source = caller_locations.first
 
     read_from_fork do |ch|
+      # This (and the matching one below the eval) allow DeepCover's
+      # clone mode to correctly pick up activity in the forked process.
+      if defined?($_cov)
+        $_cov.each_value { |arr| arr.map! { 0 } }
+        require "fileutils"
+      end
+
       $stdout = ch
 
       b = binding
@@ -70,6 +82,15 @@ if respond_to?(:fork, true)
       end
 
       eval code, b, source.path, source.lineno + 1
+
+      if defined?(DeepCover::CLONE_MODE_ENTRY_TOP_LEVEL_MODULES)
+        # We may have broken require by now. DeepCover will
+        # `require "fileutils"`, but we know that's a no-op (because we
+        # made sure to load it earlier).
+        ::Object.prepend RequireHack
+
+        DeepCover::CLONE_MODE_ENTRY_TOP_LEVEL_MODULES.first::DeepCover.save
+      end
     end.lines.map(&:chomp)
   end
 
