@@ -6,7 +6,7 @@ require "pub_grub/rubygems"
 
 module Paperback::PubGrub
   class Source < ::PubGrub::BasicPackageSource
-    Spec = Struct.new(:name, :version, :info) do
+    Spec = Struct.new(:catalog, :name, :version, :info) do
       def gem_version
         @gem_version ||= Paperback::Support::GemVersion.new(version)
       end
@@ -27,6 +27,10 @@ module Paperback::PubGrub
       @specs_by_package_version = {}
 
       super()
+    end
+
+    def spec_for_version(package, version)
+      @specs_by_package_version[package][version.to_s]
     end
 
     def all_versions_for(package)
@@ -89,6 +93,11 @@ module Paperback::PubGrub
 
       specs = []
       @catalogs.each do |catalog|
+        if catalog.nil?
+          break unless specs.empty?
+          next
+        end
+
         if info = catalog.gem_info(package.name)
           @cached_specs[catalog][package.name] ||=
             begin
@@ -98,7 +107,7 @@ module Paperback::PubGrub
                 [version, platform, attributes]
               end.group_by(&:first)
 
-              grouped_versions.map { |version, tuples| Spec.new(package.name, version, tuples.map { |_, p, a| [p, a] }) }
+              grouped_versions.map { |version, tuples| Spec.new(catalog, package.name, version, tuples.map { |_, p, a| [p, a] }) }
             end
 
           specs.concat @cached_specs[catalog][package.name]
