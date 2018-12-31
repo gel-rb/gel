@@ -65,14 +65,10 @@ module Paperback::PubGrub
     def root_dependencies
       deps = {}
 
-      full_requirements = @gemfile.gems.map do |name, constraints, _|
-        deps[name] ||= []
-        deps[name].concat constraints.flatten
-      end
-
-      platform_requirements = @gemfile.gems.select do |_, _, options|
-        !options[:path] && !options[:git] && (!options[:platforms] || options[:platforms].include?(:mri))
-      end.map do |name, constraints, _|
+      @gemfile.gems.select do |_, _, options|
+        next true unless platforms = options[:platforms]
+        !([*platforms] & [:ruby, :mri]).empty?
+      end.each do |name, constraints, _|
         deps[name] ||= []
         deps[name].concat constraints.flatten
       end
