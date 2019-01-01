@@ -11,6 +11,7 @@ require_relative "marshal_hacks"
 
 class Paperback::Catalog::DependencyIndex
   include Paperback::Catalog::Common
+  CACHE_TYPE = "quick"
 
   LIST_MAX = 40
   UPDATE_CONCURRENCY = 8
@@ -113,11 +114,5 @@ class Paperback::Catalog::DependencyIndex
     end
 
     force_refresh_including gem_name if immediate
-  end
-
-  private
-
-  def pinboard_dir
-    File.expand_path("~/.cache/paperback/quick/#{@uri_identifier}")
   end
 end

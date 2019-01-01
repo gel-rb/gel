@@ -4,11 +4,14 @@ require "fileutils"
 require "monitor"
 
 module Paperback::Catalog::Common
-  def initialize(uri, uri_identifier, httpool:, work_pool:)
+  def initialize(uri, uri_identifier, httpool:, work_pool:, cache:)
     @uri = uri
     @uri_identifier = uri_identifier
     @httpool = httpool
     @work_pool = work_pool
+    @cache = cache
+
+    @pinboard = nil
 
     @monitor = Monitor.new
     @refresh_cond = @monitor.new_cond
@@ -51,7 +54,7 @@ module Paperback::Catalog::Common
       @done_refresh[gem_name] = true
     end
 
-    gems_to_refresh
+    gems_to_refresh || []
   end
 
   def _info(name)
@@ -66,6 +69,7 @@ module Paperback::Catalog::Common
     @pinboard || @monitor.synchronize do
       @pinboard ||=
         begin
+          pinboard_dir = File.expand_path("#{@cache}/#{self.class::CACHE_TYPE}/#{@uri_identifier}")
           FileUtils.mkdir_p(pinboard_dir)
           Paperback::Pinboard.new(pinboard_dir, monitor: @monitor, httpool: @httpool, work_pool: @work_pool)
         end

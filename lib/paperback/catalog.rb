@@ -8,10 +8,11 @@ require "digest"
 require_relative "httpool"
 
 class Paperback::Catalog
-  def initialize(uri, httpool: Paperback::Httpool.new, work_pool: nil)
+  def initialize(uri, httpool: Paperback::Httpool.new, work_pool: nil, cache: "~/.cache/paperback")
     @uri = normalize_uri(uri)
     @httpool = httpool
     @work_pool = work_pool
+    @cache = cache
 
     @indexes = [
       :compact_index,
@@ -21,15 +22,15 @@ class Paperback::Catalog
   end
 
   def compact_index
-    @compact_index ||= Paperback::Catalog::CompactIndex.new(@uri, uri_identifier, httpool: @httpool, work_pool: @work_pool)
+    @compact_index ||= Paperback::Catalog::CompactIndex.new(@uri, uri_identifier, httpool: @httpool, work_pool: @work_pool, cache: @cache)
   end
 
   def dependency_index
-    @dependency_index ||= Paperback::Catalog::DependencyIndex.new(self, @uri, uri_identifier, httpool: @httpool, work_pool: @work_pool)
+    @dependency_index ||= Paperback::Catalog::DependencyIndex.new(self, @uri, uri_identifier, httpool: @httpool, work_pool: @work_pool, cache: @cache)
   end
 
   def legacy_index
-    @legacy_index ||= Paperback::Catalog::LegacyIndex.new(@uri, uri_identifier, httpool: @httpool, work_pool: @work_pool)
+    @legacy_index ||= Paperback::Catalog::LegacyIndex.new(@uri, uri_identifier, httpool: @httpool, work_pool: @work_pool, cache: @cache)
   end
 
   def index
@@ -38,7 +39,7 @@ class Paperback::Catalog
 
   def gem_info(name)
     index.gem_info(name)
-  rescue Net::HTTPServerException
+  rescue Net::HTTPExceptions
     if @indexes.size > 1
       @indexes.shift
       retry
@@ -83,7 +84,7 @@ class Paperback::Catalog
   end
 
   def cache_dir
-    File.expand_path("~/.cache/paperback/gems/#{uri_identifier}")
+    File.expand_path("#{@cache}/gems/#{uri_identifier}")
   end
 
   def cache_path(name, version)

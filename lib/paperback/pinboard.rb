@@ -53,7 +53,7 @@ class Paperback::Pinboard
         @update_pool.queue(uri.path) do
           begin
             tail_file.update(force_reset: !tail)
-          rescue => ex
+          rescue Exception => ex
             if error
               error.call(ex)
             else

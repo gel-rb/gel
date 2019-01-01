@@ -10,10 +10,11 @@ require_relative "marshal_hacks"
 
 class Paperback::Catalog::LegacyIndex
   include Paperback::Catalog::Common
+  CACHE_TYPE = "quick"
 
   UPDATE_CONCURRENCY = 8
 
-  def initialize(uri, uri_identifier, httpool:, work_pool:)
+  def initialize(*)
     super
 
     @needs_update = true
@@ -46,36 +47,43 @@ class Paperback::Catalog::LegacyIndex
       end
     end
 
-    spec_file_handler = lambda do |f|
-      data = Zlib::GzipReader.new(f).read
-      data = Marshal.load(data)
+    spec_file_handler = lambda do |for_prerelease|
+      lambda do |f|
+        data = Zlib::GzipReader.new(f).read
+        data = Marshal.load(data)
 
-      data.each do |name, version, platform|
-        v = version.to_s
-        v += "-#{platform}" unless platform == "ruby"
-        (versions[name] ||= {})[v] = nil
-      end
-
-      done = false
-      @monitor.synchronize do
-        specs = true
-        if specs && prerelease_specs
-          done = true
-          @gem_info.update versions
-          @updating = false
-          @refresh_cond.broadcast
+        data.each do |name, version, platform|
+          v = version.to_s
+          v += "-#{platform}" unless platform == "ruby"
+          (versions[name] ||= {})[v] = nil
         end
-      end
 
-      if done
-        (@active_gems | @pending_gems).each do |name|
-          refresh_gem(name)
+        done = false
+        @monitor.synchronize do
+          if for_prerelease
+            prerelease_specs = true
+          else
+            specs = true
+          end
+
+          if specs && prerelease_specs
+            done = true
+            @gem_info.update versions
+            @updating = false
+            @refresh_cond.broadcast
+          end
+        end
+
+        if done
+          (@active_gems | @pending_gems).each do |name|
+            refresh_gem(name)
+          end
         end
       end
     end
 
-    pinboard.async_file(uri("specs.4.8.gz"), tail: false, error: error, &spec_file_handler)
-    pinboard.async_file(uri("prerelease_specs.4.8.gz"), tail: false, error: error, &spec_file_handler)
+    pinboard.async_file(uri("specs.4.8.gz"), tail: false, error: error, &spec_file_handler.(false))
+    pinboard.async_file(uri("prerelease_specs.4.8.gz"), tail: false, error: error, &spec_file_handler.(true))
 
     true
   end
@@ -139,9 +147,5 @@ class Paperback::Catalog::LegacyIndex
         raise e
       end
     end
-  end
-
-  def pinboard_dir
-    File.expand_path("~/.cache/paperback/quick/#{@uri_identifier}")
   end
 end

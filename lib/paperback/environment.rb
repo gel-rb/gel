@@ -85,12 +85,8 @@ class Paperback::Environment
       "Gemfile.lock"
   end
 
-  def self.lock(output: nil)
-    Paperback::Environment.load_gemfile
-    return if @active_lockfile
-
-    lockfile = Paperback::Environment.lockfile_name
-    if File.exist?(lockfile)
+  def self.lock(output: nil, gemfile: Paperback::Environment.load_gemfile, lockfile: Paperback::Environment.lockfile_name, catalog_options: nil)
+    if lockfile && File.exist?(lockfile)
       loader = Paperback::LockLoader.new(lockfile, gemfile)
       # TODO
     end
@@ -99,12 +95,12 @@ class Paperback::Environment
     $: << File.expand_path("../../tmp/bootstrap/store/ruby/gems/molinillo-0.6.4/lib", __dir__)
 
     require_relative "catalog"
-    all_sources = (@gemfile.sources | @gemfile.gems.flat_map { |_, _, o| o[:source] }).compact
-    catalogs = all_sources.map { |s| Paperback::Catalog.new(s) }
+    all_sources = (gemfile.sources | gemfile.gems.flat_map { |_, _, o| o[:source] }).compact
+    catalogs = all_sources.map { |s| Paperback::Catalog.new(s, **catalog_options) }
 
     require_relative "specification_provider"
     provider = Paperback::SpecificationProvider.new(catalogs, ["ruby"])
-    @gemfile.gems.select do |_, _, options|
+    gemfile.gems.select do |_, _, options|
       !options[:path] && !options[:git]
     end.each do |name, _, _|
       catalogs.each do |catalog|
@@ -118,13 +114,13 @@ class Paperback::Environment
 
     resolver = Molinillo::Resolver.new(provider, ui)
 
-    full_requirements = @gemfile.gems.select do |_, _, options|
+    full_requirements = gemfile.gems.select do |_, _, options|
       !options[:path] && !options[:git]
     end.map do |name, constraints, _|
       Paperback::SpecificationProvider::Dep.new(name, constraints)
     end
 
-    platform_requirements = @gemfile.gems.select do |_, _, options|
+    platform_requirements = gemfile.gems.select do |_, _, options|
       !options[:path] && !options[:git] && (!options[:platforms] || options[:platforms].include?(:mri))
     end.map do |name, constraints, _|
       Paperback::SpecificationProvider::Dep.new(name, constraints)
@@ -168,6 +164,7 @@ class Paperback::Environment
     lock_content << ""
     lock_content << "PLATFORMS"
     lock_content << "  ruby"
+
     lock_content << ""
     lock_content << "DEPENDENCIES"
     full_requirements.sort_by(&:name).each do |req|
@@ -178,16 +175,21 @@ class Paperback::Environment
         lock_content << "  #{req.name} (#{constraints.join(", ")})"
       end
     end
-    lock_content << ""
-    lock_content << "RUBY VERSION"
-    lock_content << "   #{RUBY_DESCRIPTION.split.first(2).join(" ")}"
+
+    unless gemfile.ruby.empty?
+      lock_content << ""
+      lock_content << "RUBY VERSION"
+      lock_content << "   #{RUBY_DESCRIPTION.split.first(2).join(" ")}"
+    end
+
     lock_content << ""
     lock_content << "BUNDLED WITH"
     lock_content << "   1.999"
 
-    File.open(lockfile, "w") do |f|
-      f.write(lock_content.join("\n") << "\n")
-    end
+    lock_body = lock_content.join("\n") << "\n"
+
+    File.write(lockfile, lock_body) if lockfile
+    lock_body
   end
 
   def self.activate(install: false, output: nil)

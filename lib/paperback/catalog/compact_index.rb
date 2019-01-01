@@ -8,8 +8,9 @@ require_relative "common"
 
 class Paperback::Catalog::CompactIndex
   include Paperback::Catalog::Common
+  CACHE_TYPE = "index"
 
-  def initialize(uri, uri_identifier, httpool:, work_pool:)
+  def initialize(*)
     super
 
     @gem_tokens = Hash.new("NONE")
@@ -127,11 +128,5 @@ class Paperback::Catalog::CompactIndex
         @refresh_cond.broadcast
       end
     end
-  end
-
-  private
-
-  def pinboard_dir
-    File.expand_path("~/.cache/paperback/index/#{@uri_identifier}")
   end
 end
