@@ -319,9 +319,9 @@ LOCKFILE
         array.(pairs.map { |op, ver| "[\x07" + m.(op) + gem_version.(ver) })
     }
 
-    gem_dependency = lambda { |type, name, requirement_pairs|
+    gem_dependency = lambda { |type, dep_name, requirement_pairs|
       "o:\x14Gem::Dependency\n" +
-        ":\n@name" + m.(name) +
+        ":\n@name" + m.(dep_name) +
         ":\x11@requirement" + gem_requirement.(requirement_pairs) +
         ":\n@type" + m.(type) +
         ":\x10@prerelease" + "F" +
@@ -338,7 +338,7 @@ LOCKFILE
       gem_requirement.([ruby]), # @required_ruby_version
       gem_requirement.([[">=", "0"]]), # @required_rubygems_version
       m.(platform), # @original_platform
-      array.(dependencies.map { |type, name, reqs| gem_dependency.(type, name, reqs) }), # @dependencies
+      array.(dependencies.map { |type, dep_name, reqs| gem_dependency.(type, dep_name, reqs) }), # @dependencies
     ])
 
     Zlib::Deflate.deflate(
