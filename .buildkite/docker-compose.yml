@@ -7,3 +7,5 @@ services:
       dockerfile: .buildkite/Dockerfile
       args:
         - RUBY_IMAGE
+    environment:
+      - CI
