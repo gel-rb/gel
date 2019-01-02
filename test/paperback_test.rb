@@ -16,6 +16,6 @@ class PaperbackTest < Minitest::Test
   end
 
   def test_tests_dont_have_rubygems_loaded
-    assert_empty $".grep(/(?<!compatibility\/)rubygems\.rb$/i)
+    assert_empty $".grep(/(?<!compatibility\/|pub_grub\/)rubygems\.rb$/i)
   end
 end
