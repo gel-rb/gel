@@ -483,6 +483,57 @@ LOCKFILE
     end
   end
 
+  def test_conflicting_version_constraints
+    gemfile = <<GEMFILE
+source "https://gem-mimer.org"
+source "https://extra-gems.org"
+
+gem "thunk"
+gem "dotenv"
+gem "foreman"
+GEMFILE
+
+    stub_request(:get, "https://extra-gems.org/versions").
+      to_return(body: <<VERSIONS)
+created_at: 2017-03-27T04:38:13+00:00
+---
+thunk 1 xx
+VERSIONS
+
+    stub_request(:get, "https://extra-gems.org/info/thunk").
+      to_return(body: <<INFO)
+---
+1 thor:>= 0|checksum:zzz
+INFO
+
+    stub_gem_mimer
+
+    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile)
+GEM
+  remote: https://gem-mimer.org/
+  remote: https://extra-gems.org/
+  specs:
+    dotenv (2.5.0)
+    foreman (0.63.0)
+      dotenv (>= 0.7)
+      thor (>= 0.13.6)
+    thor (0.20.3)
+    thunk (1)
+      thor
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  dotenv
+  foreman
+  thunk
+
+BUNDLED WITH
+   1.999
+LOCKFILE
+  end
+
   def test_dependencies_api_fallback
     gemfile = <<GEMFILE
 source "https://rubygems.org"
