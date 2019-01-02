@@ -166,6 +166,95 @@ BUNDLED WITH
 LOCKFILE
   end
 
+  def test_dependencies_constrain_each_other
+    gemfile = <<GEMFILE
+source "https://gem-mimer.org"
+
+gem "activerecord"
+gem "quiet_assets"
+GEMFILE
+
+    stub_gem_mimer
+
+    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile)
+GEM
+  remote: https://gem-mimer.org/
+  specs:
+    actionpack (4.2.11)
+      actionview (= 4.2.11)
+      activesupport (= 4.2.11)
+      rack (~> 1.6)
+      rack-test (~> 0.6.2)
+      rails-dom-testing (~> 1.0, >= 1.0.5)
+      rails-html-sanitizer (~> 1.0, >= 1.0.2)
+    actionview (4.2.11)
+      activesupport (= 4.2.11)
+      builder (~> 3.1)
+      erubis (~> 2.7.0)
+      rails-dom-testing (~> 1.0, >= 1.0.5)
+      rails-html-sanitizer (~> 1.0, >= 1.0.3)
+    activemodel (4.2.11)
+      activesupport (= 4.2.11)
+      builder (~> 3.1)
+    activerecord (4.2.11)
+      activemodel (= 4.2.11)
+      activesupport (= 4.2.11)
+      arel (~> 6.0)
+    activesupport (4.2.11)
+      i18n (~> 0.7)
+      minitest (~> 5.1)
+      thread_safe (~> 0.3, >= 0.3.4)
+      tzinfo (~> 1.1)
+    arel (6.0.4)
+    builder (3.2.3)
+    concurrent-ruby (1.1.4)
+    crass (1.0.4)
+    erubis (2.7.0)
+    i18n (0.9.5)
+      concurrent-ruby (~> 1.0)
+    loofah (2.2.3)
+      crass (~> 1.0.2)
+      nokogiri (>= 1.5.9)
+    mini_portile2 (2.4.0)
+    minitest (5.11.3)
+    nokogiri (1.9.1)
+      mini_portile2 (~> 2.4.0)
+    quiet_assets (1.1.0)
+      railties (>= 3.1, < 5.0)
+    rack (1.6.11)
+    rack-test (0.6.3)
+      rack (>= 1.0)
+    rails-deprecated_sanitizer (1.0.3)
+      activesupport (>= 4.2.0.alpha)
+    rails-dom-testing (1.0.9)
+      activesupport (>= 4.2.0, < 5.0)
+      nokogiri (~> 1.6)
+      rails-deprecated_sanitizer (>= 1.0.1)
+    rails-html-sanitizer (1.0.4)
+      loofah (~> 2.2, >= 2.2.2)
+    railties (4.2.11)
+      actionpack (= 4.2.11)
+      activesupport (= 4.2.11)
+      rake (>= 0.8.7)
+      thor (>= 0.18.1, < 2.0)
+    rake (12.3.2)
+    thor (0.20.3)
+    thread_safe (0.3.6)
+    tzinfo (1.2.5)
+      thread_safe (~> 0.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  activerecord
+  quiet_assets
+
+BUNDLED WITH
+   1.999
+LOCKFILE
+  end
+
   def test_dependencies_api_fallback
     gemfile = <<GEMFILE
 source "https://rubygems.org"
