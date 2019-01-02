@@ -37,6 +37,7 @@ class Paperback::GemspecParser
       self.rdoc_options = []
       self.development_dependencies = []
       self.runtime_dependencies = []
+      self.executables = []
     end
 
     def add_development_dependency(name, *versions)

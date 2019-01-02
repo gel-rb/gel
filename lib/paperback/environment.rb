@@ -80,7 +80,7 @@ class Paperback::Environment
       "Gemfile.lock"
   end
 
-  def self.lock(output: nil, gemfile: Paperback::Environment.load_gemfile, lockfile: Paperback::Environment.lockfile_name, catalog_options: nil)
+  def self.lock(output: nil, gemfile: Paperback::Environment.load_gemfile, lockfile: Paperback::Environment.lockfile_name, catalog_options: {})
     if lockfile && File.exist?(lockfile)
       loader = Paperback::LockLoader.new(lockfile, gemfile)
       # TODO
