@@ -5,6 +5,7 @@ _templates:
       docker-compose#v2.6.0:
         run: app
         config: .buildkite/docker-compose.yml
+    timeout_in_minutes: 10
 
 steps:
   - <<: *rake
