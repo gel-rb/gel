@@ -255,6 +255,227 @@ BUNDLED WITH
 LOCKFILE
   end
 
+  def test_path_gems_get_considered_too
+    Dir.mktmpdir do |shush_dir|
+      IO.write("#{shush_dir}/shush.gemspec", <<GEMSPEC)
+Gem::Specification.new do |spec|
+  spec.name = "shush"
+  spec.version = "867.5309"
+
+  spec.add_runtime_dependency "quiet_assets"
+end
+GEMSPEC
+
+      gemfile = <<GEMFILE
+source "https://gem-mimer.org"
+
+gem "activerecord"
+gem "shush", path: #{shush_dir.inspect}
+GEMFILE
+
+      stub_gem_mimer
+
+      assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile)
+PATH
+  remote: #{shush_dir}
+  specs:
+    shush (867.5309)
+      quiet_assets
+
+GEM
+  remote: https://gem-mimer.org/
+  specs:
+    actionpack (4.2.11)
+      actionview (= 4.2.11)
+      activesupport (= 4.2.11)
+      rack (~> 1.6)
+      rack-test (~> 0.6.2)
+      rails-dom-testing (~> 1.0, >= 1.0.5)
+      rails-html-sanitizer (~> 1.0, >= 1.0.2)
+    actionview (4.2.11)
+      activesupport (= 4.2.11)
+      builder (~> 3.1)
+      erubis (~> 2.7.0)
+      rails-dom-testing (~> 1.0, >= 1.0.5)
+      rails-html-sanitizer (~> 1.0, >= 1.0.3)
+    activemodel (4.2.11)
+      activesupport (= 4.2.11)
+      builder (~> 3.1)
+    activerecord (4.2.11)
+      activemodel (= 4.2.11)
+      activesupport (= 4.2.11)
+      arel (~> 6.0)
+    activesupport (4.2.11)
+      i18n (~> 0.7)
+      minitest (~> 5.1)
+      thread_safe (~> 0.3, >= 0.3.4)
+      tzinfo (~> 1.1)
+    arel (6.0.4)
+    builder (3.2.3)
+    concurrent-ruby (1.1.4)
+    crass (1.0.4)
+    erubis (2.7.0)
+    i18n (0.9.5)
+      concurrent-ruby (~> 1.0)
+    loofah (2.2.3)
+      crass (~> 1.0.2)
+      nokogiri (>= 1.5.9)
+    mini_portile2 (2.4.0)
+    minitest (5.11.3)
+    nokogiri (1.9.1)
+      mini_portile2 (~> 2.4.0)
+    quiet_assets (1.1.0)
+      railties (>= 3.1, < 5.0)
+    rack (1.6.11)
+    rack-test (0.6.3)
+      rack (>= 1.0)
+    rails-deprecated_sanitizer (1.0.3)
+      activesupport (>= 4.2.0.alpha)
+    rails-dom-testing (1.0.9)
+      activesupport (>= 4.2.0, < 5.0)
+      nokogiri (~> 1.6)
+      rails-deprecated_sanitizer (>= 1.0.1)
+    rails-html-sanitizer (1.0.4)
+      loofah (~> 2.2, >= 2.2.2)
+    railties (4.2.11)
+      actionpack (= 4.2.11)
+      activesupport (= 4.2.11)
+      rake (>= 0.8.7)
+      thor (>= 0.18.1, < 2.0)
+    rake (12.3.2)
+    thor (0.20.3)
+    thread_safe (0.3.6)
+    tzinfo (1.2.5)
+      thread_safe (~> 0.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  activerecord
+  shush!
+
+BUNDLED WITH
+   1.999
+LOCKFILE
+    end
+  end
+
+  def test_git_gems_get_considered_too
+    Dir.mktmpdir do |shush_dir|
+      IO.write("#{shush_dir}/shush.gemspec", <<GEMSPEC)
+Gem::Specification.new do |spec|
+  spec.name = "shush"
+  spec.version = "867.5309"
+
+  spec.add_runtime_dependency "quiet_assets"
+end
+GEMSPEC
+
+      sha = `cd #{shush_dir} &&
+        git init >/dev/null &&
+        git add shush.gemspec >/dev/null &&
+        git commit -m initial >/dev/null &&
+        git branch my-branch >/dev/null &&
+        git rev-parse HEAD`.chomp
+
+      gemfile = <<GEMFILE
+source "https://gem-mimer.org"
+
+gem "activerecord"
+gem "shush", git: #{shush_dir.inspect}, branch: "my-branch"
+GEMFILE
+
+      stub_gem_mimer
+
+      assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile)
+GIT
+  remote: #{shush_dir}
+  revision: #{sha}
+  branch: my-branch
+  specs:
+    shush (867.5309)
+      quiet_assets
+
+GEM
+  remote: https://gem-mimer.org/
+  specs:
+    actionpack (4.2.11)
+      actionview (= 4.2.11)
+      activesupport (= 4.2.11)
+      rack (~> 1.6)
+      rack-test (~> 0.6.2)
+      rails-dom-testing (~> 1.0, >= 1.0.5)
+      rails-html-sanitizer (~> 1.0, >= 1.0.2)
+    actionview (4.2.11)
+      activesupport (= 4.2.11)
+      builder (~> 3.1)
+      erubis (~> 2.7.0)
+      rails-dom-testing (~> 1.0, >= 1.0.5)
+      rails-html-sanitizer (~> 1.0, >= 1.0.3)
+    activemodel (4.2.11)
+      activesupport (= 4.2.11)
+      builder (~> 3.1)
+    activerecord (4.2.11)
+      activemodel (= 4.2.11)
+      activesupport (= 4.2.11)
+      arel (~> 6.0)
+    activesupport (4.2.11)
+      i18n (~> 0.7)
+      minitest (~> 5.1)
+      thread_safe (~> 0.3, >= 0.3.4)
+      tzinfo (~> 1.1)
+    arel (6.0.4)
+    builder (3.2.3)
+    concurrent-ruby (1.1.4)
+    crass (1.0.4)
+    erubis (2.7.0)
+    i18n (0.9.5)
+      concurrent-ruby (~> 1.0)
+    loofah (2.2.3)
+      crass (~> 1.0.2)
+      nokogiri (>= 1.5.9)
+    mini_portile2 (2.4.0)
+    minitest (5.11.3)
+    nokogiri (1.9.1)
+      mini_portile2 (~> 2.4.0)
+    quiet_assets (1.1.0)
+      railties (>= 3.1, < 5.0)
+    rack (1.6.11)
+    rack-test (0.6.3)
+      rack (>= 1.0)
+    rails-deprecated_sanitizer (1.0.3)
+      activesupport (>= 4.2.0.alpha)
+    rails-dom-testing (1.0.9)
+      activesupport (>= 4.2.0, < 5.0)
+      nokogiri (~> 1.6)
+      rails-deprecated_sanitizer (>= 1.0.1)
+    rails-html-sanitizer (1.0.4)
+      loofah (~> 2.2, >= 2.2.2)
+    railties (4.2.11)
+      actionpack (= 4.2.11)
+      activesupport (= 4.2.11)
+      rake (>= 0.8.7)
+      thor (>= 0.18.1, < 2.0)
+    rake (12.3.2)
+    thor (0.20.3)
+    thread_safe (0.3.6)
+    tzinfo (1.2.5)
+      thread_safe (~> 0.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  activerecord
+  shush!
+
+BUNDLED WITH
+   1.999
+LOCKFILE
+    end
+  end
+
   def test_dependencies_api_fallback
     gemfile = <<GEMFILE
 source "https://rubygems.org"

@@ -3,11 +3,12 @@
 require_relative "path_catalog"
 
 class Paperback::GitCatalog
-  attr_reader :git_depot, :remote, :ref
+  attr_reader :git_depot, :remote, :ref_type, :ref
 
-  def initialize(git_depot, remote, ref)
+  def initialize(git_depot, remote, ref_type, ref)
     @git_depot = git_depot
     @remote = remote
+    @ref_type = ref_type
     @ref = ref
   end
 

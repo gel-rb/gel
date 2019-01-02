@@ -95,7 +95,13 @@ class Paperback::Environment
 
     git_sources = gemfile.gems.map { |_, _, o|
       if o[:git]
-        [o[:git], o[:branch] || o[:ref]]
+        if o[:branch]
+          [o[:git], :branch, o[:branch]]
+        elsif o[:tag]
+          [o[:git], :tag, o[:tag]]
+        else
+          [o[:git], :ref, o[:ref]]
+        end
       end
     }.compact.uniq
 
@@ -109,7 +115,7 @@ class Paperback::Environment
 
     catalogs =
       path_sources.map { |path| Paperback::PathCatalog.new(path) } +
-      git_sources.map { |remote, ref| Paperback::GitCatalog.new(git_depot, remote, ref) } +
+      git_sources.map { |remote, ref_type, ref| Paperback::GitCatalog.new(git_depot, remote, ref_type, ref) } +
       [nil] +
       server_catalogs
 
@@ -175,6 +181,7 @@ class Paperback::Environment
         lock_content << "GIT"
         lock_content << "  remote: #{catalog.remote}"
         lock_content << "  revision: #{catalog.revision}"
+        lock_content << "  #{catalog.ref_type}: #{catalog.ref}" if catalog.ref
       when Paperback::PathCatalog
         lock_content << "PATH"
         lock_content << "  remote: #{catalog.path}"
