@@ -373,6 +373,7 @@ end
 GEMSPEC
 
       sha = `cd #{shush_dir} &&
+        export GIT_AUTHOR_NAME=Bob GIT_AUTHOR_EMAIL=bob@example.com
         git init >/dev/null &&
         git add shush.gemspec >/dev/null &&
         git commit -m initial >/dev/null &&
