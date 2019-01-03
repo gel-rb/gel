@@ -22,6 +22,7 @@ class TailFileTest < Minitest::Test
   end
 
   def teardown
+    @pinboard.instance_variable_get(:@update_pool).stop
     reset_webmock
   end
 
@@ -424,6 +425,7 @@ class NoPartialTailFileTest < Minitest::Test
   end
 
   def teardown
+    @pinboard.instance_variable_get(:@update_pool).stop
     reset_webmock
   end
 

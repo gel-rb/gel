@@ -8,7 +8,9 @@ require "digest"
 require_relative "httpool"
 
 class Paperback::Catalog
-  def initialize(uri, httpool: Paperback::Httpool.new, work_pool: nil, cache: "~/.cache/paperback", initial_gems: [])
+  UPDATE_CONCURRENCY = 8
+
+  def initialize(uri, httpool: Paperback::Httpool.new, work_pool:, cache: "~/.cache/paperback", initial_gems: [])
     @uri = normalize_uri(uri)
     @httpool = httpool
     @work_pool = work_pool

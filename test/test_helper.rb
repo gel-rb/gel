@@ -16,6 +16,10 @@ class << Minitest
   end
 end
 
+if false
+  Minitest.after_run { $stderr.puts Thread.list.map(&:inspect) }
+end
+
 def fixture_file(path)
   File.expand_path("../fixtures/#{path}", __FILE__)
 end

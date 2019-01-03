@@ -92,7 +92,8 @@ class Paperback::Environment
     require_relative "catalog"
     all_sources = (gemfile.sources | gemfile.gems.flat_map { |_, _, o| o[:source] }).compact
     server_gems = gemfile.gems.select { |_, _, o| !o[:path] && !o[:git] }.map(&:first)
-    server_catalogs = all_sources.map { |s| Paperback::Catalog.new(s, initial_gems: server_gems, **catalog_options) }
+    catalog_pool = Paperback::WorkPool.new(8, name: "paperback-catalog")
+    server_catalogs = all_sources.map { |s| Paperback::Catalog.new(s, initial_gems: server_gems, work_pool: catalog_pool, **catalog_options) }
 
     git_sources = gemfile.gems.map { |_, _, o|
       if o[:git]
@@ -120,23 +121,21 @@ class Paperback::Environment
       [nil] +
       server_catalogs
 
-    pool = Paperback::WorkPool.new(8, name: "paperback-catalog-prep")
-    catalogs.each do |catalog|
-      next if catalog.nil?
+    Paperback::WorkPool.new(8, name: "paperback-catalog-prep") do |pool|
+      catalogs.each do |catalog|
+        next if catalog.nil?
 
-      pool.queue("catalog") do
-        catalog.prepare
-        output.print "." unless $DEBUG
+        pool.queue("catalog") do
+          catalog.prepare
+          output.print "." unless $DEBUG
+        end
+      end
+      if Paperback::Httpool::Logger.debug?
+        Paperback::Httpool::Logger.info "Fetching sources..."
+      else
+        output.print "Fetching sources..."
       end
     end
-    if Paperback::Httpool::Logger.debug?
-      Paperback::Httpool::Logger.info "Fetching sources..."
-    else
-      output.print "Fetching sources..."
-    end
-    pool.start
-    pool.join
-    pool.stop
 
     require_relative "pub_grub/source"
 
@@ -162,6 +161,8 @@ class Paperback::Environment
 
     solution = solver.result
     solution.delete(source.root)
+
+    catalog_pool.stop
 
     lock_content = []
 

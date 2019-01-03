@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require_relative "git_depot"
-
 class Paperback::LockLoader
   attr_reader :filename
   attr_reader :gemfile
@@ -96,43 +94,48 @@ class Paperback::LockLoader
 
     top_gems.each(&walk)
 
-    git_depot = Paperback::GitDepot.new(base_store)
+    require_relative "git_depot"
+    require_relative "work_pool"
 
-    gems.each do |name, (section, body, version, platform, _deps)|
-      next unless filtered_gems[name]
+    Paperback::WorkPool.new(8) do |work_pool|
+      git_depot = Paperback::GitDepot.new(base_store)
 
-      if section == :gem
-        if installer && !base_store.gem?(name, version, platform)
-          require_relative "catalog"
-          catalogs = body["remote"].map { |r| Paperback::Catalog.new(r) }
-          installer.install_gem(catalogs, name, platform ? "#{version}-#{platform}" : version)
-        end
+      gems.each do |name, (section, body, version, platform, _deps)|
+        next unless filtered_gems[name]
 
-        locks[name] = version
-      else
-        if section == :git
-          remote = body["remote"].first
-          revision = body["revision"].first
-
-          dir = git_depot.git_path(remote, revision)
-          if installer && !Dir.exist?(dir)
-            installer.load_git_gem(remote, revision, name)
-
-            locks[name] = -> { Paperback::DirectGem.new(dir, name, version) }
-            next
+        if section == :gem
+          if installer && !base_store.gem?(name, version, platform)
+            require_relative "catalog"
+            catalogs = body["remote"].map { |r| Paperback::Catalog.new(r, work_pool: work_pool) }
+            installer.install_gem(catalogs, name, platform ? "#{version}-#{platform}" : version)
           end
+
+          locks[name] = version
         else
-          dir = File.expand_path(body["remote"].first, File.dirname(filename))
+          if section == :git
+            remote = body["remote"].first
+            revision = body["revision"].first
+
+            dir = git_depot.git_path(remote, revision)
+            if installer && !Dir.exist?(dir)
+              installer.load_git_gem(remote, revision, name)
+
+              locks[name] = -> { Paperback::DirectGem.new(dir, name, version) }
+              next
+            end
+          else
+            dir = File.expand_path(body["remote"].first, File.dirname(filename))
+          end
+
+          locks[name] = Paperback::DirectGem.new(dir, name, version)
         end
-
-        locks[name] = Paperback::DirectGem.new(dir, name, version)
       end
-    end
 
-    installer.wait(output) if installer
+      installer.wait(output) if installer
 
-    locks.each do |name, locked|
-      locks[name] = locked.call if locked.is_a?(Proc)
+      locks.each do |name, locked|
+        locks[name] = locked.call if locked.is_a?(Proc)
+      end
     end
 
     locked_store.lock(locks)

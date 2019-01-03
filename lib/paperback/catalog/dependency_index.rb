@@ -14,7 +14,6 @@ class Paperback::Catalog::DependencyIndex
   CACHE_TYPE = "quick"
 
   LIST_MAX = 40
-  UPDATE_CONCURRENCY = 8
 
   def initialize(catalog, *args)
     super(*args)
@@ -23,8 +22,6 @@ class Paperback::Catalog::DependencyIndex
 
     @active_gems = Set.new
     @pending_gems = Set.new
-
-    @work_pool ||= Paperback::WorkPool.new(UPDATE_CONCURRENCY, monitor: @monitor, name: "paperback-catalog")
   end
 
   def prepare(gems)

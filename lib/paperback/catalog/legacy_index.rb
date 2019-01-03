@@ -12,8 +12,6 @@ class Paperback::Catalog::LegacyIndex
   include Paperback::Catalog::Common
   CACHE_TYPE = "quick"
 
-  UPDATE_CONCURRENCY = 8
-
   def initialize(*)
     super
 
@@ -23,8 +21,6 @@ class Paperback::Catalog::LegacyIndex
     @pending_gems = Set.new
 
     @gem_versions = {}
-
-    @work_pool ||= Paperback::WorkPool.new(UPDATE_CONCURRENCY, monitor: @monitor, name: "paperback-catalog")
   end
 
   def prepare(gems)

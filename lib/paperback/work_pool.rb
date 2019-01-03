@@ -24,6 +24,16 @@ class Paperback::WorkPool
     @queue = []
     @count = 0
     @errors = []
+
+    if block_given?
+      begin
+        result = yield self
+        join
+        result
+      ensure
+        stop
+      end
+    end
   end
 
   def start

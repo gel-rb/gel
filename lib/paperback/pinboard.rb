@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "monitor"
-
 require_relative "db"
 require_relative "httpool"
 require_relative "tail_file"
@@ -15,16 +13,15 @@ class Paperback::Pinboard
   UPDATE_CONCURRENCY = 8
 
   attr_reader :root
-  def initialize(root, monitor: Monitor.new, httpool: Paperback::Httpool.new, work_pool: nil)
+  def initialize(root, httpool: Paperback::Httpool.new, work_pool: nil)
     @root = root
-    @monitor = monitor
     @httpool = httpool
 
     @db = Paperback::DB.new(root, "pins")
     @files = {}
     @waiting = Hash.new { |h, k| h[k] = [] }
 
-    @update_pool = work_pool || Paperback::WorkPool.new(UPDATE_CONCURRENCY, monitor: @monitor, name: "paperback-pinboard")
+    @update_pool = work_pool || Paperback::WorkPool.new(UPDATE_CONCURRENCY, name: "paperback-pinboard")
   end
 
   def file(uri, token: nil, tail: true)

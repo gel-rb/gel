@@ -18,7 +18,7 @@ class Paperback::Httpool
 
     if block_given?
       begin
-        yield
+        yield self
       ensure
         close
       end

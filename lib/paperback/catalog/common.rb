@@ -71,7 +71,7 @@ module Paperback::Catalog::Common
         begin
           pinboard_dir = File.expand_path("#{@cache}/#{self.class::CACHE_TYPE}/#{@uri_identifier}")
           FileUtils.mkdir_p(pinboard_dir) unless Dir.exist?(pinboard_dir)
-          Paperback::Pinboard.new(pinboard_dir, monitor: @monitor, httpool: @httpool, work_pool: @work_pool)
+          Paperback::Pinboard.new(pinboard_dir, httpool: @httpool, work_pool: @work_pool)
         end
     end
   end
