@@ -34,4 +34,7 @@ class Paperback::PathCatalog
       Paperback::GemspecParser.parse(File.read(filename), filename)
     end
   end
+
+  def prepare
+  end
 end

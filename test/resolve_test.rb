@@ -544,7 +544,7 @@ GEMFILE
     stub_request(:get, "https://index.rubygems.org/versions").
       to_return(status: 404)
 
-    stub_request(:get, "https://index.rubygems.org/api/v1/dependencies?gems=rack").
+    stub_request(:get, "https://rubygems.org/api/v1/dependencies?gems=rack").
       to_return(body: Marshal.dump([
         { name: "rack", number: "2.0.6", platform: "ruby", dependencies: [] },
         { name: "rack", number: "2.0.5", platform: "ruby", dependencies: [] },
@@ -555,7 +555,7 @@ GEMFILE
         { name: "rack", number: "2.0.0", platform: "ruby", dependencies: [] },
       ]))
 
-    stub_request(:get, "https://index.rubygems.org/quick/Marshal.4.8/rack-2.0.6.gemspec.rz").
+    stub_request(:get, "https://rubygems.org/quick/Marshal.4.8/rack-2.0.6.gemspec.rz").
       to_return(body: gemspec_rz(name: "rack", version: "2.0.6", dependencies: []))
 
     assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile)
@@ -585,27 +585,27 @@ GEMFILE
     stub_request(:get, "https://index.rubygems.org/versions").
       to_return(status: 404)
 
-    stub_request(:get, "https://index.rubygems.org/api/v1/dependencies?gems=rack").
+    stub_request(:get, "https://rubygems.org/api/v1/dependencies?gems=rack").
       to_return(status: 404)
 
-    stub_request(:get, "https://index.rubygems.org/specs.4.8.gz").
+    stub_request(:get, "https://rubygems.org/specs.4.8.gz").
       to_return(body: specs_gz([
         ["rack", "2.0.6", "ruby"],
         ["rack", "2.0.5", "ruby"],
         ["rack", "2.0.4", "ruby"],
       ]))
 
-    stub_request(:get, "https://index.rubygems.org/prerelease_specs.4.8.gz").
+    stub_request(:get, "https://rubygems.org/prerelease_specs.4.8.gz").
       to_return(body: specs_gz([
       ]))
 
-    stub_request(:get, "https://index.rubygems.org/quick/Marshal.4.8/rack-2.0.6.gemspec.rz").
+    stub_request(:get, "https://rubygems.org/quick/Marshal.4.8/rack-2.0.6.gemspec.rz").
       to_return(body: gemspec_rz(name: "rack", version: "2.0.6", dependencies: []))
 
-    stub_request(:get, "https://index.rubygems.org/quick/Marshal.4.8/rack-2.0.5.gemspec.rz").
+    stub_request(:get, "https://rubygems.org/quick/Marshal.4.8/rack-2.0.5.gemspec.rz").
       to_return(body: gemspec_rz(name: "rack", version: "2.0.5", dependencies: []))
 
-    stub_request(:get, "https://index.rubygems.org/quick/Marshal.4.8/rack-2.0.4.gemspec.rz").
+    stub_request(:get, "https://rubygems.org/quick/Marshal.4.8/rack-2.0.4.gemspec.rz").
       to_return(body: gemspec_rz(name: "rack", version: "2.0.4", dependencies: []))
 
     assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile)
@@ -638,7 +638,7 @@ LOCKFILE
           catalog_options: { cache: cache_dir },
         )
 
-        assert_match(/\AResolving dependencies\.\.\.+\n\z/, output.string)
+        assert_match(/\AFetching sources\.\.\.+\nResolving dependencies\.\.\.+\n\z/, output.string)
       end
     end
 

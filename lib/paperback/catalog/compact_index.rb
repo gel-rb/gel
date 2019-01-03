@@ -20,6 +20,16 @@ class Paperback::Catalog::CompactIndex
     @pending_gems = Set.new
   end
 
+  def prepare(gems)
+    @monitor.synchronize do
+      @pending_gems.merge(gems)
+    end
+    update
+    @monitor.synchronize do
+      @refresh_cond.wait_until { gems.all? { |g| _info(g) } }
+    end
+  end
+
   def update
     @monitor.synchronize do
       return false unless @needs_update
@@ -52,6 +62,7 @@ class Paperback::Catalog::CompactIndex
       @monitor.synchronize do
         @gem_tokens.update new_tokens
         @updating = false
+        @refresh_cond.broadcast
       end
 
       (@active_gems | @pending_gems).each do |name|
@@ -127,6 +138,15 @@ class Paperback::Catalog::CompactIndex
         @gem_info[gem_name] = info
         @refresh_cond.broadcast
       end
+    end
+  end
+
+  private
+
+  def uri(*)
+    super.tap do |uri|
+      # https://github.com/rubygems/rubygems.org/issues/1698#issuecomment-348744676  ¯\_(ツ)_/¯
+      uri.host = "index.rubygems.org" if uri.host.downcase == "rubygems.org"
     end
   end
 end

@@ -200,6 +200,6 @@ class Paperback::TailFile
   end
 
   def debug(message)
-    $stderr.puts message if $DEBUG
+    #$stderr.puts message if $DEBUG
   end
 end

@@ -8,17 +8,29 @@ require "digest"
 require_relative "httpool"
 
 class Paperback::Catalog
-  def initialize(uri, httpool: Paperback::Httpool.new, work_pool: nil, cache: "~/.cache/paperback")
+  def initialize(uri, httpool: Paperback::Httpool.new, work_pool: nil, cache: "~/.cache/paperback", initial_gems: [])
     @uri = normalize_uri(uri)
     @httpool = httpool
     @work_pool = work_pool
     @cache = cache
+    @initial_gems = initial_gems
 
     @indexes = [
       :compact_index,
       :dependency_index,
       :legacy_index,
     ]
+  end
+
+  def prepare
+    index.prepare(@initial_gems)
+  rescue Net::HTTPExceptions
+    if @indexes.size > 1
+      @indexes.shift
+      retry
+    else
+      raise
+    end
   end
 
   def compact_index
@@ -95,8 +107,7 @@ class Paperback::Catalog
     original_uri = uri = URI(File.join(@uri.to_s, path))
 
     5.times do
-      get = Net::HTTP::Get.new(uri)
-      response = @httpool.request(uri, get)
+      response = @httpool.request(uri)
 
       case response
       when Net::HTTPRedirection

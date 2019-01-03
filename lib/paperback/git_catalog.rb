@@ -10,10 +10,14 @@ class Paperback::GitCatalog
     @remote = remote
     @ref_type = ref_type
     @ref = ref
+
+    @monitor = Monitor.new
+    @result = nil
   end
 
   def checkout_result
-    @result ||= git_depot.resolve_and_checkout(remote, ref)
+    @result ||
+      @monitor.synchronize { @result ||= git_depot.resolve_and_checkout(remote, ref) }
   end
 
   def revision
@@ -26,5 +30,9 @@ class Paperback::GitCatalog
 
   def path_catalog
     @path_catalog ||= Paperback::PathCatalog.new(checkout_result[1])
+  end
+
+  def prepare
+    checkout_result
   end
 end

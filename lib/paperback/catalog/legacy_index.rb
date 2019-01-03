@@ -27,6 +27,16 @@ class Paperback::Catalog::LegacyIndex
     @work_pool ||= Paperback::WorkPool.new(UPDATE_CONCURRENCY, monitor: @monitor, name: "paperback-catalog")
   end
 
+  def prepare(gems)
+    @monitor.synchronize do
+      @pending_gems.merge(gems)
+    end
+    update
+    @monitor.synchronize do
+      @refresh_cond.wait_until { gems.all? { |g| _info(g) } }
+    end
+  end
+
   def update
     @monitor.synchronize do
       return false unless @needs_update

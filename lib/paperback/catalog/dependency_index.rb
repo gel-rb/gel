@@ -27,6 +27,16 @@ class Paperback::Catalog::DependencyIndex
     @work_pool ||= Paperback::WorkPool.new(UPDATE_CONCURRENCY, monitor: @monitor, name: "paperback-catalog")
   end
 
+  def prepare(gems)
+    @monitor.synchronize do
+      @pending_gems.merge(gems)
+    end
+    force_refresh_including(gems.first)
+    @monitor.synchronize do
+      @refresh_cond.wait_until { gems.all? { |g| _info(g) } }
+    end
+  end
+
   def force_refresh_including(gem_name)
     gems_to_refresh = []
 
@@ -49,12 +59,12 @@ class Paperback::Catalog::DependencyIndex
   end
 
   def refresh_some_gems(gems)
-    gem_list = gems.map { |g| CGI.escape(g) }.join(",")
+    gem_list = gems.map { |g| CGI.escape(g) }.sort.join(",")
     @work_pool.queue(gem_list) do
       response =
         begin
           @catalog.send(:http_get, "api/v1/dependencies?gems=#{gem_list}")
-        rescue => ex
+        rescue Exception => ex
           @monitor.synchronize do
             @error = ex
             @refresh_cond.broadcast

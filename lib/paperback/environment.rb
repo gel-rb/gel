@@ -91,7 +91,8 @@ class Paperback::Environment
 
     require_relative "catalog"
     all_sources = (gemfile.sources | gemfile.gems.flat_map { |_, _, o| o[:source] }).compact
-    server_catalogs = all_sources.map { |s| Paperback::Catalog.new(s, **catalog_options) }
+    server_gems = gemfile.gems.select { |_, _, o| !o[:path] && !o[:git] }.map(&:first)
+    server_catalogs = all_sources.map { |s| Paperback::Catalog.new(s, initial_gems: server_gems, **catalog_options) }
 
     git_sources = gemfile.gems.map { |_, _, o|
       if o[:git]
@@ -119,15 +120,43 @@ class Paperback::Environment
       [nil] +
       server_catalogs
 
+    pool = Paperback::WorkPool.new(8, name: "paperback-catalog-prep")
+    catalogs.each do |catalog|
+      next if catalog.nil?
+
+      pool.queue("catalog") do
+        catalog.prepare
+        output.print "." unless $DEBUG
+      end
+    end
+    if Paperback::Httpool::Logger.debug?
+      Paperback::Httpool::Logger.info "Fetching sources..."
+    else
+      output.print "Fetching sources..."
+    end
+    pool.start
+    pool.join
+    pool.stop
+
     require_relative "pub_grub/source"
 
     source = Paperback::PubGrub::Source.new(gemfile, catalogs, ["ruby"])
     solver = PubGrub::VersionSolver.new(source: source)
 
-    output.print 'Resolving dependencies...'
+    if PubGrub.logger.debug?
+      PubGrub.logger.info "Resolving dependencies..."
+    else
+      output.print "\nResolving dependencies..."
+    end
+    t = Time.now
     until solver.solved?
       solver.work
-      output.print "." unless PubGrub.logger.debug?
+      unless PubGrub.logger.debug?
+        if Time.now > t + 0.1
+          output.print "."
+          t = Time.now
+        end
+      end
     end
     output.puts
 
@@ -205,7 +234,7 @@ class Paperback::Environment
     lock_content << "DEPENDENCIES"
 
     bang_deps = gemfile.gems.select { |_, _, options|
-      options[:path] || options[:git]
+      options[:path] || options[:git] || options[:source]
     }.map { |name, _, _| name }
 
     root_deps = source.root_dependencies
@@ -233,7 +262,10 @@ class Paperback::Environment
 
     lock_body = lock_content.join("\n") << "\n"
 
-    File.write(lockfile, lock_body) if lockfile
+    if lockfile
+      output.puts "Writing lockfile to #{File.expand_path(lockfile)}"
+      File.write(lockfile, lock_body)
+    end
     lock_body
   end
 

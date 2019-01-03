@@ -3,6 +3,10 @@
 class Paperback::GitDepot
   attr_reader :mirror_root
 
+  require "logger"
+  Logger = ::Logger.new($stderr)
+  Logger.level = $DEBUG ? ::Logger::DEBUG : ::Logger::WARN
+
   def initialize(store, mirror_root = "~/.cache/paperback/git")
     @store = store
     @mirror_root = File.expand_path(mirror_root)
@@ -24,11 +28,11 @@ class Paperback::GitDepot
       if block_given? && !yield(cache_dir)
         # The block didn't like what it saw; try updating the mirror
         # from upstream
-        status = git("remote", "update", chdir: cache_dir)
+        status = git(remote, "remote", "update", chdir: cache_dir)
         raise "git remote update failed" unless status.success?
       end
     else
-      status = git("clone", "--mirror", remote, cache_dir)
+      status = git(remote, "clone", "--mirror", remote, cache_dir)
       raise "git clone --mirror failed" unless status.success?
     end
 
@@ -39,7 +43,7 @@ class Paperback::GitDepot
     mirror = remote(remote) { false } # always update mirror
 
     r, w = IO.pipe
-    status = git("rev-parse", ref || "HEAD", chdir: mirror, out: w)
+    status = git(remote, "rev-parse", ref || "HEAD", chdir: mirror, out: w)
     raise "git rev-parse failed" unless status.success?
 
     w.close
@@ -58,14 +62,14 @@ class Paperback::GitDepot
 
     mirror = remote(remote) do |cache_dir|
       # Check whether the revision is already in our mirror
-      status = git("rev-list", "--quiet", revision, chdir: cache_dir)
+      status = git(remote, "rev-list", "--quiet", revision, chdir: cache_dir)
       status.success?
     end
 
-    status = git("clone", mirror, destination)
+    status = git(remote, "clone", mirror, destination)
     raise "git clone --local failed" unless status.success?
 
-    status = git("checkout", "--detach", "--force", revision, chdir: destination)
+    status = git(remote, "checkout", "--detach", "--force", revision, chdir: destination)
     raise "git checkout failed" unless status.success?
 
     destination
@@ -73,14 +77,17 @@ class Paperback::GitDepot
 
   private
 
-  def git(*arguments, **kwargs)
+  def git(remote, *arguments, **kwargs)
     kwargs[:in] ||= IO::NULL
     kwargs[:out] ||= IO::NULL
     kwargs[:err] ||= IO::NULL
 
+    t = Time.now
     pid = spawn("git", *arguments, **kwargs)
+    logger.debug { "#{remote} [#{pid}] #{command_for_log("git", *arguments)}" }
 
     _, status = Process.waitpid2(pid)
+    logger.debug { "#{remote} [#{pid}]   process exited #{status.exitstatus} (#{status.success? ? "success" : "failure"}) after #{Time.now - t}s" }
 
     status
   end
@@ -89,5 +96,24 @@ class Paperback::GitDepot
     short = File.basename(remote, ".git")
     digest = Digest(:SHA256).hexdigest(remote)[0..12]
     "#{short}-#{digest}"
+  end
+
+  require "shellwords"
+  def shellword(word)
+    if word =~ /\A[A-Za-z0-9=+\/,.-]+\z/
+      word
+    elsif word =~ /'/
+      "\"#{Shellwords.shellescape(word).gsub(/\\\s/, "\\1")}\""
+    else
+      "'#{word}'"
+    end
+  end
+
+  def command_for_log(*parts)
+    parts.map { |part| shellword(part) }.join(" ")
+  end
+
+  def logger
+    Logger
   end
 end
