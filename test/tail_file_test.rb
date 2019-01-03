@@ -323,16 +323,17 @@ class TailFileTest < Minitest::Test
     }, @pinboard.read(@uri))
   end
 
-  def test_interleaved_async_requests
+  def test_async_requests_occur_simultaneously
     start_time = Time.now
 
     requested_files = []
+    received_files = []
 
     stubbed_request {
       stub_request(:get, "https://example.org/a").
         with(headers: { "Accept-Encoding" => /gzip/ }).
         to_return(
-          body: proc { requested_files << "a"; sleep 1.0; "A" },
+          body: proc { requested_files << "a"; sleep 1; "A" },
         )
     }
 
@@ -340,7 +341,7 @@ class TailFileTest < Minitest::Test
       stub_request(:get, "https://example.org/b").
         with(headers: { "Accept-Encoding" => /gzip/ }).
         to_return(
-          body: proc { requested_files << "b"; sleep 0.5; "B" },
+          body: proc { requested_files << "b"; sleep 1; "B" },
         )
     }
 
@@ -348,11 +349,9 @@ class TailFileTest < Minitest::Test
       stub_request(:get, "https://example.org/c").
         with(headers: { "Accept-Encoding" => /gzip/ }).
         to_return(
-          body: proc { requested_files << "c"; sleep 1.5; "C" },
+          body: proc { requested_files << "c"; sleep 1; "C" },
         )
     }
-
-    received_files = []
 
     @pinboard.async_file(URI("https://example.org/a")) do |f|
       received_files << "a1"
@@ -380,12 +379,84 @@ class TailFileTest < Minitest::Test
 
     @pinboard.instance_variable_get(:@work_pool).join
 
-    assert_equal %w(b1 b2 a1 a2 c1 c2), received_files
+    # We got back all the responses we expected
+    assert_equal %w(a1 a2 b1 b2 c1 c2), received_files.sort
+
+    # .. and only made the requests we expected
     assert_equal %w(a b c), requested_files.sort
 
     # The requests occur in parallel, so they should all finish in
     # slightly longer than the slowest request duration
     assert_operator Time.now - start_time, :<, 1.9
+  end
+
+  def test_interleaved_async_requests
+    requested_files = []
+    received_files = []
+
+    stubbed_request {
+      stub_request(:get, "https://example.org/a").
+        with(headers: { "Accept-Encoding" => /gzip/ }).
+        to_return(
+          body: proc { requested_files << "a"; sleep 0.1 while received_files.size < 2; sleep 0.2; "A" },
+        )
+    }
+
+    stubbed_request {
+      stub_request(:get, "https://example.org/b").
+        with(headers: { "Accept-Encoding" => /gzip/ }).
+        to_return(
+          body: proc { requested_files << "b"; sleep 0.2; "B" },
+        )
+    }
+
+    stubbed_request {
+      stub_request(:get, "https://example.org/c").
+        with(headers: { "Accept-Encoding" => /gzip/ }).
+        to_return(
+          body: proc { requested_files << "c"; sleep 0.1 while received_files.size < 4; "C" },
+        )
+    }
+
+    @pinboard.async_file(URI("https://example.org/a")) do |f|
+      received_files << "a1"
+    end
+
+    @pinboard.async_file(URI("https://example.org/a")) do |f|
+      received_files << "a2"
+    end
+
+    @pinboard.async_file(URI("https://example.org/b")) do |f|
+      received_files << "b1"
+    end
+
+    @pinboard.async_file(URI("https://example.org/b")) do |f|
+      received_files << "b2"
+    end
+
+    @pinboard.async_file(URI("https://example.org/c")) do |f|
+      received_files << "c1"
+    end
+
+    @pinboard.async_file(URI("https://example.org/c")) do |f|
+      received_files << "c2"
+    end
+
+    @pinboard.instance_variable_get(:@work_pool).join
+
+    # The "server" only responds after we've received the earlier
+    # responses, so responses arrive in a fixed order based on
+    # 1) the order dictated by the server logic (b then a then c), and
+    # 2) the order the requests were made (b1 before b2, a1 before a2)
+    #
+    # This is important because it shows we're receiving and handling
+    # the responses in the order the server provides them, not queueing
+    # them all together.
+    assert_equal %w(b1 b2 a1 a2 c1 c2), received_files
+
+    # The order the server first saw the requests is still arbitrary --
+    # but it only gets one each
+    assert_equal %w(a b c), requested_files.sort
 
     @pinboard.async_file(URI("https://example.org/a")) do |f|
       received_files << "a3"
