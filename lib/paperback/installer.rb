@@ -27,8 +27,8 @@ class Paperback::Installer
     @weights = Hash.new(1)
     @pending = Hash.new(0)
 
-    @download_pool = Paperback::WorkPool.new(DOWNLOAD_CONCURRENCY, monitor: self, name: "paperback-download")
-    @compile_pool = Paperback::WorkPool.new(COMPILE_CONCURRENCY, monitor: self, name: "paperback-compile")
+    @download_pool = Paperback::WorkPool.new(DOWNLOAD_CONCURRENCY, monitor: self, name: "paperback-download", collect_errors: true)
+    @compile_pool = Paperback::WorkPool.new(COMPILE_CONCURRENCY, monitor: self, name: "paperback-compile", collect_errors: true)
 
     @download_pool.queue_order = -> ((_, name)) { -@weights[name] }
     @compile_pool.queue_order = -> ((_, name)) { -@weights[name] }

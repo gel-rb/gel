@@ -8,7 +8,7 @@ class Paperback::WorkPool
   attr_reader :count
   attr_reader :errors
 
-  def initialize(concurrency, monitor: Monitor.new, name: nil)
+  def initialize(concurrency, monitor: Monitor.new, name: nil, collect_errors: false)
     @monitor = monitor
     @name = name
 
@@ -23,7 +23,7 @@ class Paperback::WorkPool
 
     @queue = []
     @count = 0
-    @errors = []
+    @errors = collect_errors ? [] : nil
 
     if block_given?
       begin
@@ -61,9 +61,13 @@ class Paperback::WorkPool
               begin
                 current_job[0].call
               rescue Exception => ex
-                @monitor.synchronize do
+                if @errors
                   $stderr.puts ex if $DEBUG
-                  @errors << [current_job, ex]
+                  @monitor.synchronize do
+                    @errors << [current_job, ex]
+                  end
+                else
+                  $stderr.puts "Unhandled exception in work pool #{@name}: #{ex.inspect}\n#{ex.backtrace}"
                 end
               end
             end
@@ -106,7 +110,7 @@ class Paperback::WorkPool
   def join
     wait
     @monitor.synchronize do
-      if e = @errors.first
+      if @errors && e = @errors.first
         raise e.last
       end
     end
