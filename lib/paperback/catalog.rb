@@ -72,7 +72,7 @@ class Paperback::Catalog
     return path if File.exist?(path)
 
     response = http_get("/gems/#{name}-#{version}.gem")
-    FileUtils.mkdir_p(cache_dir)
+    FileUtils.mkdir_p(cache_dir) unless Dir.exist?(cache_dir)
     File.open(path, "wb") do |f|
       f.write(response.body)
     end

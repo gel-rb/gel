@@ -22,7 +22,7 @@ class TailFileTest < Minitest::Test
   end
 
   def teardown
-    @pinboard.instance_variable_get(:@update_pool).stop
+    @pinboard.instance_variable_get(:@work_pool).stop
     reset_webmock
   end
 
@@ -378,7 +378,7 @@ class TailFileTest < Minitest::Test
       received_files << "c2"
     end
 
-    @pinboard.instance_variable_get(:@update_pool).join
+    @pinboard.instance_variable_get(:@work_pool).join
 
     assert_equal %w(b1 b2 a1 a2 c1 c2), received_files
     assert_equal %w(a b c), requested_files.sort
@@ -399,7 +399,7 @@ class TailFileTest < Minitest::Test
       received_files << "c3"
     end
 
-    @pinboard.instance_variable_get(:@update_pool).join
+    @pinboard.instance_variable_get(:@work_pool).join
 
     # The extra requests are served by the already-loaded files, so the
     # "3" blocks are called, but no more requests occur.
@@ -425,7 +425,7 @@ class NoPartialTailFileTest < Minitest::Test
   end
 
   def teardown
-    @pinboard.instance_variable_get(:@update_pool).stop
+    @pinboard.instance_variable_get(:@work_pool).stop
     reset_webmock
   end
 

@@ -21,14 +21,17 @@ class Paperback::Pinboard
     @files = {}
     @waiting = Hash.new { |h, k| h[k] = [] }
 
-    @update_pool = work_pool || Paperback::WorkPool.new(UPDATE_CONCURRENCY, name: "paperback-pinboard")
+    @work_pool = work_pool || Paperback::WorkPool.new(UPDATE_CONCURRENCY, name: "paperback-pinboard")
+    @monitor = Monitor.new
   end
 
   def file(uri, token: nil, tail: true)
-    add uri, token: token
+    @monitor.synchronize do
+      add uri, token: token
 
-    tail_file = Paperback::TailFile.new(uri, self, httpool: @httpool)
-    tail_file.update(force_reset: !tail) if stale(uri, token)
+      tail_file = Paperback::TailFile.new(uri, self, httpool: @httpool)
+      tail_file.update(force_reset: !tail) if stale(uri, token)
+    end
 
     if block_given?
       File.open(filename(uri), "r") do |f|
@@ -38,35 +41,42 @@ class Paperback::Pinboard
   end
 
   def async_file(uri, token: nil, tail: true, only_updated: false, error: nil)
-    already_done = @files.key?(uri) && @files[uri].done?
+    file_to_yield = nil
 
-    if !already_done && stale(uri, token)
-      add uri, token: token
+    @monitor.synchronize do
+      already_done = @files.key?(uri) && @files[uri].done?
 
-      already_queued = @files.key?(uri)
-      tail_file = @files[uri] ||= Paperback::TailFile.new(uri, self, httpool: @httpool)
+      if !already_done && stale(uri, token)
+        add uri, token: token
 
-      unless already_queued
-        @update_pool.queue(uri.path) do
-          begin
-            tail_file.update(force_reset: !tail)
-          rescue Exception => ex
-            if error
-              error.call(ex)
-            else
-              raise
+        already_queued = @files.key?(uri)
+        tail_file = @files[uri] ||= Paperback::TailFile.new(uri, self, httpool: @httpool)
+
+        unless already_queued
+          @work_pool.queue(uri.path) do
+            begin
+              tail_file.update(force_reset: !tail)
+            rescue Exception => ex
+              if error
+                error.call(ex)
+              else
+                raise
+              end
             end
           end
+          @work_pool.start
         end
-        @update_pool.start
-      end
 
-      block = Proc.new
-      @waiting[uri] << lambda do |f, changed|
-        block.call(f) if changed || !only_updated
+        @waiting[uri] << lambda do |f, changed|
+          yield f if changed || !only_updated
+        end
+      elsif !only_updated
+        file_to_yield = filename(uri)
       end
-    elsif block_given? && !only_updated
-      File.open(filename(uri), "r") do |f|
+    end
+
+    if file_to_yield
+      File.open(file_to_yield, "r") do |f|
         yield f
       end
     end
@@ -105,11 +115,17 @@ class Paperback::Pinboard
   end
 
   def updated(uri, etag, changed = true)
-    @db[uri.to_s] = read(uri).merge(etag: etag, stale: false)
+    blocks = nil
+    @monitor.synchronize do
+      @db[uri.to_s] = read(uri).merge(etag: etag, stale: false)
 
-    return if @waiting[uri].empty?
+      blocks = @waiting.delete(uri)
+    end
+
+    return unless blocks && blocks.any?
+
     File.open(filename(uri), "r") do |f|
-      @waiting[uri].each do |block|
+      blocks.each do |block|
         f.rewind
         block.call(f, changed)
       end
