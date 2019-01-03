@@ -332,7 +332,7 @@ class TailFileTest < Minitest::Test
       stub_request(:get, "https://example.org/a").
         with(headers: { "Accept-Encoding" => /gzip/ }).
         to_return(
-          body: proc { requested_files << "a"; sleep 0.4; "A" },
+          body: proc { requested_files << "a"; sleep 1.0; "A" },
         )
     }
 
@@ -340,7 +340,7 @@ class TailFileTest < Minitest::Test
       stub_request(:get, "https://example.org/b").
         with(headers: { "Accept-Encoding" => /gzip/ }).
         to_return(
-          body: proc { requested_files << "b"; sleep 0.2; "B" },
+          body: proc { requested_files << "b"; sleep 0.5; "B" },
         )
     }
 
@@ -348,7 +348,7 @@ class TailFileTest < Minitest::Test
       stub_request(:get, "https://example.org/c").
         with(headers: { "Accept-Encoding" => /gzip/ }).
         to_return(
-          body: proc { requested_files << "c"; sleep 0.6; "C" },
+          body: proc { requested_files << "c"; sleep 1.5; "C" },
         )
     }
 
@@ -385,7 +385,7 @@ class TailFileTest < Minitest::Test
 
     # The requests occur in parallel, so they should all finish in
     # slightly longer than the slowest request duration
-    assert_operator Time.now - start_time, :<, 0.75
+    assert_operator Time.now - start_time, :<, 1.9
 
     @pinboard.async_file(URI("https://example.org/a")) do |f|
       received_files << "a3"
