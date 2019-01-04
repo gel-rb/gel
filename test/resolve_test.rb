@@ -636,6 +636,7 @@ LOCKFILE
           gemfile: Paperback::GemfileParser.parse(gemfile),
           lockfile: nil,
           catalog_options: { cache: cache_dir },
+          git_options: { cache: cache_dir },
         )
 
         assert_match(/\AFetching sources\.\.\.+\nResolving dependencies\.\.\.+\n\z/, output.string)

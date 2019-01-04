@@ -7,9 +7,11 @@ class Paperback::GitDepot
   Logger = ::Logger.new($stderr)
   Logger.level = $DEBUG ? ::Logger::DEBUG : ::Logger::WARN
 
-  def initialize(store, mirror_root = "~/.cache/paperback/git")
+  def initialize(store, cache: "~/.cache/paperback")
     @store = store
-    @mirror_root = File.expand_path(mirror_root)
+    @mirror_root = File.expand_path("#{cache}/git")
+
+    @github_disabled = false
   end
 
   def git_path(remote, revision)
@@ -39,16 +41,44 @@ class Paperback::GitDepot
     cache_dir
   end
 
+  def current_revision(mirror, remote, ref)
+    read_git(remote, "rev-parse", ref, chdir: mirror)
+  end
+
+  def get_config(dir, name, type: nil, default: nil)
+    arguments = []
+    arguments.append("--type", type) if type
+    arguments.append("--default", default) if default
+
+    read_git(dir, "config", *arguments, "--get", name, chdir: dir)
+  end
+
+  def set_config(dir, name, value, type: nil)
+    arguments = []
+    arguments.append("--type", type) if type
+
+    status = git(dir, "config", *arguments, "--replace-all", name, value, chdir: dir)
+    raise "git config failed" unless status.success?
+  end
+
   def resolve(remote, ref)
-    mirror = remote(remote) { false } # always update mirror
+    ref ||= "HEAD"
 
-    r, w = IO.pipe
-    status = git(remote, "rev-parse", ref || "HEAD", chdir: mirror, out: w)
-    raise "git rev-parse failed" unless status.success?
+    mirror = remote(remote) do |cache_dir|
+      if github?(remote)
+        current = current_revision(cache_dir, remote, ref)
 
-    w.close
+        # If we can, it's faster to ask GitHub's API whether our mirror
+        # is up to date
+        return current if github_current?(remote, ref, current, cache_dir)
+      end
 
-    r.read.chomp
+      # Other than that special case, we never consider the mirror up to
+      # date (i.e., we always do an update)
+      false
+    end
+
+    current_revision(mirror, remote, ref)
   end
 
   def resolve_and_checkout(remote, ref)
@@ -77,17 +107,85 @@ class Paperback::GitDepot
 
   private
 
-  def git(remote, *arguments, **kwargs)
+  def github?(remote)
+    return false if @github_disabled
+
+    case remote
+    when /\A(?:git|https?):\/\/github\.com\/([^\/]+\/[^\/]+)/
+      $1.sub(/\.git$/, "")
+    when /\Agit@github\.com:([^\/]+\/[^\/]+)/
+      $1.sub(/\.git$/, "")
+    end
+  end
+
+  def github_current?(remote, ref, known_revision, cache_dir)
+    if org_and_repo = github?(remote)
+      allowed = get_config(cache_dir, "paperback.github", default: "true", type: "bool")
+      return false unless allowed == "true"
+
+      uri = URI("https://api.github.com/repos/#{org_and_repo}/commits/#{ref}")
+
+      request = Net::HTTP::Get.new(uri)
+      request["Accept"] = "application/vnd.github.v3.sha"
+      request["If-None-Match"] = "\"#{known_revision}\""
+
+      response = httpool.request(uri, request)
+      case response
+      when Net::HTTPOK
+        response.body
+      when Net::HTTPNotModified
+        known_revision
+      when Net::HTTPNotFound
+        if response["X-GitHub-Media-Type"] == "github.v3, param=sha"
+          # We're talking to the API we intended to; this 404 suggests
+          # it's not a public repo. We'll remember that and not bother
+          # trying this again. (But we won't set @github_disabled,
+          # because we still want to try other repos.)
+          set_config cache_dir, "paperback.github", "false", type: "bool"
+
+          nil
+        else
+          @github_disabled = true
+          nil
+        end
+      else
+        @github_disabled = true
+        nil
+      end
+    end
+  end
+
+  def httpool
+    @httpool ||= Paperback::Httpool.new
+  end
+
+  def read_git(label, command, *arguments, **kwargs)
+    output = nil
+
+    r, w = IO.pipe
+    status = git(label, command, *arguments, **kwargs, out: w) do
+      w.close
+      output = r.read
+    end
+
+    raise "git #{command} failed" unless status.success?
+
+    output.chomp
+  end
+
+  def git(label, *arguments, **kwargs)
     kwargs[:in] ||= IO::NULL
     kwargs[:out] ||= IO::NULL
     kwargs[:err] ||= IO::NULL
 
     t = Time.now
     pid = spawn("git", *arguments, **kwargs)
-    logger.debug { "#{remote} [#{pid}] #{command_for_log("git", *arguments)}" }
+    logger.debug { "#{label} [#{pid}] #{command_for_log("git", *arguments)}" }
+
+    yield if block_given?
 
     _, status = Process.waitpid2(pid)
-    logger.debug { "#{remote} [#{pid}]   process exited #{status.exitstatus} (#{status.success? ? "success" : "failure"}) after #{Time.now - t}s" }
+    logger.debug { "#{label} [#{pid}]   process exited #{status.exitstatus} (#{status.success? ? "success" : "failure"}) after #{Time.now - t}s" }
 
     status
   end

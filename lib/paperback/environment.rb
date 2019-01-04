@@ -80,7 +80,7 @@ class Paperback::Environment
       "Gemfile.lock"
   end
 
-  def self.lock(output: nil, gemfile: Paperback::Environment.load_gemfile, lockfile: Paperback::Environment.lockfile_name, catalog_options: {})
+  def self.lock(output: nil, gemfile: Paperback::Environment.load_gemfile, lockfile: Paperback::Environment.lockfile_name, catalog_options: {}, git_options: {})
     if lockfile && File.exist?(lockfile)
       loader = Paperback::LockLoader.new(lockfile, gemfile)
       # TODO
@@ -110,7 +110,7 @@ class Paperback::Environment
     path_sources = gemfile.gems.map { |_, _, o| o[:path] }.compact
 
     require_relative "git_depot"
-    git_depot = Paperback::GitDepot.new(Paperback::Environment.store)
+    git_depot = Paperback::GitDepot.new(Paperback::Environment.store, **git_options)
 
     require_relative "path_catalog"
     require_relative "git_catalog"
