@@ -80,7 +80,7 @@ class Paperback::Environment
       "Gemfile.lock"
   end
 
-  def self.lock(output: nil, gemfile: Paperback::Environment.load_gemfile, lockfile: Paperback::Environment.lockfile_name, catalog_options: {})
+  def self.lock(store: store(), output: nil, gemfile: Paperback::Environment.load_gemfile, lockfile: Paperback::Environment.lockfile_name, catalog_options: {})
     output = nil if $DEBUG
 
     if lockfile && File.exist?(lockfile)
@@ -93,9 +93,13 @@ class Paperback::Environment
 
     require_relative "catalog"
     all_sources = (gemfile.sources | gemfile.gems.flat_map { |_, _, o| o[:source] }).compact
+    local_source = all_sources.delete(:local)
     server_gems = gemfile.gems.select { |_, _, o| !o[:path] && !o[:git] }.map(&:first)
     catalog_pool = Paperback::WorkPool.new(8, name: "paperback-catalog")
     server_catalogs = all_sources.map { |s| Paperback::Catalog.new(s, initial_gems: server_gems, work_pool: catalog_pool, **catalog_options) }
+
+    require_relative "store_catalog"
+    local_catalogs = local_source ? [Paperback::StoreCatalog.new(store)] : []
 
     git_sources = gemfile.gems.map { |_, _, o|
       if o[:git]
@@ -112,7 +116,7 @@ class Paperback::Environment
     path_sources = gemfile.gems.map { |_, _, o| o[:path] }.compact
 
     require_relative "git_depot"
-    git_depot = Paperback::GitDepot.new(Paperback::Environment.store)
+    git_depot = Paperback::GitDepot.new(store)
 
     require_relative "path_catalog"
     require_relative "git_catalog"
@@ -121,6 +125,7 @@ class Paperback::Environment
       path_sources.map { |path| Paperback::PathCatalog.new(path) } +
       git_sources.map { |remote, ref_type, ref| Paperback::GitCatalog.new(git_depot, remote, ref_type, ref) } +
       [nil] +
+      local_catalogs +
       server_catalogs
 
     Paperback::WorkPool.new(8, name: "paperback-catalog-prep") do |pool|
@@ -196,7 +201,7 @@ class Paperback::Environment
     grouped_graph = solution.sort_by { |package,_| package.name }.group_by { |(package, version)|
       spec = source.spec_for_version(package, version)
       catalog = spec.catalog
-      catalog.is_a?(Paperback::Catalog) ? nil : catalog
+      catalog.is_a?(Paperback::Catalog) || catalog.is_a?(Paperback::StoreCatalog) ? nil : catalog
     }
     server_gems = grouped_graph.delete(nil)
 

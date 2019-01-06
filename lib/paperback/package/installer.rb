@@ -89,8 +89,50 @@ class Paperback::Package::Installer
       local_config.unlink if local_config
     end
 
+    def gemfile_and_lockfile
+      @gemfile ||=
+        begin
+          gemfile = Tempfile.new(["#{spec.name}.gemfile", ".rb"])
+          gemfile.puts "source :local"
+          spec.runtime_dependencies.each do |(name, operator_pairs)|
+            arguments = [name, *operator_pairs.map { |op, ver| "#{op} #{ver}" }]
+            gemfile.puts "gem #{arguments.map(&:inspect).join(", ")}"
+          end
+          gemfile.close
+
+          gemfile
+        end
+
+      @lockfile ||=
+        begin
+          lockfile = Tempfile.new(["#{spec.name}.lockfile", ".lock"])
+          lockfile.close
+
+          Paperback::Environment.lock(store: @root_store, output: nil, gemfile: Paperback::GemfileParser.parse(File.read(gemfile.path), gemfile.path, 1), lockfile: lockfile.path)
+
+          lockfile
+        end
+
+      [@gemfile.path, @lockfile.path]
+    end
+
+    def build_environment
+      gemfile, lockfile = gemfile_and_lockfile
+
+      {
+        "RUBYOPT" => nil,
+        "PAPERBACK_STORE" => File.expand_path(@root_store.root),
+        "PAPERBACK_GEMFILE" => gemfile,
+        "PAPERBACK_LOCKFILE" => lockfile,
+      }
+    end
+
     def build_command(work_dir, log, *command, **options)
+      env = build_environment
+      env.merge!(command.shift) if command.first.is_a?(Hash)
+
       pid = spawn(
+        env,
         *command,
         chdir: work_dir,
         in: IO::NULL,
@@ -106,7 +148,7 @@ class Paperback::Package::Installer
       with_build_environment(ext, install_dir) do |work_dir, short_install_dir, local_config_path, log|
         status = build_command(
           work_dir, log,
-          { "RUBYOPT" => nil, "MAKEFLAGS" => "-j3", "PAPERBACK_STORE" => File.expand_path(@root_store.root), "PAPERBACK_LOCKFILE" => nil },
+          { "MAKEFLAGS" => "-j3" },
           RbConfig.ruby, "--disable=gems",
           "-I", File.expand_path("../..", __dir__),
           "-r", "paperback/runtime",
@@ -131,7 +173,6 @@ class Paperback::Package::Installer
         if File.basename(ext) =~ /mkrf_conf/i
           status = build_command(
             work_dir, log,
-            { "RUBYOPT" => nil },
             RbConfig.ruby, "--disable-gems",
             "-r", local_config_path,
             File.basename(ext),
