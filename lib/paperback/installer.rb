@@ -165,7 +165,7 @@ class Paperback::Installer
           output.write @messages.pop until @messages.empty?
 
           if tty
-            messages = pools.map { |label, pool| pool_status(label, pool) }.compact
+            messages = pools.map { |label, pool| pool_status(label, pool, label == "Compiling" ? @compile_waiting.size : 0) }.compact
             if messages.empty?
               msgline = ""
             else
@@ -219,13 +219,15 @@ class Paperback::Installer
     @dependencies[name].all? { |dep| @pending[dep] == 0 && compile_ready?(dep) }
   end
 
-  def pool_status(label, pool)
+  def pool_status(label, pool, extra_queue = 0)
     st = pool.status
-    return if st[:active].empty? && st[:queued].zero?
+    queue = st[:queued] + extra_queue
+
+    return if st[:active].empty? && queue.zero?
 
     msg = +"#{label}:"
     msg << " #{st[:active].join(" ")}" unless st[:active].empty?
-    msg << " +#{st[:queued]}" unless st[:queued].zero?
+    msg << " +#{queue}" unless queue.zero?
     msg
   end
 
