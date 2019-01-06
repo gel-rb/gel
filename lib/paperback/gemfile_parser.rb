@@ -128,6 +128,10 @@ module Paperback::GemfileParser
           elsif options[:require] == true
             target.scoped_require name, name
           end
+        elsif options[:require].is_a?(Array)
+          options[:require].each do |path|
+            target.scoped_require name, path
+          end
         else
           target.scoped_require name, options[:require]
         end
