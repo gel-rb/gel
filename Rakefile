@@ -20,8 +20,7 @@ FIXTURE_GEMS = [
   ["rack-test", "0.6.3"],
   ["fast_blank", "1.0.0"],
   ["atomic", "1.1.16"],
-  ["ffi", "1.9.25"],
-  ["sassc", "2.0.0"],
+  ["rainbow", "2.2.2"],
   ["rake", "12.3.2"],
 ]
 

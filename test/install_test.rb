@@ -107,24 +107,23 @@ class InstallTest < Minitest::Test
   def test_installing_a_rake_extension
     skip if jruby?
 
-    with_fixture_gems_installed(["rake-12.3.2.gem", "ffi-1.9.25.gem"], multi: true) do |store|
+    with_fixture_gems_installed(["rake-12.3.2.gem"], multi: true) do |store|
       result = Paperback::Package::Installer.new(store)
       dir = store["ruby", true].root
 
-      g = Paperback::Package.extract(fixture_file("sassc-2.0.0.gem"), result)
+      g = Paperback::Package.extract(fixture_file("rainbow-2.2.2.gem"), result)
       g.compile
       g.install
 
       # Files from gem
-      assert File.exist?("#{dir}/gems/sassc-2.0.0/ext/Rakefile")
-      assert File.exist?("#{dir}/gems/sassc-2.0.0/lib/sassc.rb")
+      assert File.exist?("#{dir}/gems/rainbow-2.2.2/ext/mkrf_conf.rb")
+      assert File.exist?("#{dir}/gems/rainbow-2.2.2/lib/rainbow.rb")
 
-      # Compiled binary
-      ext = RbConfig::CONFIG["DLEXT"]
-      ext = "so" if ext == "bundle"
-      # sassc's build script ignores sitelibdir, so the compiled binary
-      # ends up in the gem dir.
-      assert File.exist?("#{dir}/gems/sassc-2.0.0/ext/libsass/lib/libsass.#{ext}")
+      # Build artifact
+      assert File.exist?("#{dir}/gems/rainbow-2.2.2/ext/Rakefile")
+
+      # rainbow doesn't actually build anything -- its rakefile is a
+      # hack for Ruby < 2 on Windows
 
       entries = []
       store.each do |gem|
@@ -132,9 +131,8 @@ class InstallTest < Minitest::Test
       end
 
       assert_equal [
-        ["ffi", "1.9.25"],
+        ["rainbow", "2.2.2"],
         ["rake", "12.3.2"],
-        ["sassc", "2.0.0"],
       ], entries.sort
 
       assert_equal({
@@ -143,10 +141,9 @@ class InstallTest < Minitest::Test
         extensions: true,
         require_paths: ["lib"],
         dependencies: {
-          "ffi" => [%w(~> 1.9.6)],
           "rake" => [%w(>= 0)],
         },
-      }, store.gem("sassc", "2.0.0").info)
+      }, store.gem("rainbow", "2.2.2").info)
     end
   end
 end
