@@ -81,6 +81,8 @@ class Paperback::Environment
   end
 
   def self.lock(output: nil, gemfile: Paperback::Environment.load_gemfile, lockfile: Paperback::Environment.lockfile_name, catalog_options: {})
+    output = nil if $DEBUG
+
     if lockfile && File.exist?(lockfile)
       loader = Paperback::LockLoader.new(lockfile, gemfile)
       # TODO
@@ -122,18 +124,19 @@ class Paperback::Environment
       server_catalogs
 
     Paperback::WorkPool.new(8, name: "paperback-catalog-prep") do |pool|
+      if output
+        output.print "Fetching sources..."
+      else
+        Paperback::Httpool::Logger.info "Fetching sources..."
+      end
+
       catalogs.each do |catalog|
         next if catalog.nil?
 
         pool.queue("catalog") do
           catalog.prepare
-          output.print "." unless $DEBUG
+          output.print "." if output
         end
-      end
-      if Paperback::Httpool::Logger.debug?
-        Paperback::Httpool::Logger.info "Fetching sources..."
-      else
-        output.print "Fetching sources..."
       end
     end
 
@@ -142,22 +145,21 @@ class Paperback::Environment
     source = Paperback::PubGrub::Source.new(gemfile, catalogs, ["ruby"])
     solver = PubGrub::VersionSolver.new(source: source)
 
-    if PubGrub.logger.debug?
-      PubGrub.logger.info "Resolving dependencies..."
-    else
+    if output
       output.print "\nResolving dependencies..."
-    end
-    t = Time.now
-    until solver.solved?
-      solver.work
-      unless PubGrub.logger.debug?
+      t = Time.now
+      until solver.solved?
+        solver.work
         if Time.now > t + 0.1
           output.print "."
           t = Time.now
         end
       end
+      output.puts
+    else
+      PubGrub.logger.info "Resolving dependencies..."
+      solver.work until solver.solved?
     end
-    output.puts
 
     solution = solver.result
     solution.delete(source.root)
@@ -221,17 +223,19 @@ class Paperback::Environment
       lock_content << ""
     end
 
-    lock_content << "GEM"
-    server_catalogs.each do |catalog|
-      lock_content << "  remote: #{catalog}"
+    if server_gems
+      lock_content << "GEM"
+      server_catalogs.each do |catalog|
+        lock_content << "  remote: #{catalog}"
+      end
+      output_specs_for.call(server_gems)
+      lock_content << ""
     end
-    output_specs_for.call(server_gems)
 
-    lock_content << ""
     lock_content << "PLATFORMS"
     lock_content << "  ruby"
-
     lock_content << ""
+
     lock_content << "DEPENDENCIES"
 
     bang_deps = gemfile.gems.select { |_, _, options|
@@ -250,21 +254,21 @@ class Paperback::Environment
         lock_content << "  #{name} (#{req_strings.join(", ")})#{bang}"
       end
     end
+    lock_content << ""
 
     unless gemfile.ruby.empty?
-      lock_content << ""
       lock_content << "RUBY VERSION"
       lock_content << "   #{RUBY_DESCRIPTION.split.first(2).join(" ")}"
+      lock_content << ""
     end
 
-    lock_content << ""
     lock_content << "BUNDLED WITH"
     lock_content << "   1.999"
 
     lock_body = lock_content.join("\n") << "\n"
 
     if lockfile
-      output.puts "Writing lockfile to #{File.expand_path(lockfile)}"
+      output.puts "Writing lockfile to #{File.expand_path(lockfile)}" if output
       File.write(lockfile, lock_body)
     end
     lock_body
