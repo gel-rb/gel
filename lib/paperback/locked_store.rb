@@ -11,6 +11,10 @@ class Paperback::LockedStore
     @full_cache = false
   end
 
+  def paths
+    @inner.paths
+  end
+
   def root
     @inner.root
   end

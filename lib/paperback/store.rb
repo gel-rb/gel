@@ -12,6 +12,10 @@ class Paperback::Store
     @rlib_db = Paperback::DB::File.new(root, "meta")
   end
 
+  def paths
+    [@root.dup]
+  end
+
   def add_gem(name, version, bindir, executables, require_paths, dependencies, extensions)
     name = normalize_string(name)
     version = normalize_string(version)

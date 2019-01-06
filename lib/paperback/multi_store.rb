@@ -12,6 +12,10 @@ class Paperback::MultiStore
     @stores = stores
   end
 
+  def paths
+    @stores.values.flat_map(&:paths).uniq
+  end
+
   def [](architecture, version = false)
     @stores[self.class.subkey(architecture, version)]
   end

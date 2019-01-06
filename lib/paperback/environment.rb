@@ -359,6 +359,14 @@ class Paperback::Environment
     @gemfile.autorequire(self, gems)
   end
 
+  def self.find_gem(name, *requirements, &condition)
+    requirements = Paperback::Support::GemRequirement.new(requirements)
+
+    @store.each(name).find do |g|
+      g.satisfies?(requirements) && (!condition || condition.call(g))
+    end
+  end
+
   def self.gem(name, *requirements, why: nil)
     return if IGNORE_LIST.include?(name)
 
