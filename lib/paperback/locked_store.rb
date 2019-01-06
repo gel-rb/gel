@@ -15,6 +15,14 @@ class Paperback::LockedStore
     @inner.root
   end
 
+  def inspect
+    content = @locked_versions.map { |name, version| "#{name}=#{version.is_a?(String) ? version : version.root}" }
+    content = ["(none)"] if content.empty?
+    content.sort!
+
+    "#<#{self.class} inner=#{@inner.inspect} locks=#{content.join(",")}>"
+  end
+
   def prepare(locks)
     return if @full_cache
 

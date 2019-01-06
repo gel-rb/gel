@@ -79,6 +79,10 @@ class Paperback::Catalog
     path
   end
 
+  def inspect
+    "#<#{self.class} #{to_s.inspect}>"
+  end
+
   def to_s
     @uri.to_s
   end

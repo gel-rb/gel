@@ -154,6 +154,14 @@ class Paperback::Store
     end
   end
 
+  def inspect
+    content = each.map { |g| "#{g.name}-#{g.version}" }
+    content = ["(none)"] if content.empty?
+    content.sort!
+
+    "#<#{self.class} root=#{@root.inspect} content=#{content.join(",")}>"
+  end
+
   private
 
   def _gem(name, version, info)
