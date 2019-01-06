@@ -141,8 +141,9 @@ class Paperback::Installer
     @pending[g.spec.name] -= 1
 
     synchronize do
-      until @compile_waiting.empty?
-        g = @compile_waiting.shift
+      compile_recheck, @compile_waiting = @compile_waiting, []
+
+      compile_recheck.each do |g|
         @compile_pool.queue(g.spec.name) do
           work_compile(g)
         end
