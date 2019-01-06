@@ -24,7 +24,11 @@ def fixture_file(path)
   File.expand_path("../fixtures/#{path}", __FILE__)
 end
 
-def with_empty_store
+def with_empty_store(multi: false, &block)
+  if multi
+    return with_empty_multi_store(&block)
+  end
+
   Dir.mktmpdir do |dir|
     store = Paperback::Store.new(dir)
     yield store
@@ -44,11 +48,11 @@ def with_empty_multi_store
   end
 end
 
-def with_fixture_gems_installed(paths)
+def with_fixture_gems_installed(paths, multi: false)
   require "paperback/package"
   require "paperback/package/installer"
 
-  with_empty_store do |store|
+  with_empty_store(multi: multi) do |store|
     paths.each do |path|
       result = Paperback::Package::Installer.new(store)
       g = Paperback::Package.extract(fixture_file(path), result)

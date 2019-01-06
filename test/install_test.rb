@@ -103,4 +103,50 @@ class InstallTest < Minitest::Test
       }, store.gem("fast_blank", "1.0.0").info)
     end
   end
+
+  def test_installing_a_rake_extension
+    skip if jruby?
+
+    with_fixture_gems_installed(["rake-12.3.2.gem", "ffi-1.9.25.gem"], multi: true) do |store|
+      result = Paperback::Package::Installer.new(store)
+      dir = store["ruby", true].root
+
+      g = Paperback::Package.extract(fixture_file("sassc-2.0.0.gem"), result)
+      g.compile
+      g.install
+
+      # Files from gem
+      assert File.exist?("#{dir}/gems/sassc-2.0.0/ext/Rakefile")
+      assert File.exist?("#{dir}/gems/sassc-2.0.0/lib/sassc.rb")
+
+      # Compiled binary
+      ext = RbConfig::CONFIG["DLEXT"]
+      ext = "so" if ext == "bundle"
+      # sassc's build script ignores sitelibdir, so the compiled binary
+      # ends up in the gem dir.
+      assert File.exist?("#{dir}/gems/sassc-2.0.0/ext/libsass/lib/libsass.#{ext}")
+
+      entries = []
+      store.each do |gem|
+        entries << [gem.name, gem.version]
+      end
+
+      assert_equal [
+        ["ffi", "1.9.25"],
+        ["rake", "12.3.2"],
+        ["sassc", "2.0.0"],
+      ], entries.sort
+
+      assert_equal({
+        bindir: "bin",
+        executables: [],
+        extensions: true,
+        require_paths: ["lib"],
+        dependencies: {
+          "ffi" => [%w(~> 1.9.6)],
+          "rake" => [%w(>= 0)],
+        },
+      }, store.gem("sassc", "2.0.0").info)
+    end
+  end
 end
