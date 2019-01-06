@@ -279,6 +279,46 @@ class Paperback::Environment
     lock_body
   end
 
+  def self.install_gem(catalogs, gem_name, requirements = nil, output: nil)
+    base_store = Paperback::Environment.store
+    base_store = base_store.inner if base_store.is_a?(Paperback::LockedStore)
+
+    req = Paperback::Support::GemRequirement.new(requirements)
+    #base_store.each(gem_name) do |g|
+    #  return false if g.satisfies?(req)
+    #end
+
+    require_relative "installer"
+    installer = Paperback::Installer.new(base_store)
+
+    found_any = false
+    catalogs.each do |catalog|
+      # TODO: Hand this over to resolution so we pick up dependencies
+      # too
+
+      info = catalog.gem_info(gem_name)
+      next if info.nil?
+
+      found_any = true
+      version = info.keys.map { |v| Paperback::Support::GemVersion.new(v) }.sort.reverse.find { |v| req.satisfied_by?(v) }
+      next if version.nil?
+
+      return false if base_store.gem?(gem_name, version.to_s)
+
+      installer.install_gem([catalog], gem_name, version.to_s)
+
+      installer.wait(output)
+
+      return true
+    end
+
+    if found_any
+      raise "no version of gem #{gem_name.inspect} satifies #{requirements.inspect}"
+    else
+      raise "unknown gem #{gem_name.inspect}"
+    end
+  end
+
   def self.activate(install: false, output: nil)
     Paperback::Environment.load_gemfile
     return if @active_lockfile
@@ -288,7 +328,10 @@ class Paperback::Environment
       @active_lockfile = true
       loader = Paperback::LockLoader.new(lockfile, gemfile)
 
-      loader.activate(Paperback::Environment, Paperback::Environment.store.inner, install: install, output: output)
+      base_store = Paperback::Environment.store
+      base_store = base_store.inner if base_store.is_a?(Paperback::LockedStore)
+
+      loader.activate(Paperback::Environment, base_store, install: install, output: output)
     else
       raise "No lockfile found in #{lockfile.inspect}"
     end
