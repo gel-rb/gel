@@ -131,7 +131,7 @@ class ActivateTest < Minitest::Test
         Paperback::Environment.gem "rack", "0.1.0"
         begin
           require Paperback::Environment.resolve_gem_path("rack/test")
-        rescue => ex
+        rescue LoadError => ex
           puts ex
         end
       END
@@ -148,7 +148,7 @@ class ActivateTest < Minitest::Test
         Paperback::Environment.open(store)
         begin
           Paperback::Environment.gem "rack", "< 1.0"
-        rescue => ex
+        rescue LoadError => ex
           puts ex
         end
       END

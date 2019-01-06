@@ -321,7 +321,7 @@ class Paperback::Environment
         return
       else
         why = " (#{why.join("; ")})" if why && why.first
-        raise "already loaded gem #{name} #{existing.version}, which is incompatible with: #{requirements}#{why}"
+        raise LoadError, "already loaded gem #{name} #{existing.version}, which is incompatible with: #{requirements}#{why}"
       end
     end
 
@@ -333,7 +333,7 @@ class Paperback::Environment
       activate_gem gem, why: why
     else
       why = " (#{why.join("; ")})" if why && why.first
-      raise "unable to satisfy requirements for gem #{name}: #{requirements}#{why}"
+      raise LoadError, "unable to satisfy requirements for gem #{name}: #{requirements}#{why}"
     end
   end
 
@@ -351,7 +351,7 @@ class Paperback::Environment
 
   def self.activate_gem(gem, why: nil)
     return if activated_gems[gem.name] && activated_gems[gem.name].version == gem.version
-    raise "already activated #{gem.name} #{activated_gems[gem.name].version}" if activated_gems[gem.name]
+    raise LoadError, "already activated #{gem.name} #{activated_gems[gem.name].version}" if activated_gems[gem.name]
 
     gem.dependencies.each do |dep, reqs|
       self.gem(dep, *reqs.map { |(qual, ver)| "#{qual} #{ver}" }, why: ["required by #{gem.name} #{gem.version}", *why])

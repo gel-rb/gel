@@ -48,7 +48,7 @@ class LockedActivateTest < Minitest::Test
         Paperback::Environment.open(locked_store)
         begin
           Paperback::Environment.gem "rack"
-        rescue => ex
+        rescue LoadError => ex
           puts ex.message
         end
       END
