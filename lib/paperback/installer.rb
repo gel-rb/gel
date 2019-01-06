@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "monitor"
+require "net/http"
 
 require_relative "work_pool"
 require_relative "git_depot"
@@ -96,7 +97,7 @@ class Paperback::Installer
     catalogs.each do |catalog|
       begin
         return catalog.download_gem(name, version)
-      rescue Net::HTTPError
+      rescue Net::HTTPExceptions
       end
     end
 
