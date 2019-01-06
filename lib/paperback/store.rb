@@ -137,8 +137,9 @@ class Paperback::Store
       @primary_db.reading do
         return unless vs = @primary_db["v/#{gem_name}"]
         vs.each do |version|
-          info = @primary_db["i/#{gem_name}/#{version}"]
-          yield _gem(gem_name, version, info)
+          if info = @primary_db["i/#{gem_name}/#{version}"]
+            yield _gem(gem_name, version, info)
+          end
         end
       end
     else
