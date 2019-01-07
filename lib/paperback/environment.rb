@@ -355,7 +355,7 @@ class Paperback::Environment
     gems = filtered_gems
     groups = [:default] if groups.empty?
     groups = groups.map(&:to_s)
-    gems = gems.reject { |g| ((g[2][:groups] || [:default]).map(&:to_s) & groups).empty? }
+    gems = gems.reject { |g| ((g[2][:group] || [:default]).map(&:to_s) & groups).empty? }
     @gemfile.autorequire(self, gems)
   end
 

@@ -32,7 +32,7 @@ module Gem
     end
 
     def self.each(&block)
-      Paperback::Environment.store.map { |g| new(g) }.each(&block)
+      Paperback::Environment.store.each.map { |g| new(g) }.each(&block)
     end
 
     def initialize(store_gem)

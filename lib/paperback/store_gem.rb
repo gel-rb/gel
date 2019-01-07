@@ -9,7 +9,7 @@ class Paperback::StoreGem
     @root = root
     @name = name
     @version = version
-    @extensions = extensions
+    @extensions = extensions unless extensions && extensions.empty?
     @info = info
   end
 
