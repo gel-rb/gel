@@ -7,7 +7,7 @@ class Paperback::GitDepot
   Logger = ::Logger.new($stderr)
   Logger.level = $DEBUG ? ::Logger::DEBUG : ::Logger::WARN
 
-  def initialize(store, mirror_root = "~/.cache/paperback/git")
+  def initialize(store, mirror_root = (ENV["PAPERBACK_CACHE"] || "~/.cache/paperback") + "/git")
     @store = store
     @mirror_root = File.expand_path(mirror_root)
   end
