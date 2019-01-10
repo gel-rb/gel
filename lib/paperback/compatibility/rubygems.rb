@@ -124,12 +124,17 @@ module Gem
   def self.activate_bin_path(gem_name, bin_name, version = nil)
     if g = Paperback::Environment.activated_gems[gem_name]
       Paperback::Environment.gem g.name, version if version
-    else
-      g = Paperback::Environment.find_gem(name, *version) do |g|
+    elsif g = Paperback::Environment.find_gem(gem_name, *version) do |g|
         g.executables.include?(bin_name)
       end
 
       Paperback::Environment.gem g.name, g.version
+    elsif g = Paperback::Environment.find_gem(gem_name, *version)
+      raise "#{g.name} (#{g.version}) doesn't contain executable #{bin_name.inspect}"
+    elsif version && Paperback::Environment.find_gem(gem_name)
+      raise "#{gem_name} (#{version}) not available"
+    else
+      raise "Unknown gem #{gem_name.inspect}"
     end
 
     Paperback::Environment.find_executable(bin_name, g.name, g.version)
@@ -140,6 +145,10 @@ module Gem
       Paperback::Environment.gem g.name, version if version
 
       Paperback::Environment.find_executable(bin_name, g.name, g.version)
+    elsif Paperback::Environment.find_gem(gem_name)
+      raise "Gem #{gem_name.inspect} is not active"
+    else
+      raise "Unknown gem #{gem_name.inspect}"
     end
   end
 end
