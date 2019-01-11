@@ -5,9 +5,16 @@ require_relative "gemspec_parser"
 class Paperback::PathCatalog
   attr_reader :path
 
+  DEFAULT_GLOB = '{,*,*/*}.gemspec'
+
   def initialize(path)
     @path = path
     @cache = {}
+    @gemspecs = nil
+  end
+
+  def gemspecs
+    @gemspecs ||= Dir["#{@path}/#{DEFAULT_GLOB}"]
   end
 
   def gem_info(name)
@@ -15,9 +22,9 @@ class Paperback::PathCatalog
   end
 
   def _info(name)
-    gemspec = gemspec_from("#{name}.gemspec") ||
-      gemspec_from("#{name}/#{name}.gemspec")
+    gemspec = gemspecs.detect { |path| File.basename(path) == "#{name}.gemspec" }
     return unless gemspec
+    gemspec = gemspec_from(gemspec)
 
     info = {}
     info[gemspec.version] = {
@@ -29,10 +36,7 @@ class Paperback::PathCatalog
   end
 
   def gemspec_from(filename)
-    filename = File.expand_path("#{path}/#{filename}")
-    if File.exist?(filename)
-      Paperback::GemspecParser.parse(File.read(filename), filename)
-    end
+    Paperback::GemspecParser.parse(File.read(filename), filename)
   end
 
   def prepare
