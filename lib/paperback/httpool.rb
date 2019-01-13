@@ -46,6 +46,7 @@ class Paperback::Httpool
     synchronize do
       https = @pool.values.flatten
       @pool = nil
+      @cond.broadcast
     end
 
     https.each(&:finish)
@@ -73,7 +74,18 @@ class Paperback::Httpool
   def queue_new_connection(ident, uri)
     Thread.new do
       http = connect(ident, uri)
-      checkin ident, http
+
+      synchronize do
+        unless Thread.current[:discard]
+          Thread.current[:result] = http
+          http = nil
+          @cond.broadcast
+        end
+      end
+
+      if http
+        checkin ident, http
+      end
     end
   end
 
@@ -95,12 +107,18 @@ class Paperback::Httpool
     synchronize do
       @pool[ident] ||= []
 
-      if @pool[ident].empty?
-        queue_new_connection ident, uri
-        @cond.wait_while { @pool[ident].empty? }
-      end
+      return @pool[ident].pop unless @pool[ident].empty?
 
-      @pool[ident].pop
+      thread = queue_new_connection(ident, uri)
+
+      @cond.wait_while { !thread[:result] && @pool[ident].empty? }
+
+      if thread[:result]
+        thread[:result]
+      else
+        thread[:discard] = true
+        @pool[ident].pop
+      end
     end
   end
 
