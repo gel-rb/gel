@@ -326,90 +326,88 @@ class TailFileTest < Minitest::Test
   class Barrier
     def initialize(counter)
       @counter = counter
+      @seen = []
       @monitor = Monitor.new
       @cond = @monitor.new_cond
     end
 
-    def meet
+    def meet(source = nil)
       @monitor.synchronize do
-        @counter -= 1
-
-        if @counter > 0
-          @cond.wait_while { @counter > 0 }
-        else
-          @cond.broadcast
-        end
+        release(source)
+        wait
       end
     end
 
     def wait
       @monitor.synchronize do
-        @cond.wait_while { @counter > 0 }
+        t = Time.now + 10
+        while @counter > 0
+          raise "Timed out waiting for barrier: seen #{@seen.inspect}; expected #{@counter} more" if Time.now >= t
+          @cond.wait(t - Time.now)
+        end
       end
     end
 
-    def release
+    def release(source = nil)
       @monitor.synchronize do
         @counter -= 1
-
-        @cond.broadcast if @counter <= 0
+        @seen << source
+        @cond.broadcast
       end
     end
   end
 
   def test_async_requests_occur_simultaneously
-    start_time = Time.now
-
     requested_files = []
     received_files = []
 
     barrier = Barrier.new(3)
 
     stubbed_request {
-      stub_request(:get, "https://example.org/a").
+      stub_request(:get, "https://example.org/x/a").
         with(headers: { "Accept-Encoding" => /gzip/ }).
         to_return(
-          body: proc { requested_files << "a"; barrier.meet; "A" },
+          body: proc { requested_files << "a"; barrier.meet(:A); "A" },
         )
     }
 
     stubbed_request {
-      stub_request(:get, "https://example.org/b").
+      stub_request(:get, "https://example.org/x/b").
         with(headers: { "Accept-Encoding" => /gzip/ }).
         to_return(
-          body: proc { requested_files << "b"; barrier.meet; "B" },
+          body: proc { requested_files << "b"; barrier.meet(:B); "B" },
         )
     }
 
     stubbed_request {
-      stub_request(:get, "https://example.org/c").
+      stub_request(:get, "https://example.org/x/c").
         with(headers: { "Accept-Encoding" => /gzip/ }).
         to_return(
-          body: proc { requested_files << "c"; barrier.meet; "C" },
+          body: proc { requested_files << "c"; barrier.meet(:C); "C" },
         )
     }
 
-    @pinboard.async_file(URI("https://example.org/a")) do |f|
+    @pinboard.async_file(URI("https://example.org/x/a")) do |f|
       received_files << "a1#{f.read}"
     end
 
-    @pinboard.async_file(URI("https://example.org/a")) do |f|
+    @pinboard.async_file(URI("https://example.org/x/a")) do |f|
       received_files << "a2#{f.read}"
     end
 
-    @pinboard.async_file(URI("https://example.org/b")) do |f|
+    @pinboard.async_file(URI("https://example.org/x/b")) do |f|
       received_files << "b1#{f.read}"
     end
 
-    @pinboard.async_file(URI("https://example.org/b")) do |f|
+    @pinboard.async_file(URI("https://example.org/x/b")) do |f|
       received_files << "b2#{f.read}"
     end
 
-    @pinboard.async_file(URI("https://example.org/c")) do |f|
+    @pinboard.async_file(URI("https://example.org/x/c")) do |f|
       received_files << "c1#{f.read}"
     end
 
-    @pinboard.async_file(URI("https://example.org/c")) do |f|
+    @pinboard.async_file(URI("https://example.org/x/c")) do |f|
       received_files << "c2#{f.read}"
     end
 
@@ -433,7 +431,7 @@ class TailFileTest < Minitest::Test
     second = Barrier.new(2)
 
     stubbed_request {
-      stub_request(:get, "https://example.org/a").
+      stub_request(:get, "https://example.org/y/a").
         with(headers: { "Accept-Encoding" => /gzip/ }).
         to_return(
           body: proc { requested_files << "a"; first.wait; "A" },
@@ -441,7 +439,7 @@ class TailFileTest < Minitest::Test
     }
 
     stubbed_request {
-      stub_request(:get, "https://example.org/b").
+      stub_request(:get, "https://example.org/y/b").
         with(headers: { "Accept-Encoding" => /gzip/ }).
         to_return(
           body: proc { requested_files << "b"; "B" },
@@ -449,38 +447,38 @@ class TailFileTest < Minitest::Test
     }
 
     stubbed_request {
-      stub_request(:get, "https://example.org/c").
+      stub_request(:get, "https://example.org/y/c").
         with(headers: { "Accept-Encoding" => /gzip/ }).
         to_return(
           body: proc { requested_files << "c"; second.wait; "C" },
         )
     }
 
-    @pinboard.async_file(URI("https://example.org/a")) do |f|
+    @pinboard.async_file(URI("https://example.org/y/a")) do |f|
       received_files << "a1"
-      second.release
+      second.release :a1
     end
 
-    @pinboard.async_file(URI("https://example.org/a")) do |f|
+    @pinboard.async_file(URI("https://example.org/y/a")) do |f|
       received_files << "a2"
-      second.release
+      second.release :a2
     end
 
-    @pinboard.async_file(URI("https://example.org/b")) do |f|
+    @pinboard.async_file(URI("https://example.org/y/b")) do |f|
       received_files << "b1"
-      first.release
+      first.release :b1
     end
 
-    @pinboard.async_file(URI("https://example.org/b")) do |f|
+    @pinboard.async_file(URI("https://example.org/y/b")) do |f|
       received_files << "b2"
-      first.release
+      first.release :b2
     end
 
-    @pinboard.async_file(URI("https://example.org/c")) do |f|
+    @pinboard.async_file(URI("https://example.org/y/c")) do |f|
       received_files << "c1"
     end
 
-    @pinboard.async_file(URI("https://example.org/c")) do |f|
+    @pinboard.async_file(URI("https://example.org/y/c")) do |f|
       received_files << "c2"
     end
 
@@ -500,15 +498,15 @@ class TailFileTest < Minitest::Test
     # but it only gets one each
     assert_equal %w(a b c), requested_files.sort
 
-    @pinboard.async_file(URI("https://example.org/a")) do |f|
+    @pinboard.async_file(URI("https://example.org/y/a")) do |f|
       received_files << "a3"
     end
 
-    @pinboard.async_file(URI("https://example.org/b")) do |f|
+    @pinboard.async_file(URI("https://example.org/y/b")) do |f|
       received_files << "b3"
     end
 
-    @pinboard.async_file(URI("https://example.org/c")) do |f|
+    @pinboard.async_file(URI("https://example.org/y/c")) do |f|
       received_files << "c3"
     end
 

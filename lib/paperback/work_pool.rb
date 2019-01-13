@@ -67,7 +67,7 @@ class Paperback::WorkPool
                     @errors << [current_job, ex]
                   end
                 else
-                  $stderr.puts "Unhandled exception in work pool #{@name}: #{ex.inspect}\n#{ex.backtrace.map { |s| s.sub(/^/, "   ") }.join("\n")}"
+                  $stderr.puts "Unhandled exception in work pool #{@name.inspect} for job #{current_job[1].inspect}:\n#{ex.inspect}\n#{ex.backtrace.map { |s| s.sub(/^/, "   ") }.join("\n")}"
                 end
               end
             end
