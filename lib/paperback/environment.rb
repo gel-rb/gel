@@ -80,12 +80,11 @@ class Paperback::Environment
       "Gemfile.lock"
   end
 
-  def self.lock(store: store(), output: nil, gemfile: Paperback::Environment.load_gemfile, lockfile: Paperback::Environment.lockfile_name, catalog_options: {})
+  def self.lock(store: store(), output: nil, gemfile: Paperback::Environment.load_gemfile, lockfile: Paperback::Environment.lockfile_name, catalog_options: {}, preference_strategy: nil)
     output = nil if $DEBUG
 
     if lockfile && File.exist?(lockfile)
       loader = Paperback::LockLoader.new(lockfile, gemfile)
-      # TODO
     end
 
     # HACK
@@ -147,8 +146,21 @@ class Paperback::Environment
 
     require_relative "pub_grub/source"
 
-    source = Paperback::PubGrub::Source.new(gemfile, catalogs, ["ruby"])
+    strategy = loader && preference_strategy && preference_strategy.call(loader)
+    source = Paperback::PubGrub::Source.new(gemfile, catalogs, ["ruby"], strategy)
     solver = PubGrub::VersionSolver.new(source: source)
+    solver.define_singleton_method(:next_package_to_try) do
+      self.solution.unsatisfied.min_by do |term|
+        package = term.package
+        versions = self.source.versions_for(package, term.constraint.range)
+
+        if strategy
+          strategy.package_priority(package, versions) + @package_depth[package]
+        else
+          @package_depth[package]
+        end * 1000 + versions.count
+      end.package
+    end
 
     if output
       output.print "\nResolving dependencies..."
@@ -176,7 +188,7 @@ class Paperback::Environment
     output_specs_for = lambda do |results|
       lock_content << "  specs:"
       results.each do |(package, version)|
-        next if package.name == "bundler" || package.name == "ruby"
+        next if package.name == "bundler" || package.name == "ruby" || package.name =~ /^~/
 
         lock_content << "    #{package} (#{version})"
 
@@ -249,6 +261,8 @@ class Paperback::Environment
 
     root_deps = source.root_dependencies
     root_deps.sort_by { |name,_| name }.each do |name, constraints|
+      next if name =~ /^~/
+
       bang = "!" if bang_deps.include?(name)
       if constraints == []
         lock_content << "  #{name}#{bang}"

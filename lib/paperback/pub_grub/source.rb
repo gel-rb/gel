@@ -14,10 +14,11 @@ module Paperback::PubGrub
 
     attr_reader :root, :root_version
 
-    def initialize(gemfile, catalogs, active_platforms)
+    def initialize(gemfile, catalogs, active_platforms, preference_strategy)
       @gemfile = gemfile
       @catalogs = catalogs
       @active_platforms = active_platforms
+      @preference_strategy = preference_strategy
 
       @packages = Hash.new {|h, k| h[k] = PubGrub::Package.new(k) }
       @root = PubGrub::Package.root
@@ -30,40 +31,67 @@ module Paperback::PubGrub
     end
 
     def spec_for_version(package, version)
+      if package.name =~ /^~/
+        return Spec.new(nil, package.name, version, [])
+      end
+
       @specs_by_package_version[package][version.to_s]
     end
 
     def all_versions_for(package)
+      if package.name =~ /^~/
+        return [Gem::Version.new("0")]
+      end
+
       fetch_package_info(package)
 
       @specs_by_package_version[package].values.map(&:gem_version)
     end
 
     def sort_versions_by_preferred(package, sorted_versions)
-      prereleases, releases = sorted_versions.reverse.partition(&:prerelease?)
+      sorted_versions = sorted_versions.reverse
+
+      if @preference_strategy
+        sorted_versions = @preference_strategy.sort_versions_by_preferred(package, sorted_versions)
+      end
+
+      prereleases, releases = sorted_versions.partition(&:prerelease?)
       releases.concat(prereleases)
     end
 
     def dependencies_for(package, version)
-      fetch_package_info(package) # probably already done, can't hurt
-
-      spec = @specs_by_package_version[package][version.to_s]
-      info = spec.info
-      info = info.select { |p, i| @active_platforms.include?(p) }
-
       deps = {}
-      info.flat_map { |_, i| i[:dependencies] }.each do |n, cs|
-        deps[n] ||= []
-        deps[n].concat cs
-      end
 
-      # FIXME: ruby_constraints ???
+      case package.name
+      when "~arguments"
+        if @preference_strategy
+          @preference_strategy.constraints.each do |name, constraints|
+            deps[name] ||= []
+            deps[name].concat constraints.flatten
+          end
+        end
+      when /^~/
+        raise "Unknown pseudo-package"
+      else
+        fetch_package_info(package) # probably already done, can't hurt
+
+        spec = @specs_by_package_version[package][version.to_s]
+        info = spec.info
+        info = info.select { |p, i| @active_platforms.include?(p) }
+
+        info.flat_map { |_, i| i[:dependencies] }.each do |n, cs|
+          deps[n] ||= []
+          deps[n].concat cs
+        end
+
+        # FIXME: ruby_constraints ???
+      end
 
       deps
     end
 
     def root_dependencies
-      deps = {}
+      deps = { "~arguments" => [] }
 
       @gemfile.gems.select do |_, _, options|
         next true unless platforms = options[:platforms]
