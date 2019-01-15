@@ -514,10 +514,9 @@ GEM
   remote: https://extra-gems.org/
   specs:
     dotenv (2.5.0)
-    foreman (0.63.0)
-      dotenv (>= 0.7)
-      thor (>= 0.13.6)
-    thor (0.20.3)
+    foreman (0.85.0)
+      thor (~> 0.19.1)
+    thor (0.19.4)
     thunk (1)
       thor
 
