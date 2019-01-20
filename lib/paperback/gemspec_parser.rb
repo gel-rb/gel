@@ -51,6 +51,9 @@ class Paperback::GemspecParser
   end
 
   def self.parse(content, filename, lineno = 1, root: File.dirname(filename), isolate: true)
+    filename = File.expand_path(filename)
+    root = File.expand_path(root)
+
     if isolate
       in_read, in_write = IO.pipe
       out_read, out_write = IO.pipe
