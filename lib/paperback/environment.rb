@@ -200,36 +200,52 @@ class Paperback::Environment
 
     output_specs_for = lambda do |results|
       lock_content << "  specs:"
-      results.each do |(package, version)|
-        next if package.name == "bundler" || package.name == "ruby" || package.name =~ /^~/
+      results.flat_map do |(package, version)|
+        next [] if package.name =~ /^~/
 
         spec = source.spec_for_version(package, version)
-        platforms = spec.active_platforms(active_platforms_map[package.name])
+        if package.name =~ /(.*)@(.*)/
+          package_name = $1
+          platforms = spec.active_platforms([$2])
+        else
+          package_name = package.name
+          platforms = spec.active_platforms(active_platforms_map[package.name])
+        end
 
-        platforms.sort_by { |p| [p == "ruby" ? 0 : 1, p] }.each do |platform|
-          full_version = platform == "ruby" ? version : "#{version}-#{platform}"
-          lock_content << "    #{package} (#{full_version})"
+        next [] if package_name == "bundler" || package_name == "ruby"
 
-          deps = source.dependencies_for(package, version, platform)
-          next unless deps && deps.first
+        platforms.map { |platform|
+          [package, package_name, version, platform]
+        }
+      end.sort_by do |package, package_name, version, platform|
+        [package_name, version, platform == "ruby" ? 0 : 1, platform]
+      end.uniq do |package, package_name, version, platform|
+        [package_name, version, platform == "ruby" ? 0 : 1, platform]
+      end.each do |package, package_name, version, platform|
+        full_version = platform == "ruby" ? version : "#{version}-#{platform}"
+        lock_content << "    #{package_name} (#{full_version})"
 
-          dep_lines = deps.map do |(dep_name, dep_requirements)|
-            next dep_name if dep_requirements == [">= 0"] || dep_requirements == []
+        deps = source.dependencies_for(package, version, platform)
+        next unless deps && deps.first
 
-            req = Paperback::Support::GemRequirement.new(dep_requirements)
-            req_strings = req.requirements.sort_by { |(_op, ver)| ver }.map { |(op, ver)| "#{op} #{ver}" }
+        dep_lines = deps.map do |(dep_name, dep_requirements)|
+          dep_name = dep_name.split("@").first
 
-            "#{dep_name} (#{req_strings.join(", ")})"
-          end
+          next dep_name if dep_requirements == [">= 0"] || dep_requirements == []
 
-          dep_lines.sort.each do |line|
-            lock_content << "      #{line}"
-          end
+          req = Paperback::Support::GemRequirement.new(dep_requirements)
+          req_strings = req.requirements.sort_by { |(_op, ver)| ver }.map { |(op, ver)| "#{op} #{ver}" }
+
+          "#{dep_name} (#{req_strings.join(", ")})"
+        end
+
+        dep_lines.sort.each do |line|
+          lock_content << "      #{line}"
         end
       end
     end
 
-    grouped_graph = solution.sort_by { |package,_| package.name }.group_by { |(package, version)|
+    grouped_graph = solution.sort_by { |package, _| package.name }.group_by { |(package, version)|
       spec = source.spec_for_version(package, version)
       catalog = spec.catalog
       catalog.is_a?(Paperback::Catalog) || catalog.is_a?(Paperback::StoreCatalog) ? nil : catalog
@@ -281,7 +297,12 @@ class Paperback::Environment
     }.map { |name, _, _| name }
 
     root_deps = source.root_dependencies
-    root_deps.sort_by { |name,_| name }.each do |name, constraints|
+    root_deps.
+      map { |name, constraints| [name.split("@").first, constraints] }.
+      sort_by { |name, _| name }.
+      uniq { |name, _| name }.
+      each do |name, constraints|
+
       next if name =~ /^~/
 
       bang = "!" if bang_deps.include?(name)

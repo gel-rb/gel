@@ -51,6 +51,10 @@ module Paperback::PubGrub
         return Spec.new(nil, package.name, version, [])
       end
 
+      if package.name =~ /(.*)@(.*)/
+        package = @packages[$1]
+      end
+
       @specs_by_package_version[package][version.to_s]
     end
 
@@ -59,14 +63,23 @@ module Paperback::PubGrub
         return [Gem::Version.new("0")]
       end
 
+      if package.name =~ /(.*)@(.*)/
+        package_name, platform = $1, $2
+        package = @packages[package_name]
+      end
+
       fetch_package_info(package)
 
       @specs_by_package_version[package].values.
-        select { |spec| spec.available_on_platforms?(@active_platforms[package.name]) }.
+        select { |spec| spec.available_on_platforms?(platform ? [platform] : @active_platforms[package.name]) }.
         map(&:gem_version)
     end
 
     def sort_versions_by_preferred(package, sorted_versions)
+      if package.name =~ /(.*)@(.*)/
+        package = @packages[$1]
+      end
+
       sorted_versions = sorted_versions.reverse
 
       if @preference_strategy
@@ -90,14 +103,20 @@ module Paperback::PubGrub
         end
       when /^~/
         raise "Unknown pseudo-package"
+      when /(.*)@(.*)/
+        return dependencies_for(@packages[$1], version, $2)
       else
         fetch_package_info(package) # probably already done, can't hurt
 
         spec = @specs_by_package_version[package][version.to_s]
         info = spec.info
-        info = info.select { |p, i| p == platform } if platform
+        if platform
+          release_platform = Paperback::Platform.match(platform, spec.available_platforms)
+          info = info.select { |p, i| p == release_platform }
+        end
 
         info.flat_map { |_, i| i[:dependencies] }.each do |n, cs|
+          n += "@#{platform}" if platform
           deps[n] ||= []
           deps[n].concat cs
         end
@@ -112,8 +131,10 @@ module Paperback::PubGrub
       deps = { "~arguments" => [] }
 
       @gemfile.gems.each do |name, constraints, _|
-        deps[name] ||= []
-        deps[name].concat constraints.flatten
+        @active_platforms[name].each do |platform|
+          deps["#{name}@#{platform}"] ||= []
+          deps["#{name}@#{platform}"].concat constraints.flatten
+        end
       end
 
       deps.values.each(&:uniq!)
@@ -123,6 +144,25 @@ module Paperback::PubGrub
 
     def parse_dependency(package, requirement)
       ::PubGrub::VersionConstraint.new(@packages[package], range: to_range(requirement))
+    end
+
+    def incompatibilities_for(package, version)
+      result = super
+
+      if package.name =~ /(.*)@(.*)/
+        this_platform = $2
+        package_name = $1
+
+        other_platforms = @active_platforms[nil] - [this_platform]
+
+        self_constraint = PubGrub::VersionConstraint.new(package, range: PubGrub::VersionRange.new(min: version, max: version, include_min: true, include_max: true))
+        result += other_platforms.map do |other_platform|
+          other_constraint = PubGrub::VersionConstraint.new(@packages["#{package_name}@#{other_platform}"], range: PubGrub::VersionUnion.new([PubGrub::VersionRange.new(max: version), PubGrub::VersionRange.new(min: version)]))
+          PubGrub::Incompatibility.new([PubGrub::Term.new(self_constraint, true), PubGrub::Term.new(other_constraint, true)], cause: :dependency)
+        end
+      end
+
+      result
     end
 
     private
