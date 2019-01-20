@@ -85,7 +85,10 @@ class Paperback::Environment
 
     if lockfile && File.exist?(lockfile)
       loader = Paperback::LockLoader.new(lockfile, gemfile)
+      target_platforms = loader.platforms
     end
+
+    target_platforms ||= ["ruby"]
 
     # HACK
     $: << File.expand_path("../../tmp/bootstrap/store/ruby/gems/pub_grub-0.5.0.alpha3/lib", __dir__)
@@ -146,8 +149,18 @@ class Paperback::Environment
 
     require_relative "pub_grub/source"
 
+    require_relative "platform"
+
+    active_platforms_map = Hash.new(target_platforms)
+    gemfile.gems.each do |name, _, options|
+      if options.key?(:platforms)
+        filter = Array(options[:platforms] || ["ruby"]).map(&:to_s)
+        active_platforms_map[name] = Paperback::Platform.filter(target_platforms, filter)
+      end
+    end
+
     strategy = loader && preference_strategy && preference_strategy.call(loader)
-    source = Paperback::PubGrub::Source.new(gemfile, catalogs, ["ruby"], strategy)
+    source = Paperback::PubGrub::Source.new(gemfile, catalogs, active_platforms_map, strategy)
     solver = PubGrub::VersionSolver.new(source: source)
     solver.define_singleton_method(:next_package_to_try) do
       self.solution.unsatisfied.min_by do |term|
@@ -190,22 +203,28 @@ class Paperback::Environment
       results.each do |(package, version)|
         next if package.name == "bundler" || package.name == "ruby" || package.name =~ /^~/
 
-        lock_content << "    #{package} (#{version})"
+        spec = source.spec_for_version(package, version)
+        platforms = spec.active_platforms(active_platforms_map[package.name])
 
-        deps = source.dependencies_for(package, version)
-        next unless deps && deps.first
+        platforms.sort_by { |p| [p == "ruby" ? 0 : 1, p] }.each do |platform|
+          full_version = platform == "ruby" ? version : "#{version}-#{platform}"
+          lock_content << "    #{package} (#{full_version})"
 
-        dep_lines = deps.map do |(dep_name, dep_requirements)|
-          next dep_name if dep_requirements == [">= 0"] || dep_requirements == []
+          deps = source.dependencies_for(package, version, platform)
+          next unless deps && deps.first
 
-          req = Paperback::Support::GemRequirement.new(dep_requirements)
-          req_strings = req.requirements.sort_by { |(_op, ver)| ver }.map { |(op, ver)| "#{op} #{ver}" }
+          dep_lines = deps.map do |(dep_name, dep_requirements)|
+            next dep_name if dep_requirements == [">= 0"] || dep_requirements == []
 
-          "#{dep_name} (#{req_strings.join(", ")})"
-        end
+            req = Paperback::Support::GemRequirement.new(dep_requirements)
+            req_strings = req.requirements.sort_by { |(_op, ver)| ver }.map { |(op, ver)| "#{op} #{ver}" }
 
-        dep_lines.sort.each do |line|
-          lock_content << "      #{line}"
+            "#{dep_name} (#{req_strings.join(", ")})"
+          end
+
+          dep_lines.sort.each do |line|
+            lock_content << "      #{line}"
+          end
         end
       end
     end
@@ -250,7 +269,9 @@ class Paperback::Environment
     end
 
     lock_content << "PLATFORMS"
-    lock_content << "  ruby"
+    target_platforms.each do |platform|
+      lock_content << "  #{platform}"
+    end
     lock_content << ""
 
     lock_content << "DEPENDENCIES"

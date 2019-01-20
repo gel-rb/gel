@@ -10,6 +10,22 @@ module Paperback::PubGrub
       def gem_version
         @gem_version ||= Paperback::Support::GemVersion.new(version)
       end
+
+      def available_platforms
+        info.map(&:first)
+      end
+
+      def available_on_platforms?(requested_platforms)
+        requested_platforms.all? do |requested_platform|
+          Paperback::Platform.match(requested_platform, available_platforms)
+        end
+      end
+
+      def active_platforms(requested_platforms)
+        requested_platforms.map do |requested_platform|
+          Paperback::Platform.match(requested_platform, available_platforms)
+        end.uniq
+      end
     end
 
     attr_reader :root, :root_version
@@ -45,7 +61,9 @@ module Paperback::PubGrub
 
       fetch_package_info(package)
 
-      @specs_by_package_version[package].values.map(&:gem_version)
+      @specs_by_package_version[package].values.
+        select { |spec| spec.available_on_platforms?(@active_platforms[package.name]) }.
+        map(&:gem_version)
     end
 
     def sort_versions_by_preferred(package, sorted_versions)
@@ -59,7 +77,7 @@ module Paperback::PubGrub
       releases.concat(prereleases)
     end
 
-    def dependencies_for(package, version)
+    def dependencies_for(package, version, platform = nil)
       deps = {}
 
       case package.name
@@ -77,7 +95,7 @@ module Paperback::PubGrub
 
         spec = @specs_by_package_version[package][version.to_s]
         info = spec.info
-        info = info.select { |p, i| @active_platforms.include?(p) }
+        info = info.select { |p, i| p == platform } if platform
 
         info.flat_map { |_, i| i[:dependencies] }.each do |n, cs|
           deps[n] ||= []
@@ -93,10 +111,7 @@ module Paperback::PubGrub
     def root_dependencies
       deps = { "~arguments" => [] }
 
-      @gemfile.gems.select do |_, _, options|
-        next true unless platforms = options[:platforms]
-        !([*platforms] & [:ruby, :mri]).empty?
-      end.each do |name, constraints, _|
+      @gemfile.gems.each do |name, constraints, _|
         deps[name] ||= []
         deps[name].concat constraints.flatten
       end

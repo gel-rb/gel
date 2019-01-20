@@ -47,6 +47,12 @@ class Paperback::LockLoader
     end
   end
 
+  def platforms
+    if pair = lock_content.assoc("PLATFORMS")
+      pair.last
+    end
+  end
+
   def activate(env, base_store, install: false, output: nil)
     locked_store = Paperback::LockedStore.new(base_store)
 
