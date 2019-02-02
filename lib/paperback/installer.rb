@@ -217,7 +217,17 @@ class Paperback::Installer
   private
 
   def compile_ready?(name)
-    @dependencies[name].all? { |dep| @pending[dep] == 0 && compile_ready?(dep) }
+    @dependencies[name].all? do |dep|
+      if @pending[dep] == 0
+        compile_ready?(dep)
+      elsif @download_pool.errors.any? { |(_, failed_name), ex| failed_name == dep }
+        raise "Depends on #{dep.inspect}, which failed to download"
+      elsif @compile_pool.errors.any? { |(_, failed_name), ex| failed_name == dep }
+        raise "Depends on #{dep.inspect}, which failed to compile"
+      else
+        false
+      end
+    end
   end
 
   def pool_status(label, pool, extra_queue = 0)
