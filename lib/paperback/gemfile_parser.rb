@@ -10,6 +10,8 @@ module Paperback::GemfileParser
       context.instance_eval(content)
     end
     result
+  rescue ScriptError, StandardError
+    raise Paperback::Error::GemfileEvaluationError.new(filename: filename)
   end
 
   class ParseContext

@@ -5,6 +5,7 @@ require "paperback"
 require "paperback/compatibility"
 
 require "minitest/autorun"
+require "mocha/minitest"
 require "webmock/minitest"
 
 require "tmpdir"

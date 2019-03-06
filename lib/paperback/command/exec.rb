@@ -20,7 +20,18 @@ class Paperback::Command::Exec < Paperback::Command
     original_command = command_line.shift
     expanded_command = expand_executable(original_command)
 
-    execute_inline(original_command, expanded_command, *command_line) || exec([original_command, expanded_command], *command_line)
+    if execute_inline?(expanded_command)
+      Paperback::Environment.activate(output: $stderr)
+      $0 = original_command
+      ARGV.replace(command_line)
+
+      # Any error after this point should bypass Paperback's error
+      # handling
+      self.reraise = true
+      Kernel.load(expanded_command)
+    else
+      Kernel.exec([original_command, expanded_command], *command_line)
+    end
   end
 
   def expand_executable(original_command)
@@ -43,17 +54,11 @@ class Paperback::Command::Exec < Paperback::Command
     original_command
   end
 
-  def execute_inline(original_command, expanded_command, *arguments)
-    return unless File.exist?(expanded_command) && File.executable?(expanded_command)
-    File.open(expanded_command, "rb") do |f|
-      return unless f.read(2) == "#!"
-      return unless f.gets.chomp =~ /\bruby\b/
+  def execute_inline?(expanded_command)
+    if File.exist?(expanded_command) && File.executable?(expanded_command)
+      File.open(expanded_command, "rb") do |f|
+        f.read(2) == "#!" && f.gets.chomp =~ /\bruby\b/
+      end
     end
-
-    Paperback::Environment.activate(output: $stderr)
-    $0 = original_command
-    ARGV.replace(arguments)
-    load expanded_command
-    exit
   end
 end
