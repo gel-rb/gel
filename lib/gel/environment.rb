@@ -49,7 +49,7 @@ class Gel::Environment
     file
   end
 
-  def self.find_gemfile(path = nil)
+  def self.find_gemfile(path = nil, error: true)
     if path && @gemfile && @gemfile.filename != File.expand_path(path)
       raise "Cannot activate #{path.inspect}; already activated #{@gemfile.filename.inspect}"
     end
@@ -59,15 +59,18 @@ class Gel::Environment
     path ||= search_upwards("Gemfile")
     path ||= "Gemfile"
 
-    raise "No Gemfile found in #{path.inspect}" unless File.exist?(path)
-
-    path
+    if File.exist?(path)
+      path
+    elsif error
+      raise "No Gemfile found in #{path.inspect}"
+    end
   end
 
-  def self.load_gemfile(path = nil)
-    return if @gemfile
+  def self.load_gemfile(path = nil, error: true)
+    return @gemfile if @gemfile
 
-    path = find_gemfile(path)
+    path = find_gemfile(path, error: error)
+    return if path.nil?
 
     content = File.read(path)
     @gemfile = Gel::GemfileParser.parse(content, path, 1)
@@ -333,21 +336,75 @@ class Gel::Environment
     end
   end
 
-  def self.activate(install: false, output: nil)
-    Gel::Environment.load_gemfile
+  def self.activate(install: false, output: nil, error: true)
+    loaded = Gel::Environment.load_gemfile
+    return if loaded.nil?
     return if @active_lockfile
 
     lockfile = Gel::Environment.lockfile_name
-    if File.exist?(lockfile)
-      @active_lockfile = true
+    unless File.exist?(lockfile)
+      lock(output: $stderr, lockfile: lockfile)
+    end
+
+    @active_lockfile = true
+    loader = Gel::LockLoader.new(lockfile, gemfile)
+
+    base_store = Gel::Environment.store
+    base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
+
+    loader.activate(Gel::Environment, base_store, install: install, output: output)
+  end
+
+  def self.activate_for_executable(exes, install: false, output: nil)
+    loader = nil
+    if Gel::Environment.load_gemfile(error: false)
+      lockfile = Gel::Environment.lockfile_name
+      unless File.exist?(lockfile)
+        lock(output: $stderr, lockfile: lockfile)
+      end
+
       loader = Gel::LockLoader.new(lockfile, gemfile)
 
       base_store = Gel::Environment.store
       base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
 
-      loader.activate(Gel::Environment, base_store, install: install, output: output)
-    else
-      raise "No lockfile found in #{lockfile.inspect}"
+      locked_store = loader.activate(nil, base_store, install: install, output: output)
+
+      exes.each do |exe|
+        if locked_store.each.any? { |g| g.executables.include?(exe) }
+          activate(install: install, output: output)
+          return :lock
+        end
+      end
+    end
+
+    locked_gems = loader ? loader.gem_names : []
+
+    @gemfile = nil
+    exes.each do |exe|
+      candidates = @store.each.select do |g|
+        !locked_gems.include?(g.name) && g.executables.include?(exe)
+      end.group_by(&:name)
+
+      case candidates.size
+      when 0
+        nil
+      when 1
+        gem(candidates.keys.first)
+        return :gem
+      else
+        # Multiple gems can supply this executable; do we have any
+        # useful way of deciding which one should win? One obvious
+        # tie-breaker: if a gem's name matches the executable, it wins.
+
+        if candidates.keys.include?(exe)
+          gem(exe)
+        else
+          gem(candidates.keys.first)
+        end
+
+        return :gem
+      end
     end
   end
 

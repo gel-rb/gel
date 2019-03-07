@@ -8,9 +8,13 @@ class Gel::Command
     command_line = command_line.dup
     if command_name = extract_word(command_line)
       const = command_name.downcase.sub(/^./, &:upcase).gsub(/[-_]./) { |s| s[1].upcase }
-      if Gel::Command.const_defined?(const)
-        command = Gel::Command.const_get(const).new
+      if Gel::Command.const_defined?(const, false)
+        command = Gel::Command.const_get(const, false).new
         command.run(command_line)
+      elsif Gel::Environment.activate_for_executable(["gel-#{command_name}", command_name])
+        command_name = "gel-#{command_name}" if Gel::Environment.find_executable("gel-#{command_name}")
+        command = Gel::Command::Exec.new
+        command.run([command_name, *command_line])
       else
         raise "Unknown command #{command_name.inspect}"
       end
@@ -69,3 +73,4 @@ require_relative "command/install_gem"
 require_relative "command/env"
 require_relative "command/exec"
 require_relative "command/lock"
+require_relative "command/ruby"

@@ -47,6 +47,14 @@ class Gel::LockLoader
     end
   end
 
+  def gem_names
+    names = []
+    each_gem do |section, body, name, version, platform, deps|
+      names << name
+    end
+    names
+  end
+
   def activate(env, base_store, install: false, output: nil)
     locked_store = Gel::LockedStore.new(base_store)
 
@@ -145,5 +153,7 @@ class Gel::LockLoader
 
       env.gems_from_lock(locks)
     end
+
+    locked_store
   end
 end
