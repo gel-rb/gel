@@ -1,17 +1,17 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require "paperback/command"
+require "gel/command"
 
 class CLITest < Minitest::Test
   def setup
     @original_env = ENV.map { |k, v| [k, v.dup] }.to_h
 
-    ENV["PAPERBACK_GEMFILE"] = nil
-    ENV["PAPERBACK_LOCKFILE"] = nil
+    ENV["GEL_GEMFILE"] = nil
+    ENV["GEL_LOCKFILE"] = nil
     ENV["RUBYLIB"] = nil
     ENV["RUBYOPT"] = nil
-    Paperback::Environment.gemfile = nil
+    Gel::Environment.gemfile = nil
   end
 
   def teardown
@@ -21,9 +21,9 @@ class CLITest < Minitest::Test
   end
 
   def test_basic_install
-    Paperback::Environment.expects(:activate).with(has_entries(install: true, output: $stderr))
+    Gel::Environment.expects(:activate).with(has_entries(install: true, output: $stderr))
 
-    Paperback::Command.run(%W(install))
+    Gel::Command.run(%W(install))
   end
 
   # TODO: There's too much behaviour here, yet it's still not a full
@@ -38,14 +38,14 @@ class CLITest < Minitest::Test
       File.write("#{dir}/ruby-executable", "#!/usr/bin/ruby\n")
       FileUtils.chmod 0755, "#{dir}/ruby-executable"
 
-      Paperback::Environment.expects(:activate)
+      Gel::Environment.expects(:activate)
 
       Kernel.expects(:load).with do |path|
         assert_equal "ruby-executable", path
 
-        assert_equal "#{dir}/Gemfile", ENV["PAPERBACK_GEMFILE"]
-        assert_equal "#{dir}/Gemfile.lock", ENV["PAPERBACK_LOCKFILE"]
-        assert_equal "--disable=gems -rpaperback/runtime", ENV["RUBYOPT"]
+        assert_equal "#{dir}/Gemfile", ENV["GEL_GEMFILE"]
+        assert_equal "#{dir}/Gemfile.lock", ENV["GEL_LOCKFILE"]
+        assert_equal "--disable=gems -rgel/runtime", ENV["RUBYOPT"]
         assert_equal File.expand_path("../lib", __dir__), ENV["RUBYLIB"]
 
         assert_equal "ruby-executable", $0
@@ -54,7 +54,7 @@ class CLITest < Minitest::Test
 
       Dir.chdir(dir) do
         catch(:exit) do
-          Paperback::Command.run(%W(exec ruby-executable some args))
+          Gel::Command.run(%W(exec ruby-executable some args))
         end
       end
     end
@@ -72,15 +72,15 @@ class CLITest < Minitest::Test
       Kernel.expects(:exec).with do |*command|
         assert_equal [["shell-executable", "shell-executable"], "some", "args"], command
 
-        assert_equal "#{dir}/Gemfile", ENV["PAPERBACK_GEMFILE"]
-        assert_equal "#{dir}/Gemfile.lock", ENV["PAPERBACK_LOCKFILE"]
-        assert_equal "--disable=gems -rpaperback/runtime", ENV["RUBYOPT"]
+        assert_equal "#{dir}/Gemfile", ENV["GEL_GEMFILE"]
+        assert_equal "#{dir}/Gemfile.lock", ENV["GEL_LOCKFILE"]
+        assert_equal "--disable=gems -rgel/runtime", ENV["RUBYOPT"]
         assert_equal File.expand_path("../lib", __dir__), ENV["RUBYLIB"]
       end.throws(:exit)
 
       Dir.chdir(dir) do
         catch(:exit) do
-          Paperback::Command.run(%W(exec shell-executable some args))
+          Gel::Command.run(%W(exec shell-executable some args))
         end
       end
     end

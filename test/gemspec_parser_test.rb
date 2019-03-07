@@ -4,12 +4,12 @@ require "test_helper"
 
 class GemspecParserTest < Minitest::Test
   EXAMPLE_LINE, EXAMPLE = __LINE__ + 1, <<'GEMSPEC'
-require File.expand_path("lib/paperback/version")
+require File.expand_path("lib/gel/version")
 
 # This is based on, but does not match, our real gemspec
 Gem::Specification.new do |spec|
-  spec.name          = "paperback"
-  spec.version       = Paperback::VERSION
+  spec.name          = "gel"
+  spec.version       = Gel::VERSION
   spec.authors       = ["Some Authors"]
   spec.email         = ["example@example.com"]
 
@@ -39,13 +39,13 @@ end
 GEMSPEC
 
   def test_simple_parse
-    gemspec = Paperback::GemspecParser.parse(EXAMPLE, __FILE__, EXAMPLE_LINE, root: File.expand_path("..", __dir__), isolate: false)
+    gemspec = Gel::GemspecParser.parse(EXAMPLE, __FILE__, EXAMPLE_LINE, root: File.expand_path("..", __dir__), isolate: false)
 
-    assert_equal "paperback", gemspec.name
-    assert_equal Paperback::VERSION, gemspec.version
+    assert_equal "gel", gemspec.name
+    assert_equal Gel::VERSION, gemspec.version
     assert_equal ["lib"], gemspec.require_paths
     assert_equal "exe", gemspec.bindir
-    assert gemspec.files.include?("lib/paperback/gemspec_parser.rb")
+    assert gemspec.files.include?("lib/gel/gemspec_parser.rb")
     assert_equal [["rake", ["~> 10.0"]], ["minitest", ["~> 5.0"]]], gemspec.development_dependencies
   end
 end

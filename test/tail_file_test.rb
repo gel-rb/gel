@@ -2,8 +2,8 @@
 
 require "test_helper"
 
-require "paperback/tail_file"
-require "paperback/pinboard"
+require "gel/tail_file"
+require "gel/pinboard"
 
 class TailFileTest < Minitest::Test
   # Long enough to exceed PARTIAL_MINIMUM
@@ -11,7 +11,7 @@ class TailFileTest < Minitest::Test
 
   def setup
     @pin_root = Dir.mktmpdir("pins")
-    @pinboard = Paperback::Pinboard.new(@pin_root)
+    @pinboard = Gel::Pinboard.new(@pin_root)
     @uri = URI("https://example.org/content")
 
     @stubbed_requests = []
@@ -525,7 +525,7 @@ class NoPartialTailFileTest < Minitest::Test
 
   def setup
     @pin_root = Dir.mktmpdir("pins")
-    @pinboard = Paperback::Pinboard.new(@pin_root)
+    @pinboard = Gel::Pinboard.new(@pin_root)
     @uri = URI("https://example.org/content")
 
     @stubbed_requests = []

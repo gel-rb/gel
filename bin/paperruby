@@ -1,3 +1,0 @@
-#!/bin/bash
-
-exec ruby --disable=gems -I `dirname $0`/../lib -r paperback/runtime "$@"

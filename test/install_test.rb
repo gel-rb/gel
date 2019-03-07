@@ -2,20 +2,20 @@
 
 require "test_helper"
 
-require "paperback/package"
-require "paperback/package/installer"
+require "gel/package"
+require "gel/package/installer"
 
 class InstallTest < Minitest::Test
   def test_install_single_package
     Dir.mktmpdir do |dir|
-      store = Paperback::Store.new(dir)
+      store = Gel::Store.new(dir)
 
-      result = Paperback::Package::Installer.new(store)
-      g = Paperback::Package.extract(fixture_file("rack-2.0.3.gem"), result)
+      result = Gel::Package::Installer.new(store)
+      g = Gel::Package.extract(fixture_file("rack-2.0.3.gem"), result)
       g.compile
       g.install
 
-      g = Paperback::Package.extract(fixture_file("rack-0.1.0.gem"), result)
+      g = Gel::Package.extract(fixture_file("rack-0.1.0.gem"), result)
       g.compile
       g.install
 
@@ -67,9 +67,9 @@ class InstallTest < Minitest::Test
     skip if jruby?
 
     Dir.mktmpdir do |dir|
-      store = Paperback::Store.new(dir)
-      result = Paperback::Package::Installer.new(store)
-      g = Paperback::Package.extract(fixture_file("fast_blank-1.0.0.gem"), result)
+      store = Gel::Store.new(dir)
+      result = Gel::Package::Installer.new(store)
+      g = Gel::Package.extract(fixture_file("fast_blank-1.0.0.gem"), result)
       g.compile
       g.install
 
@@ -108,10 +108,10 @@ class InstallTest < Minitest::Test
     skip if jruby?
 
     with_fixture_gems_installed(["rake-12.3.2.gem"], multi: true) do |store|
-      result = Paperback::Package::Installer.new(store)
+      result = Gel::Package::Installer.new(store)
       dir = store["ruby", true].root
 
-      g = Paperback::Package.extract(fixture_file("rainbow-2.2.2.gem"), result)
+      g = Gel::Package.extract(fixture_file("rainbow-2.2.2.gem"), result)
       g.compile
       g.install
 

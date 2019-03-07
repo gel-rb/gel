@@ -4,4 +4,4 @@ IFS=$'\n\t'
 DIR="`dirname $0`"
 set -x
 
-"$DIR"/paperruby "$DIR"/../bootstrap.rb gemfile
+"$DIR"/gruby "$DIR"/../bootstrap.rb gemfile

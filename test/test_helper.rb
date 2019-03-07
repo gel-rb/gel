@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 $LOAD_PATH.unshift File.expand_path("../../lib", __FILE__)
-require "paperback"
-require "paperback/compatibility"
+require "gel"
+require "gel/compatibility"
 
 require "minitest/autorun"
 require "mocha/minitest"
@@ -31,7 +31,7 @@ def with_empty_store(multi: false, &block)
   end
 
   Dir.mktmpdir do |dir|
-    store = Paperback::Store.new(dir)
+    store = Gel::Store.new(dir)
     yield store
   end
 end
@@ -39,24 +39,24 @@ end
 def with_empty_multi_store
   Dir.mktmpdir do |dir|
     stores = {}
-    Paperback::Environment.store_set.each do |arch|
+    Gel::Environment.store_set.each do |arch|
       subdir = File.join(dir, arch)
       Dir.mkdir subdir
-      stores[arch] = Paperback::Store.new(subdir)
+      stores[arch] = Gel::Store.new(subdir)
     end
-    store = Paperback::MultiStore.new(dir, stores)
+    store = Gel::MultiStore.new(dir, stores)
     yield store
   end
 end
 
 def with_fixture_gems_installed(paths, multi: false)
-  require "paperback/package"
-  require "paperback/package/installer"
+  require "gel/package"
+  require "gel/package/installer"
 
   with_empty_store(multi: multi) do |store|
     paths.each do |path|
-      result = Paperback::Package::Installer.new(store)
-      g = Paperback::Package.extract(fixture_file(path), result)
+      result = Gel::Package::Installer.new(store)
+      g = Gel::Package.extract(fixture_file(path), result)
       g.compile
       g.install
     end
@@ -136,7 +136,7 @@ elsif defined?(org.jruby.Ruby)
 
     config.disable_gems = true
     config.load_paths = [File.expand_path("../lib", __dir__)]
-    config.required_libraries << "paperback" << "paperback/compatibility"
+    config.required_libraries << "gel" << "gel/compatibility"
 
     wrapped_code = kwargs.map { |name, value| "#{name} = Marshal.load(#{Marshal.dump(value).inspect})\n" }.join +
       "eval(#{code.inspect}, binding, #{source.path.inspect}, #{source.lineno + 1})"
@@ -155,11 +155,11 @@ else
     r, w = IO.pipe
 
     pid = spawn(
-      { "RUBYOPT" => nil, "PAPERBACK_STORE" => nil, "PAPERBACK_LOCKFILE" => nil },
+      { "RUBYOPT" => nil, "GEL_STORE" => nil, "GEL_LOCKFILE" => nil },
       RbConfig.ruby, "--disable=gems",
       "-I", File.expand_path("../lib", __dir__),
-      "-r", "paperback",
-      "-r", "paperback/compatibility",
+      "-r", "gel",
+      "-r", "gel/compatibility",
       "-e", wrapped_code,
       in: IO::NULL,
       out: w,

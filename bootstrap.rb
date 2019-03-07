@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "lib/paperback"
+require_relative "lib/gel"
 
 def usage
   puts "USAGE: ruby bootstrap.rb gemfile"
@@ -17,8 +17,8 @@ when "gemfile"
   Dir.mkdir "tmp/bootstrap/store" unless Dir.exist?("tmp/bootstrap/store")
   Dir.mkdir "tmp/bootstrap/store/ruby" unless Dir.exist?("tmp/bootstrap/store/ruby")
 
-  store = Paperback::Store.new("tmp/bootstrap/store/ruby")
-  loader = Paperback::LockLoader.new("Gemfile.lock")
+  store = Gel::Store.new("tmp/bootstrap/store/ruby")
+  loader = Gel::LockLoader.new("Gemfile.lock")
 
   loader.activate(nil, store, install: true, output: $stderr)
 

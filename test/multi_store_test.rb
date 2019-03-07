@@ -6,13 +6,13 @@ class MultiStoreTest < Minitest::Test
   def test_activation_across_stores
     with_fixture_gems_installed(["rack-2.0.3.gem", "rack-0.1.0.gem"]) do |store_1|
       with_fixture_gems_installed(["rack-test-0.6.3.gem"]) do |store_2|
-        multi = Paperback::MultiStore.new(nil,
+        multi = Gel::MultiStore.new(nil,
                                        "ruby-#{RbConfig::CONFIG["ruby_version"]}" => store_1,
                                        "ruby" => store_2)
 
         output = subprocess_output(<<-'END', store: multi)
-          Paperback::Environment.open(store)
-          require Paperback::Environment.resolve_gem_path("rack/test")
+          Gel::Environment.open(store)
+          require Gel::Environment.resolve_gem_path("rack/test")
 
           puts $:.grep(/\brack(?!-test)/).join(":")
           puts $:.grep(/rack-test/).join(":")

@@ -41,7 +41,7 @@ BUNDLED WITH
 LOCKFILE
 
   def test_simple_parse
-    parser = Paperback::LockParser.new
+    parser = Gel::LockParser.new
     assert_equal [
       ["GEM", {
         "remote" => ["https://rubygems.org/"],

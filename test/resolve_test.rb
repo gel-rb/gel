@@ -630,9 +630,9 @@ LOCKFILE
     Dir.mktmpdir do |cache_dir|
       with_empty_store do |store|
         output = StringIO.new
-        locked = Paperback::Environment.lock(
+        locked = Gel::Environment.lock(
           output: output,
-          gemfile: Paperback::GemfileParser.parse(gemfile),
+          gemfile: Gel::GemfileParser.parse(gemfile),
           lockfile: nil,
           catalog_options: { cache: cache_dir },
         )

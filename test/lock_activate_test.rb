@@ -20,8 +20,8 @@ LOCKFILE
 
     with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
       output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path)
-        loader = Paperback::LockLoader.new(lock_path)
-        loader.activate(Paperback::Environment, store)
+        loader = Gel::LockLoader.new(lock_path)
+        loader.activate(Gel::Environment, store)
 
         puts $:.grep(/\brack(?!-test)/).join(":")
         puts $:.grep(/rack-test/).join(":")
@@ -64,8 +64,8 @@ LOCKFILE
 
       with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
         output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path)
-          loader = Paperback::LockLoader.new(lock_path)
-          loader.activate(Paperback::Environment, store)
+          loader = Gel::LockLoader.new(lock_path)
+          loader.activate(Gel::Environment, store)
 
           puts $:.grep(/\brack(?!-test)/).join(":")
           puts $:.grep(/rack-test/).join(":")
@@ -111,8 +111,8 @@ LOCKFILE
 
     with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
       output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path, gemfile_content: gemfile_content)
-        loader = Paperback::LockLoader.new(lock_path, Paperback::GemfileParser.parse(gemfile_content))
-        loader.activate(Paperback::Environment, store)
+        loader = Gel::LockLoader.new(lock_path, Gel::GemfileParser.parse(gemfile_content))
+        loader.activate(Gel::Environment, store)
 
         puts $:.grep(/\brack(?!-test)/).join(":")
         puts $:.grep(/rack-test/).join(":")
@@ -150,8 +150,8 @@ LOCKFILE
 
     with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
       output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path, gemfile_content: gemfile_content)
-        loader = Paperback::LockLoader.new(lock_path, Paperback::GemfileParser.parse(gemfile_content))
-        loader.activate(Paperback::Environment, store)
+        loader = Gel::LockLoader.new(lock_path, Gel::GemfileParser.parse(gemfile_content))
+        loader.activate(Gel::Environment, store)
 
         puts $:.grep(/\brack(?!-test)/).join(":")
         puts $:.grep(/rack-test/).join(":")

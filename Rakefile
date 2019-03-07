@@ -7,7 +7,7 @@ Rake::TestTask.class_eval do
 end
 
 Rake::TestTask.new(:test) do |t|
-  t.ruby_opts = ["--disable=gems", "-r", "paperback/runtime"]
+  t.ruby_opts = ["--disable=gems", "-r", "gel/runtime"]
   t.libs << "test"
   t.libs << "lib"
   t.test_files = FileList["test/**/*_test.rb"]

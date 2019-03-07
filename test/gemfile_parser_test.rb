@@ -35,7 +35,7 @@ end
 GEMFILE
 
   def test_simple_parse
-    result = Paperback::GemfileParser.parse(EXAMPLE, __FILE__, EXAMPLE_LINE)
+    result = Gel::GemfileParser.parse(EXAMPLE, __FILE__, EXAMPLE_LINE)
     assert_equal ["https://rubygems.org"], result.sources
 
     assert_equal [
@@ -52,7 +52,7 @@ GEMFILE
   end
 
   def test_autorequire_mocked
-    result = Paperback::GemfileParser.parse(EXAMPLE, __FILE__, EXAMPLE_LINE)
+    result = Gel::GemfileParser.parse(EXAMPLE, __FILE__, EXAMPLE_LINE)
 
     requirer = Minitest::Mock.new
     requirer.expect(:gem_has_file?, true, ["rake", "rake"])
@@ -76,16 +76,16 @@ GEMFILE
   def test_autorequire_real
     with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
       output = subprocess_output(<<-'END', store: store)
-        result = Paperback::GemfileParser.parse(<<GEMFILE, __FILE__, __LINE__ + 1)
+        result = Gel::GemfileParser.parse(<<GEMFILE, __FILE__, __LINE__ + 1)
 gem "rack", require: "rack/query_parser"
 gem "rack-test"
 gem "hoe", require: false
 GEMFILE
 
-        Paperback::Environment.open(store)
-        Paperback::Environment.gem "rack"
-        Paperback::Environment.gem "rack-test"
-        result.autorequire(Paperback::Environment)
+        Gel::Environment.open(store)
+        Gel::Environment.gem "rack"
+        Gel::Environment.gem "rack-test"
+        result.autorequire(Gel::Environment)
 
         puts $".grep(/\brack\//).first
         puts $".grep(/rack\/test\//).first

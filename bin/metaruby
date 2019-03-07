@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export PAPERBACK_STORE=`dirname $0`/../tmp/bootstrap/store
-export PAPERBACK_LOCKFILE=`dirname $0`/../Gemfile.lock
+export GEL_STORE=`dirname $0`/../tmp/bootstrap/store
+export GEL_LOCKFILE=`dirname $0`/../Gemfile.lock
 
-exec `dirname $0`/paperruby "$@"
+exec `dirname $0`/gruby "$@"

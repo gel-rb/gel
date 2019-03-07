@@ -26,8 +26,8 @@ LOCKFILE
 
     with_empty_store do |store|
       output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path)
-        loader = Paperback::LockLoader.new(lock_path)
-        loader.activate(Paperback::Environment, store, install: true)
+        loader = Gel::LockLoader.new(lock_path)
+        loader.activate(Gel::Environment, store, install: true)
 
         puts $:.grep(/\brack(?!-test)/).join(":")
         puts $:.grep(/rack-test/).join(":")
@@ -78,8 +78,8 @@ LOCKFILE
 
     with_empty_multi_store do |store|
       output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path)
-        loader = Paperback::LockLoader.new(lock_path)
-        loader.activate(Paperback::Environment, store, install: true)
+        loader = Gel::LockLoader.new(lock_path)
+        loader.activate(Gel::Environment, store, install: true)
 
         puts $:.grep(/\brack(?!-test)/).join(":")
         puts $:.grep(/rack-test/).join(":")
@@ -92,7 +92,7 @@ LOCKFILE
       assert_equal "#{store.root}/ruby/gems/rack-2.0.3/lib", output.shift
       assert_equal "#{store.root}/ruby/gems/rack-test-0.6.3/lib", output.shift
       # and in the right directories
-      assert_equal "#{store.root}/#{Paperback::MultiStore::VERSION}/gems/atomic-1.1.16/lib:#{store.root}/#{Paperback::MultiStore::VERSION}/ext/atomic-1.1.16", output.shift
+      assert_equal "#{store.root}/#{Gel::MultiStore::VERSION}/gems/atomic-1.1.16/lib:#{store.root}/#{Gel::MultiStore::VERSION}/ext/atomic-1.1.16", output.shift
 
       # Other installed gems are not
       assert_equal "", output.shift

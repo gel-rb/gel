@@ -9,8 +9,8 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "rack/request" }
 
       output = subprocess_output(<<-'END', store: store)
-        Paperback::Environment.open(store)
-        Paperback::Environment.gem "rack", "2.0.3"
+        Gel::Environment.open(store)
+        Gel::Environment.gem "rack", "2.0.3"
 
         require "rack"
         require "rack/request"
@@ -30,8 +30,8 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "rack/request" }
 
       output = subprocess_output(<<-'END', store: store)
-        Paperback::Environment.open(store)
-        Paperback::Environment.gem "rack"
+        Gel::Environment.open(store)
+        Gel::Environment.gem "rack"
 
         require "rack"
         require "rack/request"
@@ -51,8 +51,8 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "rack/utils" }
 
       output = subprocess_output(<<-'END', store: store)
-        Paperback::Environment.open(store)
-        Paperback::Environment.gem "rack", "< 2"
+        Gel::Environment.open(store)
+        Gel::Environment.gem "rack", "< 2"
 
         # Avoid requiring "rack" itself, because 0.1.0's rack.rb
         # directly manipulates $:, which is confusing
@@ -73,8 +73,8 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "rack/request" }
 
       output = subprocess_output(<<-'END', store: store)
-        Paperback::Environment.open(store)
-        require Paperback::Environment.resolve_gem_path("rack/request")
+        Gel::Environment.open(store)
+        require Gel::Environment.resolve_gem_path("rack/request")
 
         puts $:.grep(/\brack/).join(":")
         puts $".grep(/\brack\/request/).join(":")
@@ -91,8 +91,8 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "rack/request" }
 
       output = subprocess_output(<<-'END', store: store)
-        Paperback::Environment.open(store)
-        require Paperback::Environment.resolve_gem_path("rack/request")
+        Gel::Environment.open(store)
+        require Gel::Environment.resolve_gem_path("rack/request")
 
         puts $:.grep(/\brack/).join(":")
         puts $".grep(/\brack\/request/).join(":")
@@ -108,8 +108,8 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "rack/test" }
 
       output = subprocess_output(<<-'END', store: store)
-        Paperback::Environment.open(store)
-        require Paperback::Environment.resolve_gem_path("rack/test")
+        Gel::Environment.open(store)
+        require Gel::Environment.resolve_gem_path("rack/test")
 
         puts $:.grep(/\brack(?!-test)/).join(":")
         puts $:.grep(/rack-test/).join(":")
@@ -127,10 +127,10 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "rack/test" }
 
       output = subprocess_output(<<-'END', store: store)
-        Paperback::Environment.open(store)
-        Paperback::Environment.gem "rack", "0.1.0"
+        Gel::Environment.open(store)
+        Gel::Environment.gem "rack", "0.1.0"
         begin
-          require Paperback::Environment.resolve_gem_path("rack/test")
+          require Gel::Environment.resolve_gem_path("rack/test")
         rescue LoadError => ex
           puts ex
         end
@@ -145,9 +145,9 @@ class ActivateTest < Minitest::Test
       assert_raises(LoadError) { require "rack" }
 
       output = subprocess_output(<<-'END', store: store)
-        Paperback::Environment.open(store)
+        Gel::Environment.open(store)
         begin
-          Paperback::Environment.gem "rack", "< 1.0"
+          Gel::Environment.gem "rack", "< 1.0"
         rescue LoadError => ex
           puts ex
         end
@@ -165,8 +165,8 @@ class ActivateTest < Minitest::Test
       assert_raises(NoMethodError) { "x".blank? }
 
       output = subprocess_output(<<-'END', store: store)
-        Paperback::Environment.open(store)
-        require Paperback::Environment.resolve_gem_path("fast_blank")
+        Gel::Environment.open(store)
+        require Gel::Environment.resolve_gem_path("fast_blank")
 
         puts $:.grep(/fast_blank/).join(":")
 
