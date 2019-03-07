@@ -1,3 +1,1 @@
-#!/bin/bash
-
-exec `dirname $0`/gruby -r gel/command -e "Gel::Command.run(ARGV)" -- "$@"
+../exe/gel

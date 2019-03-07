@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby --disable=gems
+
+if defined?(::Gel)
+  require "gel/command"
+elsif defined?(::Gem)
+  exec ::Gem.ruby, "--disable=gems", __FILE__, "--", *ARGV
+else
+  require_relative "../lib/gel/command"
+end
+
+Gel::Command.run(ARGV)

@@ -1,17 +1,18 @@
 # frozen_string_literal: true
 
+require_relative "runtime"
 require_relative "error"
 
 class Gel::Command
   def self.run(command_line)
     command_line = command_line.dup
-    if command = extract_word(command_line)
-      const = command.downcase.sub(/^./, &:upcase).gsub(/[-_]./) { |s| s[1].upcase }
+    if command_name = extract_word(command_line)
+      const = command_name.downcase.sub(/^./, &:upcase).gsub(/[-_]./) { |s| s[1].upcase }
       if Gel::Command.const_defined?(const)
         command = Gel::Command.const_get(const).new
         command.run(command_line)
       else
-        raise "Unknown command #{command.inspect}"
+        raise "Unknown command #{command_name.inspect}"
       end
     else
       raise "No subcommand specified"
