@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "yaml"
-
 class Gel::Config
   def initialize(root)
     @root = File.expand_path(root)
@@ -34,11 +32,25 @@ class Gel::Config
   private
 
   def read
+    result = {}
     if File.exist?(@path)
-      YAML.safe_load(File.read(@path))
-    else
-      {}
+      context = nil
+      File.read(@path).each_line do |line|
+        line.chomp!
+        if line =~ /\A(\S[^:]*):\z/
+          context = result[$1] = {}
+        elsif line =~ /\A  ([^:]*): (.*)\z/
+          context[$1] = $2
+        elsif line =~ /\A([^:]*): (.*)\z/
+          result[$1] = $2
+        elsif line =~ /\A\s*(?:#|\z)/
+          # comment / empty
+        else
+          raise "Unexpected config line #{line.inspect}"
+        end
+      end
     end
+    result
   end
 
   def write(data)
@@ -46,7 +58,19 @@ class Gel::Config
 
     tempfile = File.join(@root, ".config.#{Process.pid}")
     File.open(tempfile, "w", 0644) do |f|
-      f.write(YAML.dump(data))
+      data.each do |key, value|
+        next if value.is_a?(Hash)
+        f.puts("#{key}: #{value}")
+      end
+
+      data.each do |key, value|
+        next unless value.is_a?(Hash)
+        f.puts
+        f.puts("#{key}:")
+        value.each do |subkey, subvalue|
+          f.puts("  #{subkey}: #{subvalue}")
+        end
+      end
     end
 
     File.rename(tempfile, @path)
