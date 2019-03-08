@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 class Gel::Config
-  def initialize(root)
-    @root = File.expand_path(root)
+  def initialize
+    @root = File.expand_path("~/.config/gel")
     @path = File.join(@root, "config")
     @config = nil
   end

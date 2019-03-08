@@ -24,7 +24,7 @@ class Gel::Environment
   end
 
   def self.config
-    @config ||= Gel::Config.new(store.root)
+    @config ||= Gel::Config.new
   end
 
   def self.store_set
