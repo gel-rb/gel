@@ -12,6 +12,10 @@ class Gel::Store
     @rlib_db = Gel::DB::File.new(root, "meta")
   end
 
+  def stub_set
+    @stub_set ||= Gel::StubSet.new(@root)
+  end
+
   def paths
     [@root.dup]
   end

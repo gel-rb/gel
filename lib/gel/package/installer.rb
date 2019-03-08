@@ -251,7 +251,10 @@ class Gel::Package::Installer
       mode = 0444
       mode |= source_mode & 0200
       mode |= 0111 if source_mode & 0111 != 0
-      mode |= 0111 if spec.executables.any? { |e| filename == "#{spec.bindir}/#{e}" }
+      if exe = spec.executables.find { |e| filename == "#{spec.bindir}/#{e}" }
+        mode |= 0111
+        @root_store.stub_set.add(File.basename(@store.root), [exe])
+      end
       File.open(target, "wb", mode) do |f|
         f.write io.read
       end

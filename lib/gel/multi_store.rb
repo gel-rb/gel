@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rbconfig"
+require_relative "stub_set"
 
 class Gel::MultiStore
   VERSION = "#{RbConfig::CONFIG["ruby_version"]}"
@@ -10,6 +11,10 @@ class Gel::MultiStore
   def initialize(root, stores)
     @root = File.realpath(File.expand_path(root)) if root
     @stores = stores
+  end
+
+  def stub_set
+    @stub_set ||= Gel::StubSet.new(@root)
   end
 
   def paths

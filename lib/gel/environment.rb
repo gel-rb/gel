@@ -406,6 +406,8 @@ class Gel::Environment
         return :gem
       end
     end
+
+    nil
   end
 
   def self.find_executable(exe, gem_name = nil, gem_version = nil)
