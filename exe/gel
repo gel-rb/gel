@@ -1,9 +1,10 @@
 #!/usr/bin/env ruby --disable=gems
+# frozen_string_literal: true
 
 if defined?(::Gel)
   require "gel/command"
 elsif defined?(::Gem)
-  exec ::Gem.ruby, "--disable=gems", __FILE__, "--", *ARGV
+  exec ::Gem.ruby, "--disable=gems", "--", __FILE__, *ARGV
 else
   require_relative "../lib/gel/command"
 end
