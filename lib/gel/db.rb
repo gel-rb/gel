@@ -146,6 +146,8 @@ end
 
 class Gel::DB::SDBM < Gel::DB
   prepend Gel::DB::AutoTransaction
+  SDBM_MAX_STORE_SIZE = 1000 - 1 # arbitrary on PBLKSIZ-N
+  SAFE_DELIMITER = '---'
 
   def initialize(root, name)
     @sdbm = ::SDBM.new("#{root}/#{name}")
@@ -167,14 +169,52 @@ class Gel::DB::SDBM < Gel::DB
     !!@sdbm[key.to_s]
   end
 
+  ##
+  # Retrieve the value from SDBM and handle for when we split
+  # over multiple stores. It is safe to assume that the value
+  # stored will be a marshaled value or a integer implying the
+  # amount of extra stores to retrieve the data string form. A
+  # marshaled store would have special starting delimiter that
+  # is not a decimal. If a number is not found at start of string
+  # then simply load it as a string and you get a value that
+  # is then marshaled.
   def [](key)
-    if value = @sdbm[key.to_s]
-      Marshal.load(value)
+    value = @sdbm[key.to_s]
+    return nil unless value
+
+    if value =~ /\A~(\d+)\z/
+      value = $1.to_i.times.map do |idx|
+        @sdbm["#{key}#{SAFE_DELIMITER}#{idx}"]
+      end.join
     end
+
+    return Marshal.load(value)
   end
 
+
+  ##
+  # SDBM has an arbitrary limit on the size of a string it stores,
+  # so we simply split any string over multiple stores for the edge
+  # case when it reaches this. It's optimised to take advantage of the common
+  # case where this is not needed.
+  # When the edge case is hit, the first value in the storage will be the amount
+  # of extra values stored to hold the split string. This amount is determined by string
+  # size split by the arbitrary limit imposed by SDBM
   def []=(key, value)
-    @sdbm[key.to_s] = value && Marshal.dump(value)
+    return unless value && key
+
+    dump = Marshal.dump(value)
+    count = dump.length / SDBM_MAX_STORE_SIZE
+
+    if count > 0
+      count += 1
+      @sdbm["#{key.to_s}"] = "~#{count}"
+      count.times.map do |idx|
+        @sdbm["#{key.to_s}#{SAFE_DELIMITER}#{idx}"] = dump.slice!(0, SDBM_MAX_STORE_SIZE)
+      end
+    else
+      @sdbm[key.to_s] = dump
+    end
   end
 end
 
