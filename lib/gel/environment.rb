@@ -23,6 +23,10 @@ class Gel::Environment
     platform.nil? || architectures.include?(platform)
   end
 
+  def self.config
+    @config ||= Gel::Config.new(store.root)
+  end
+
   def self.store_set
     list = []
     architectures.each do |arch|

@@ -35,6 +35,8 @@ class Gel::Package::Installer
 
       raise "gem already installed" if store.gem?(spec.name, spec.version)
 
+      @config = Gel::Environment.config
+
       @root = store.gem_root(spec.name, spec.version)
       FileUtils.rm_rf(@root) if @root && Dir.exist?(@root)
 
@@ -154,6 +156,7 @@ class Gel::Package::Installer
           "-r", "gel/runtime",
           "-r", local_config_path,
           File.basename(ext),
+          *Shellwords.shellsplit(@config[:build, @spec.name] || ""),
         )
         raise "extconf exited with #{status.exitstatus}" unless status.success?
 
