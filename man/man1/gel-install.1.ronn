@@ -1,0 +1,14 @@
+gel-install(1) -- install gems
+==============================
+
+## SYNOPSIS
+
+`gel install`
+
+## DESCRIPTION
+
+Install gems listed in `Gemfile.lock`.
+
+## SEE ALSO
+
+gemfile(5), gel-lock(1), bundle-install(1)

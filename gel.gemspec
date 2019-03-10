@@ -19,7 +19,8 @@ Gem::Specification.new do |spec|
       "public gem pushes."
   end
 
-  spec.files         = `git ls-files -z exe lib *.md *.txt`.split("\x0")
+  spec.files         = `git ls-files -z exe lib *.md *.txt`.split("\x0") +
+    Dir["man/man?/*.?"]
   spec.bindir        = "exe"
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]

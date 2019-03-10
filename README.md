@@ -4,15 +4,21 @@ A modern gem manager.
 
 ## Installation
 
-Install it the gem:
+Install the gem:
 
     $ gem install gel
 
-TODO: .. and then?
+Then, either activate gel in your current shell:
+
+    $ eval "$(gel shell-setup)"
+
+Or add it to your `.bashrc` or `.zshrc` to enable it everywhere:
+
+    $ echo 'eval "$(gel shell-setup)"' >> ~/.bashrc
 
 ## Usage
 
-TODO: Write usage instructions here
+Use `gel install`, `gel lock`, and `gel exec` as you would the equivalent `bundle` subcommands.
 
 ## Development
 

@@ -6,4 +6,6 @@
 /spec/reports/
 /tmp/
 
+/man/man?/*.?
+
 /test/fixtures/*.gem

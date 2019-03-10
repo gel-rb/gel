@@ -1,0 +1,14 @@
+gel-exec(1) -- run an executable with gel enabled
+=================================================
+
+## SYNOPSIS
+
+`gel` `exec` <executable> [<args>]
+
+## DESCRIPTION
+
+Run an executable with the Gemfile activated.
+
+## SEE ALSO
+
+bundle-exec(1)

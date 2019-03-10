@@ -1,0 +1,25 @@
+gel(1) -- a modern gem manager
+==============================
+
+## SYNOPSIS
+
+`gel` [`--version`] [`--help`] <command> [<args>]
+
+## DESCRIPTION
+
+Gel is a minimal package manager for the Ruby programming language.
+
+## GEL COMMANDS
+
+* gel-install(1):
+  Install all the gems listed in the Gemfile.lock
+
+* gel-lock(1):
+  Resolve the dependencies listed in Gemfile into a Gemfile.lock
+
+* gel-exec(1):
+  Run an executable with the Gemfile activated
+
+## SEE ALSO
+
+ruby(1), gem(1), bundle(1)
