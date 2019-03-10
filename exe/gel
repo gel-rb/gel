@@ -1,12 +1,13 @@
 #!/usr/bin/env ruby --disable=gems
 # frozen_string_literal: true
 
-if defined?(::Gel)
-  require "gel/command"
-elsif defined?(::Gem)
-  exec ::Gem.ruby, "--disable=gems", "--", __FILE__, *ARGV
-else
-  require_relative "../lib/gel/command"
+if defined?(::Gem) && !defined?(::Gel)
+  exec ::Gem.ruby,
+    "-I", File.expand_path("../lib/gel/compatibility", __dir__),
+    "--",
+    __FILE__,
+    *ARGV
 end
 
+require_relative "../lib/gel/command"
 Gel::Command.run(ARGV)

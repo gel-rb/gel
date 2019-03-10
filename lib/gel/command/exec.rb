@@ -12,15 +12,7 @@ class Gel::Command::Exec < Gel::Command
       ENV["GEL_LOCKFILE"] = File.expand_path(Gel::Environment.lockfile_name(gemfile))
     end
 
-    opt = (ENV["RUBYOPT"] || "").split(" ")
-    opt.unshift "-rgel/runtime" unless opt.include?("-rgel/runtime") || opt.each_cons(2).to_a.include?(["-r", "gel/runtime"])
-    opt.unshift "--disable=gems" unless opt.include?("--disable=gems") || opt.each_cons(2).to_a.include?(["--disable", "gems"])
-    ENV["RUBYOPT"] = opt.join(" ")
-
-    lib = (ENV["RUBYLIB"] || "").split(File::PATH_SEPARATOR)
-    dir = File.expand_path("../..", __dir__)
-    lib.unshift dir unless lib.include?(dir)
-    ENV["RUBYLIB"] = lib.join(File::PATH_SEPARATOR)
+    ENV["RUBYLIB"] = Gel::Environment.modified_rubylib
 
     if execute_inline?(expanded_command)
       if command_source == :path || command_source == :original

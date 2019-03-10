@@ -44,6 +44,23 @@ class Gel::Environment
     @store = store
   end
 
+  def self.original_rubylib
+    lib = (ENV["RUBYLIB"] || "").split(File::PATH_SEPARATOR)
+    lib.delete File.expand_path("compatibility", __dir__)
+    #lib.delete File.expand_path("..", __dir__)
+    return nil if lib.empty?
+    lib.join(File::PATH_SEPARATOR)
+  end
+
+  def self.modified_rubylib
+    lib = (ENV["RUBYLIB"] || "").split(File::PATH_SEPARATOR)
+    dir = File.expand_path("compatibility", __dir__)
+    lib.unshift dir unless lib.include?(dir)
+    #dir = File.expand_path("..", __dir__)
+    #lib.unshift dir unless lib.include?(dir)
+    lib.join(File::PATH_SEPARATOR)
+  end
+
   def self.search_upwards(name, dir = Dir.pwd)
     until (file = File.join(dir, name)) && File.exist?(file)
       next_dir = File.dirname(dir)

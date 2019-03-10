@@ -58,11 +58,10 @@ class Gel::GemspecParser
       in_read, in_write = IO.pipe
       out_read, out_write = IO.pipe
 
-      pid = spawn({ "GEL_GEMFILE" => "", "GEL_LOCKFILE" => "" },
-                  RbConfig.ruby, "--disable=gems",
-                  "-I", File.expand_path("..", __dir__),
-                  "-r", "gel",
-                  "-r", "gel/gemspec_parser",
+      pid = spawn({ "RUBYLIB" => Gel::Environment.modified_rubylib, "GEL_GEMFILE" => "", "GEL_LOCKFILE" => "" },
+                  RbConfig.ruby,
+                  "-r", File.expand_path("compatibility", __dir__),
+                  "-r", File.expand_path("gemspec_parser", __dir__),
                   "-e", "puts Marshal.dump(Gel::GemspecParser.parse($stdin.read, ARGV.shift, ARGV.shift.to_i, root: ARGV.shift, isolate: false))",
                   filename, lineno.to_s, root,
                   in: in_read, out: out_write)

@@ -134,9 +134,7 @@ elsif defined?(org.jruby.Ruby)
     config.input = StringIO.new.tap(&:close_write).to_input_stream
     config.output = java.io.PrintStream.new(io.to_output_stream)
 
-    config.disable_gems = true
-    config.load_paths = [File.expand_path("../lib", __dir__)]
-    config.required_libraries << "gel" << "gel/compatibility"
+    config.required_libraries << File.expand_path("../gel/compatibility", __dir__)
 
     wrapped_code = kwargs.map { |name, value| "#{name} = Marshal.load(#{Marshal.dump(value).inspect})\n" }.join +
       "eval(#{code.inspect}, binding, #{source.path.inspect}, #{source.lineno + 1})"
@@ -155,11 +153,13 @@ else
     r, w = IO.pipe
 
     pid = spawn(
-      { "RUBYOPT" => nil, "GEL_STORE" => nil, "GEL_LOCKFILE" => nil },
-      RbConfig.ruby, "--disable=gems",
-      "-I", File.expand_path("../lib", __dir__),
-      "-r", "gel",
-      "-r", "gel/compatibility",
+      {
+        "RUBYLIB" => File.expand_path("../lib/gel/compatibility", __dir__),
+        "GEL_STORE" => nil,
+        "GEL_LOCKFILE" => nil,
+      },
+      RbConfig.ruby,
+      "-r", File.expand_path("../lib/gel/compatibility", __dir__),
       "-e", wrapped_code,
       in: IO::NULL,
       out: w,

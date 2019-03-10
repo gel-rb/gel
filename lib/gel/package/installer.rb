@@ -122,7 +122,7 @@ class Gel::Package::Installer
       gemfile, lockfile = gemfile_and_lockfile
 
       {
-        "RUBYOPT" => nil,
+        "RUBYLIB" => Gel::Environment.modified_rubylib,
         "GEL_STORE" => File.expand_path(@root_store.root),
         "GEL_GEMFILE" => gemfile,
         "GEL_LOCKFILE" => lockfile,
@@ -151,9 +151,7 @@ class Gel::Package::Installer
         status = build_command(
           work_dir, log,
           { "MAKEFLAGS" => "-j3" },
-          RbConfig.ruby, "--disable=gems",
-          "-I", File.expand_path("../..", __dir__),
-          "-r", "gel/runtime",
+          RbConfig.ruby,
           "-r", local_config_path,
           File.basename(ext),
           *Shellwords.shellsplit(@config[:build, @spec.name] || ""),
@@ -176,7 +174,7 @@ class Gel::Package::Installer
         if File.basename(ext) =~ /mkrf_conf/i
           status = build_command(
             work_dir, log,
-            RbConfig.ruby, "--disable-gems",
+            RbConfig.ruby,
             "-r", local_config_path,
             File.basename(ext),
           )
@@ -186,10 +184,8 @@ class Gel::Package::Installer
         status = build_command(
           work_dir, log,
           { "RUBYARCHDIR" => short_install_dir, "RUBYLIBDIR" => short_install_dir },
-          RbConfig.ruby, "--disable-gems",
-          "-I", File.expand_path("../..", __dir__),
-          "-r", "gel/runtime",
-          "-r", "gel/command",
+          RbConfig.ruby,
+          "-r", File.expand_path("../command", __dir__),
           "-e", "Gel::Command.run(ARGV)",
           "--",
           "exec",

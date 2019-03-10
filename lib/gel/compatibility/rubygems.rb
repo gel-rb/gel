@@ -6,6 +6,8 @@
 # The threshold is basically "things that already-popular/established
 # gems assume are there without checking".
 
+require_relative "../runtime"
+
 module Gem
   Version = Gel::Support::GemVersion
   Requirement = Gel::Support::GemRequirement
