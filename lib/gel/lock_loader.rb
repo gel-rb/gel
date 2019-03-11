@@ -47,6 +47,11 @@ class Gel::LockLoader
     end
   end
 
+  def bundler_version
+    _, (version,) = lock_content.assoc("BUNDLED WITH")
+    version
+  end
+
   def gem_names
     names = []
     each_gem do |section, body, name, version, platform, deps|

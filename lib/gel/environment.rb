@@ -305,10 +305,13 @@ class Gel::Environment
       lock_content << ""
     end
 
-    lock_content << "BUNDLED WITH"
-    lock_content << "   1.999"
+    if loader&.bundler_version
+      lock_content << "BUNDLED WITH"
+      lock_content << "   #{loader.bundler_version}"
+      lock_content << ""
+    end
 
-    lock_body = lock_content.join("\n") << "\n"
+    lock_body = lock_content.join("\n")
 
     if lockfile
       output.puts "Writing lockfile to #{File.expand_path(lockfile)}" if output

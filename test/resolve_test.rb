@@ -38,9 +38,6 @@ PLATFORMS
 
 DEPENDENCIES
   rack (= 2.0.3)
-
-BUNDLED WITH
-   1.999
 LOCKFILE
   end
 
@@ -78,9 +75,6 @@ PLATFORMS
 
 DEPENDENCIES
   rack
-
-BUNDLED WITH
-   1.999
 LOCKFILE
   end
 
@@ -118,9 +112,6 @@ PLATFORMS
 
 DEPENDENCIES
   rack (< 2.0)
-
-BUNDLED WITH
-   1.999
 LOCKFILE
   end
 
@@ -164,9 +155,6 @@ PLATFORMS
 
 DEPENDENCIES
   activerecord (~> 4.0)
-
-BUNDLED WITH
-   1.999
 LOCKFILE
   end
 
@@ -253,9 +241,6 @@ PLATFORMS
 DEPENDENCIES
   activerecord
   quiet_assets
-
-BUNDLED WITH
-   1.999
 LOCKFILE
   end
 
@@ -358,9 +343,6 @@ PLATFORMS
 DEPENDENCIES
   activerecord
   shush!
-
-BUNDLED WITH
-   1.999
 LOCKFILE
     end
   end
@@ -476,9 +458,6 @@ PLATFORMS
 DEPENDENCIES
   activerecord
   shush!
-
-BUNDLED WITH
-   1.999
 LOCKFILE
     end
   end
@@ -527,9 +506,6 @@ DEPENDENCIES
   dotenv
   foreman
   thunk
-
-BUNDLED WITH
-   1.999
 LOCKFILE
   end
 
@@ -568,9 +544,6 @@ PLATFORMS
 
 DEPENDENCIES
   rack
-
-BUNDLED WITH
-   1.999
 LOCKFILE
   end
 
@@ -618,9 +591,6 @@ PLATFORMS
 
 DEPENDENCIES
   rack
-
-BUNDLED WITH
-   1.999
 LOCKFILE
   end
 
