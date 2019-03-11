@@ -111,9 +111,6 @@ class Gel::Environment
       loader = Gel::LockLoader.new(lockfile, gemfile)
     end
 
-    # HACK
-    $: << File.expand_path("../../tmp/bootstrap/store/ruby/gems/pub_grub-0.5.0.alpha3/lib", __dir__)
-
     require_relative "catalog"
     all_sources = (gemfile.sources | gemfile.gems.flat_map { |_, _, o| o[:source] }).compact
     local_source = all_sources.delete(:local)
@@ -168,6 +165,7 @@ class Gel::Environment
       end
     end
 
+    gem "pub_grub"
     require_relative "pub_grub/source"
 
     strategy = loader && preference_strategy && preference_strategy.call(loader)
