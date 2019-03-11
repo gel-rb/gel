@@ -21,39 +21,43 @@ class Gel::Command
     else
       raise "No subcommand specified"
     end
-  rescue Gel::ReportableError => ex
+  rescue Exception => ex
     raise if $DEBUG || (command && command.reraise)
+    handle_error(ex)
+  end
 
-    $stderr.puts "ERROR: #{ex.message}"
-    if more = ex.details
-      $stderr.puts more
+  def self.handle_error(ex)
+    case ex
+    when Gel::ReportableError
+      $stderr.puts "ERROR: #{ex.message}"
+      if more = ex.details
+        $stderr.puts more
+      end
+
+      exit ex.exit_code
+    when Interrupt
+      # Re-signal so our parent knows why we died
+      Signal.trap(ex.signo, "SYSTEM_DEFAULT")
+      Process.kill(ex.signo, Process.pid)
+
+      # Shouldn't be reached
+      raise ex
+    when SystemExit, SignalException
+      raise ex
+    when StandardError, ScriptError, NoMemoryError, SystemStackError
+      # We want basically everything here: we definitely care about
+      # StandardError and ScriptError... but we also assume that whatever
+      # caused NoMemoryError or SystemStackError was way down the call
+      # stack, so we've now unwound enough to safely handle even those.
+
+      $stderr.print "\n\n===== Gel Internal Error =====\n\n"
+
+      # We'll improve this later, but for now after the header we'll leave
+      # ruby to write the message & backtrace:
+      raise ex
+    else
+      raise ex
     end
-
-    exit ex.exit_code
-  rescue Interrupt => ex
-    raise if $DEBUG || (command && command.reraise)
-
-    # Re-signal so our parent knows why we died
-    Signal.trap(ex.signo, "SYSTEM_DEFAULT")
-    Process.kill(ex.signo, Process.pid)
-
-    # Shouldn't be reached
-    raise
-  rescue SystemExit, SignalException
-    raise
-  rescue StandardError, ScriptError, NoMemoryError, SystemStackError => ex
-    raise if $DEBUG || (command && command.reraise)
-
-    # We want basically everything here: we definitely care about
-    # StandardError and ScriptError... but we also assume that whatever
-    # caused NoMemoryError or SystemStackError was way down the call
-    # stack, so we've now unwound enough to safely handle even those.
-
-    $stderr.print "\n\n===== Gel Internal Error =====\n\n"
-
-    # We'll improve this later, but for now after the header we'll leave
-    # ruby to write the message & backtrace:
-    raise
   end
 
   def self.extract_word(arguments)
