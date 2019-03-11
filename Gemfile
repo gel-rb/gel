@@ -10,4 +10,4 @@ gem "minitest", "~> 5.0"
 gem "mocha"
 gem "webmock"
 
-gem "ronn"
+gem "ronn", platform: :ruby

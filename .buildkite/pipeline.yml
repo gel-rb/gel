@@ -28,3 +28,4 @@ steps:
     name: "JRuby"
     env:
       RUBY_IMAGE: "jruby:latest"
+    soft_fail: true
