@@ -339,7 +339,10 @@ class Gel::Environment
       next if info.nil?
 
       found_any = true
-      version = info.keys.map { |v| Gel::Support::GemVersion.new(v) }.sort.reverse.find { |v| req.satisfied_by?(v) }
+      version = info.keys.
+        map { |v| Gel::Support::GemVersion.new(v) }.
+        sort_by { |v| [v.prerelease? ? 0 : 1, v] }.
+        reverse.find { |v| req.satisfied_by?(v) }
       next if version.nil?
 
       return false if base_store.gem?(gem_name, version.to_s)
