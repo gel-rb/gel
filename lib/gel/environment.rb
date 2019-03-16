@@ -3,7 +3,7 @@
 require "rbconfig"
 
 class Gel::Environment
-  IGNORE_LIST = %w(bundler)
+  IGNORE_LIST = %w(bundler gel rubygems-update)
 
   class << self
     attr_reader :store
@@ -165,7 +165,32 @@ class Gel::Environment
       end
     end
 
-    gem "pub_grub"
+    begin
+      app_store = Gel::Environment.store
+
+      base_store = app_store
+      base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
+
+      # Work around the fact Gel::Environment is a singleton: we really
+      # want to treat the environment we're running in separately from
+      # the application's environment we're working on. But for now, we
+      # can just cheat and swap them.
+      @store = base_store
+
+      if base_store.each("pub_grub").none?
+        require_relative "work_pool"
+
+        Gel::WorkPool.new(2) do |work_pool|
+          catalog = Gel::Catalog.new("https://rubygems.org", work_pool: work_pool)
+
+          install_gem([catalog], "pub_grub", [">= 0.5.a"])
+        end
+      end
+
+      gem "pub_grub"
+    ensure
+      @store = app_store
+    end
     require_relative "pub_grub/source"
 
     strategy = loader && preference_strategy && preference_strategy.call(loader)
