@@ -65,7 +65,7 @@ class Gel::Store
           d = h[name] || []
           raise "already installed" if d.include?(version)
           d << version
-          h[name] = d.sort_by { |v, _| Gel::Support::GemVersion.new(v) }.reverse
+          h[name] = d.sort_by.with_index { |(v, _), idx| [Gel::Support::GemVersion.new(v), -idx] }.reverse
           @lib_db[file] = h
         end
 
