@@ -30,6 +30,9 @@ module Gem
     def self.find_by_name(name, *requirements)
       if g = Gel::Environment.find_gem(name, *requirements)
         new(g)
+      else
+        # TODO: Should probably be a Gel exception instead?
+        raise Gem::LoadError, "Unable to find gem #{name.inspect}" + (requirements.empty? ? "" : " (#{requirements.join(", ")})")
       end
     end
 
