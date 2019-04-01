@@ -127,6 +127,14 @@ module Gem
   end
 
   def self.activate_bin_path(gem_name, bin_name, version = nil)
+    if gem_name == "bundler" && bin_name == "bundle"
+      # Extra-special case: this is the bundler binstub, we need to
+      # re-exec to hand over.
+
+      ENV["RUBYLIB"] = Gel::Environment.original_rubylib
+      exec RbConfig.ruby, "--", $0, *ARGV
+    end
+
     if g = Gel::Environment.activated_gems[gem_name]
       Gel::Environment.gem g.name, version if version
     elsif g = Gel::Environment.find_gem(gem_name, *version) do |g|
