@@ -365,7 +365,7 @@ class Gel::Environment
 
       found_any = true
       version = info.keys.
-        map { |v| Gel::Support::GemVersion.new(v) }.
+        map { |v| Gel::Support::GemVersion.new(v.split("-", 2).first) }.
         sort_by { |v| [v.prerelease? ? 0 : 1, v] }.
         reverse.find { |v| req.satisfied_by?(v) }
       next if version.nil?
