@@ -97,7 +97,7 @@ class Gel::Environment
     @gemfile = Gel::GemfileParser.parse(content, path, 1)
   end
 
-  def self.lockfile_name(gemfile = self.gemfile.filename)
+  def self.lockfile_name(gemfile = self.gemfile&.filename)
     ENV["GEL_LOCKFILE"] ||
       (gemfile && File.exist?(gemfile + ".lock") && gemfile + ".lock") ||
       search_upwards("Gemfile.lock") ||
