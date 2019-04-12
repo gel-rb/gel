@@ -5,7 +5,7 @@ class Gel::Command::Stub < Gel::Command
     stub_command, _path, *arguments = command_line
 
     command = Gel::Command::Exec.new
-    command.run([stub_command, *arguments])
+    command.run([stub_command, *arguments], from_stub: true)
   ensure
     self.reraise = command.reraise if command
   end

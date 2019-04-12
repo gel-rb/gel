@@ -91,4 +91,14 @@ module Gel::Error
       inner_backtrace.join("\n")
     end
   end
+
+  class BrokenStubError < Gel::UserError
+    def initialize(name:)
+      super
+    end
+
+    def message
+      "No available gem supplies a #{self[:name].inspect} executable"
+    end
+  end
 end

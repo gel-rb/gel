@@ -1,9 +1,13 @@
 # frozen_string_literal: true
 
 class Gel::Command::Exec < Gel::Command
-  def run(command_line)
+  def run(command_line, from_stub: false)
     original_command = command_line.shift
     expanded_command, command_source = expand_executable(original_command)
+
+    if from_stub && [:original, :path].include?(command_source)
+      raise Gel::Error::BrokenStubError.new(name: original_command)
+    end
 
     gemfile = Gel::Environment.find_gemfile(error: false)
 
