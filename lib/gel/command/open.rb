@@ -14,6 +14,6 @@ class Gel::Command::Open < Gel::Command
     raise "Can't find gem `#{command_line.first}`" unless found_gem
 
     command = [*Shellwords.split(editor), found_gem.root]
-    system(*command)
+    system(*command) || exit($?.exitstatus)
   end
 end
