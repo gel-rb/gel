@@ -6,6 +6,7 @@ require "uri"
 require "digest"
 
 require_relative "httpool"
+require_relative "support/gem_platform"
 
 class Gel::Catalog
   UPDATE_CONCURRENCY = 8
@@ -71,12 +72,27 @@ class Gel::Catalog
     path = cache_path(name, version)
     return path if File.exist?(path)
 
+    name, version = guess_version(name, version)
+
     response = http_get("/gems/#{name}-#{version}.gem")
     FileUtils.mkdir_p(cache_dir) unless Dir.exist?(cache_dir)
     File.open(path, "wb") do |f|
       f.write(response.body)
     end
     path
+  end
+
+  VARIANT_GEMS = %w(libv8)
+  def guess_version(name, version)
+    if VARIANT_GEMS.include?(name)
+      [name, "#{version}-#{platform_specific_version}"]
+    else
+      [name, version]
+    end
+  end
+
+  def platform_specific_version
+    Gel::Support::GemPlatform.new(RbConfig::CONFIG["arch"])
   end
 
   def inspect
