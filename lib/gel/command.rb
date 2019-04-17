@@ -19,7 +19,9 @@ class Gel::Command
         raise "Unknown command #{command_name.inspect}"
       end
     else
-      raise "No subcommand specified"
+      puts <<~EOF
+      Gel doesn't have a default command; please run `gel install`
+      EOF
     end
   rescue Exception => ex
     raise if $DEBUG || (command && command.reraise)
