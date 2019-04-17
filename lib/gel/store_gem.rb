@@ -28,6 +28,7 @@ class Gel::StoreGem
   def require_paths
     paths = _require_paths.map { |reqp| "#{root}/#{reqp}" }
     paths << extensions if extensions
+    raise(paths.inspect) unless paths.all? { |path| path.is_a?(String) }
     paths
   end
 
