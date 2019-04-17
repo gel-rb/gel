@@ -1,3 +1,5 @@
+<p align="center"><a href="https://gel.dev"><img src="https://gel.dev/images/gel.svg" width="150" /></a></p>
+
 # Gel
 
 A modern gem manager.
