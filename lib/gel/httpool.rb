@@ -73,18 +73,28 @@ class Gel::Httpool
 
   def queue_new_connection(ident, uri)
     Thread.new do
-      http = connect(ident, uri)
+      begin
+        http = connect(ident, uri)
 
-      synchronize do
-        unless Thread.current[:discard]
-          Thread.current[:result] = http
-          http = nil
-          @cond.broadcast
+        synchronize do
+          unless Thread.current[:discard]
+            Thread.current[:result] = http
+            http = nil
+            @cond.broadcast
+          end
         end
-      end
 
-      if http
-        checkin ident, http
+        if http
+          checkin ident, http
+        end
+      rescue StandardError => exception
+        synchronize do
+          unless Thread.current[:discard]
+            Thread.current[:error] = exception
+            http = nil
+            @cond.broadcast
+          end
+        end
       end
     end
   end
@@ -115,6 +125,8 @@ class Gel::Httpool
 
       if thread[:result]
         thread[:result]
+      elsif thread[:error]
+        raise thread[:error]
       else
         thread[:discard] = true
         @pool[ident].pop

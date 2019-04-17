@@ -91,7 +91,7 @@ class Gel::Package::Installer
       local_config.unlink if local_config
     end
 
-    def gemfile_and_lockfile
+    def gemfile_and_lockfile(rake: false)
       @gemfile ||=
         begin
           gemfile = Tempfile.new(["#{spec.name}.gemfile", ".rb"])
@@ -99,6 +99,9 @@ class Gel::Package::Installer
           spec.runtime_dependencies.each do |(name, operator_pairs)|
             arguments = [name, *operator_pairs.map { |op, ver| "#{op} #{ver}" }]
             gemfile.puts "gem #{arguments.map(&:inspect).join(", ")}"
+          end
+          if rake
+            gemfile.puts "gem 'rake'" unless spec.runtime_dependencies.any? { |name, *| name == "rake" }
           end
           gemfile.close
 
@@ -118,8 +121,8 @@ class Gel::Package::Installer
       [@gemfile.path, @lockfile.path]
     end
 
-    def build_environment
-      gemfile, lockfile = gemfile_and_lockfile
+    def build_environment(rake: false)
+      gemfile, lockfile = gemfile_and_lockfile(rake: rake)
 
       {
         "RUBYLIB" => Gel::Environment.modified_rubylib,
@@ -129,8 +132,8 @@ class Gel::Package::Installer
       }
     end
 
-    def build_command(work_dir, log, *command, **options)
-      env = build_environment
+    def build_command(work_dir, log, *command, rake: false, **options)
+      env = build_environment(rake: rake)
       env.merge!(command.shift) if command.first.is_a?(Hash)
 
       pid = spawn(
@@ -177,6 +180,7 @@ class Gel::Package::Installer
             RbConfig.ruby,
             "-r", local_config_path,
             File.basename(ext),
+            rake: true,
           )
           raise "mkrf_conf exited with #{status.exitstatus}" unless status.success?
         end
@@ -190,6 +194,7 @@ class Gel::Package::Installer
           "--",
           "exec",
           "rake",
+          rake: true,
         )
       end
     end
