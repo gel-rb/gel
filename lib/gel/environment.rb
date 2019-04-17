@@ -183,7 +183,7 @@ class Gel::Environment
         Gel::WorkPool.new(2) do |work_pool|
           catalog = Gel::Catalog.new("https://rubygems.org", work_pool: work_pool)
 
-          install_gem([catalog], "pub_grub", [">= 0.5.a"])
+          install_gem([catalog], "pub_grub", [">= 0.5.0"])
         end
       end
 
