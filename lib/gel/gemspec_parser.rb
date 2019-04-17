@@ -19,10 +19,12 @@ class Gel::GemspecParser
       end
 
       module Specification
-        def self.new(&block)
-          o = Result.new
-          block.call o
-          o
+        def self.new(name = nil, version = nil, &block)
+          result = Result.new
+          result.name = name
+          result.version = version
+          block.call result
+          result
         end
       end
     end
