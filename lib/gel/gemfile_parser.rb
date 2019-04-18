@@ -40,8 +40,18 @@ module Gel::GemfileParser
 
     def ruby(version, engine: nil, engine_version: nil)
       req = Gel::Support::GemRequirement.new(version)
-      raise "Running ruby version #{RUBY_VERSION} does not match requested #{version.inspect}" unless req.satisfied_by?(Gel::Support::GemVersion.new(RUBY_VERSION))
-      raise "Running ruby engine #{RUBY_ENGINE} does not match requested #{engine.inspect}" unless !engine || RUBY_ENGINE == engine
+      unless req.satisfied_by?(Gel::Support::GemVersion.new(RUBY_VERSION))
+        raise Gel::Error::MismatchRubyVersionError.new(
+          running: RUBY_VERSION,
+          requested: version,
+        )
+      end
+      unless !engine || RUBY_ENGINE == engine
+        raise Gel::Error::MismatchRubyEngineError.new(
+          running: RUBY_ENGINE,
+          engine: engine,
+        )
+      end
       if engine_version
         raise "Cannot specify :engine_version without :engine" unless engine
         req = Gel::Support::GemRequirement.new(version)

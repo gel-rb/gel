@@ -72,7 +72,7 @@ class Gel::Environment
 
   def self.find_gemfile(path = nil, error: true)
     if path && @gemfile && @gemfile.filename != File.expand_path(path)
-      raise "Cannot activate #{path.inspect}; already activated #{@gemfile.filename.inspect}"
+      raise Gel::Error::CannotActivateError.new(path: path, gemfile: @gemfile.filename)
     end
     return @gemfile.filename if @gemfile
 
@@ -83,7 +83,7 @@ class Gel::Environment
     if File.exist?(path)
       path
     elsif error
-      raise "No Gemfile found in #{path.inspect}"
+      raise Gel::Error::NoGemfile.new(path: path)
     end
   end
 
@@ -391,9 +391,12 @@ class Gel::Environment
     end
 
     if found_any
-      raise "no version of gem #{gem_name.inspect} satifies #{requirements.inspect}"
+      raise Gel::Error::NoVersionSatisfyError.new(
+        gem_name: gem_name,
+        requirements: requirements,
+      )
     else
-      raise "unknown gem #{gem_name.inspect}"
+      raise Gel::Error::UnknownGemError.new(gem_name: gem_name)
     end
   end
 

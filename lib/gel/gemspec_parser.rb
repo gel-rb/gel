@@ -81,7 +81,7 @@ class Gel::GemspecParser
       end
 
       _, status = Process.waitpid2(pid)
-      raise "Gemspec parse failed" unless status.success?
+      raise Gel::Error::ParsedGemspecError unless status.success?
 
       write_thread.join
       Marshal.load read_thread.value
