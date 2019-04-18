@@ -104,6 +104,39 @@ class Gel::Environment
       "Gemfile.lock"
   end
 
+  def self.with_root_store
+    app_store = Gel::Environment.store
+
+    base_store = app_store
+    base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
+
+    # Work around the fact Gel::Environment is a singleton: we really
+    # want to treat the environment we're running in separately from
+    # the application's environment we're working on. But for now, we
+    # can just cheat and swap them.
+    @store = base_store
+
+    yield base_store
+  ensure
+    @store = app_store
+  end
+
+  def self.auto_install_pub_grub!
+    with_root_store do |base_store|
+      base_store.monitor.synchronize do
+        if base_store.each("pub_grub").none?
+          require_relative "work_pool"
+
+          Gel::WorkPool.new(2) do |work_pool|
+            catalog = Gel::Catalog.new("https://rubygems.org", work_pool: work_pool)
+
+            install_gem([catalog], "pub_grub", [">= 0.5.0"])
+          end
+        end
+      end
+    end
+  end
+
   def self.lock(store: store(), output: nil, gemfile: Gel::Environment.load_gemfile, lockfile: Gel::Environment.lockfile_name, catalog_options: {}, preference_strategy: nil)
     output = nil if $DEBUG
 
@@ -165,31 +198,9 @@ class Gel::Environment
       end
     end
 
-    begin
-      app_store = Gel::Environment.store
-
-      base_store = app_store
-      base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
-
-      # Work around the fact Gel::Environment is a singleton: we really
-      # want to treat the environment we're running in separately from
-      # the application's environment we're working on. But for now, we
-      # can just cheat and swap them.
-      @store = base_store
-
-      if base_store.each("pub_grub").none?
-        require_relative "work_pool"
-
-        Gel::WorkPool.new(2) do |work_pool|
-          catalog = Gel::Catalog.new("https://rubygems.org", work_pool: work_pool)
-
-          install_gem([catalog], "pub_grub", [">= 0.5.0"])
-        end
-      end
-
+    auto_install_pub_grub!
+    with_root_store do
       gem "pub_grub"
-    ensure
-      @store = app_store
     end
     require_relative "pub_grub/source"
 

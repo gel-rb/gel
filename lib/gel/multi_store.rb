@@ -7,10 +7,13 @@ class Gel::MultiStore
   VERSION = "#{RbConfig::CONFIG["ruby_version"]}"
 
   attr_reader :root
+  attr_reader :monitor
 
   def initialize(root, stores)
     @root = File.realpath(File.expand_path(root)) if root
     @stores = stores
+
+    @monitor = Monitor.new
   end
 
   def stub_set

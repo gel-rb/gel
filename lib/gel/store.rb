@@ -4,12 +4,15 @@ require_relative "db"
 
 class Gel::Store
   attr_reader :root
+  attr_reader :monitor
 
   def initialize(root)
     @root = File.realpath(File.expand_path(root))
     @primary_db = Gel::DB.new(root, "store")
     @lib_db = Gel::DB.new(root, "libs")
     @rlib_db = Gel::DB::File.new(root, "meta")
+
+    @monitor = Monitor.new
   end
 
   def stub_set
