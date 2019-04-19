@@ -17,8 +17,8 @@ class Gel::StoreCatalog
 
     @store.each(name) do |store_gem|
       info[store_gem.version] = {
-        dependencies: store_gem.dependencies.map do |name, pairs|
-          [name, pairs.map { |op, ver| "#{op} #{ver}" }]
+        dependencies: store_gem.dependencies.map do |dep_name, pairs|
+          [dep_name, pairs.map { |op, ver| "#{op} #{ver}" }]
         end,
       }
     end

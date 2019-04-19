@@ -24,7 +24,7 @@ module Gel::GemfileParser
     def source(uri)
       if block_given?
         begin
-          @stack << { source: uri }
+          @stack << {source: uri}
           yield
         ensure
           @stack.pop
@@ -66,7 +66,7 @@ module Gel::GemfileParser
     end
 
     def gemspec(path: ".", development_group: :development)
-      if file = Dir[File.join(File.expand_path(path, File.dirname(@result.filename)), "/*.gemspec")].first
+      if (file = Dir[File.join(File.expand_path(path, File.dirname(@result.filename)), "/*.gemspec")].first)
         spec = Gel::GemspecParser.parse(File.read(file), file)
         gem spec.name, path: path
         spec.development_dependencies.each do |name, constraints|
@@ -76,14 +76,14 @@ module Gel::GemfileParser
     end
 
     def group(*names)
-      @stack << { group: names }
+      @stack << {group: names}
       yield
     ensure
       @stack.pop
     end
 
     def platforms(*names)
-      @stack << { platforms: names }
+      @stack << {platforms: names}
       yield
     ensure
       @stack.pop

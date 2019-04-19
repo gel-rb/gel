@@ -45,8 +45,8 @@ module Bundler
   end
 
   def self.settings
-    if gemfile = Gel::Environment.gemfile
-      { "gemfile" => gemfile.filename }
+    if (gemfile = Gel::Environment.gemfile)
+      {"gemfile" => gemfile.filename}
     else
       {}
     end

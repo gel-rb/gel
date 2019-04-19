@@ -9,7 +9,7 @@ class Gel::StoreGem
     @root = root
     @name = name
     @version = version
-    @extensions = extensions unless extensions && extensions.empty?
+    @extensions = extensions unless extensions&.empty?
     @info = info
   end
 

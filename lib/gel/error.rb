@@ -69,9 +69,7 @@ class Gel::UserError < StandardError
       ignored_bt.pop
     end
 
-    while bt.last.path == ignored_bt.last.path
-      bt.pop
-    end
+    bt.pop while bt.last.path == ignored_bt.last.path
 
     bt
   end

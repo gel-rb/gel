@@ -3,7 +3,7 @@
 require "rbconfig"
 
 class Gel::Environment
-  IGNORE_LIST = %w(bundler gel rubygems-update)
+  IGNORE_LIST = %w[bundler gel rubygems-update]
 
   class << self
     attr_reader :store
@@ -47,7 +47,7 @@ class Gel::Environment
   def self.original_rubylib
     lib = (ENV["RUBYLIB"] || "").split(File::PATH_SEPARATOR)
     lib.delete File.expand_path("compatibility", __dir__)
-    #lib.delete File.expand_path("..", __dir__)
+    # lib.delete File.expand_path("..", __dir__)
     return nil if lib.empty?
     lib.join(File::PATH_SEPARATOR)
   end
@@ -56,8 +56,8 @@ class Gel::Environment
     lib = (ENV["RUBYLIB"] || "").split(File::PATH_SEPARATOR)
     dir = File.expand_path("compatibility", __dir__)
     lib.unshift dir unless lib.include?(dir)
-    #dir = File.expand_path("..", __dir__)
-    #lib.unshift dir unless lib.include?(dir)
+    # dir = File.expand_path("..", __dir__)
+    # lib.unshift dir unless lib.include?(dir)
     lib.join(File::PATH_SEPARATOR)
   end
 
@@ -137,7 +137,7 @@ class Gel::Environment
     end
   end
 
-  def self.lock(store: store(), output: nil, gemfile: Gel::Environment.load_gemfile, lockfile: Gel::Environment.lockfile_name, catalog_options: {}, preference_strategy: nil)
+  def self.lock(store: Gel::Environment.store, output: nil, gemfile: Gel::Environment.load_gemfile, lockfile: Gel::Environment.lockfile_name, catalog_options: {}, preference_strategy: nil)
     output = nil if $DEBUG
 
     if lockfile && File.exist?(lockfile)
@@ -193,7 +193,7 @@ class Gel::Environment
 
         pool.queue("catalog") do
           catalog.prepare
-          output.print "." if output
+          output&.print "."
         end
       end
     end
@@ -208,7 +208,7 @@ class Gel::Environment
     source = Gel::PubGrub::Source.new(gemfile, catalogs, ["ruby"], strategy)
     solver = PubGrub::VersionSolver.new(source: source)
     solver.define_singleton_method(:next_package_to_try) do
-      self.solution.unsatisfied.min_by do |term|
+      solution.unsatisfied.min_by { |term|
         package = term.package
         versions = self.source.versions_for(package, term.constraint.range)
 
@@ -217,7 +217,7 @@ class Gel::Environment
         else
           @package_depth[package]
         end * 1000 + versions.count
-      end.package
+      }.package
     end
 
     if output
@@ -251,16 +251,16 @@ class Gel::Environment
         lock_content << "    #{package} (#{version})"
 
         deps = source.dependencies_for(package, version)
-        next unless deps && deps.first
+        next unless deps&.first
 
-        dep_lines = deps.map do |(dep_name, dep_requirements)|
+        dep_lines = deps.map { |(dep_name, dep_requirements)|
           next dep_name if dep_requirements == [">= 0"] || dep_requirements == []
 
           req = Gel::Support::GemRequirement.new(dep_requirements)
           req_strings = req.requirements.sort_by { |(_op, ver)| ver }.map { |(op, ver)| "#{op} #{ver}" }
 
           "#{dep_name} (#{req_strings.join(", ")})"
-        end
+        }
 
         dep_lines.sort.each do |line|
           lock_content << "      #{line}"
@@ -268,21 +268,21 @@ class Gel::Environment
       end
     end
 
-    grouped_graph = solution.sort_by { |package,_| package.name }.group_by { |(package, version)|
+    grouped_graph = solution.sort_by { |package, _| package.name }.group_by { |(package, version)|
       spec = source.spec_for_version(package, version)
       catalog = spec.catalog
       catalog.is_a?(Gel::Catalog) || catalog.is_a?(Gel::StoreCatalog) ? nil : catalog
     }
     server_gems = grouped_graph.delete(nil)
 
-    grouped_graph.keys.sort_by do |catalog|
+    grouped_graph.keys.sort_by { |catalog|
       case catalog
       when Gel::GitCatalog
         [1, catalog.remote, catalog.revision]
       when Gel::PathCatalog
         [2, catalog.path]
       end
-    end.each do |catalog|
+    }.each do |catalog|
       case catalog
       when Gel::GitCatalog
         lock_content << "GIT"
@@ -318,7 +318,7 @@ class Gel::Environment
     }.map { |name, _, _| name }
 
     root_deps = source.root_dependencies
-    root_deps.sort_by { |name,_| name }.each do |name, constraints|
+    root_deps.sort_by { |name, _| name }.each do |name, constraints|
       next if name =~ /^~/
 
       bang = "!" if bang_deps.include?(name)
@@ -348,7 +348,7 @@ class Gel::Environment
     lock_body = lock_content.join("\n")
 
     if lockfile
-      output.puts "Writing lockfile to #{File.expand_path(lockfile)}" if output
+      output&.puts "Writing lockfile to #{File.expand_path(lockfile)}"
       File.write(lockfile, lock_body)
     end
     lock_body
@@ -359,9 +359,9 @@ class Gel::Environment
     base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
 
     req = Gel::Support::GemRequirement.new(requirements)
-    #base_store.each(gem_name) do |g|
+    # base_store.each(gem_name) do |g|
     #  return false if g.satisfies?(req)
-    #end
+    # end
 
     require_relative "installer"
     installer = Gel::Installer.new(base_store)
@@ -375,10 +375,10 @@ class Gel::Environment
       next if info.nil?
 
       found_any = true
-      version = info.keys.
-        map { |v| Gel::Support::GemVersion.new(v.split("-", 2).first) }.
-        sort_by { |v| [v.prerelease? ? 0 : 1, v] }.
-        reverse.find { |v| req.satisfied_by?(v) }
+      version = info.keys
+        .map { |v| Gel::Support::GemVersion.new(v.split("-", 2).first) }
+        .sort_by { |v| [v.prerelease? ? 0 : 1, v] }
+        .reverse.find { |v| req.satisfied_by?(v) }
       next if version.nil?
 
       return false if base_store.gem?(gem_name, version.to_s)
@@ -446,9 +446,9 @@ class Gel::Environment
 
     @gemfile = nil
     exes.each do |exe|
-      candidates = @store.each.select do |g|
+      candidates = @store.each.select { |g|
         !locked_gems.include?(g.name) && g.executables.include?(exe)
-      end.group_by(&:name)
+      }.group_by(&:name)
 
       case candidates.size
       when 0
@@ -461,7 +461,7 @@ class Gel::Environment
         # useful way of deciding which one should win? One obvious
         # tie-breaker: if a gem's name matches the executable, it wins.
 
-        if candidates.keys.include?(exe)
+        if candidates.key?(exe)
           gem(exe)
         else
           gem(candidates.keys.first)
@@ -482,7 +482,7 @@ class Gel::Environment
     nil
   end
 
-  def self.filtered_gems(gems = self.gemfile.gems)
+  def self.filtered_gems(gems = gemfile.gems)
     platforms = GEMFILE_PLATFORMS.map(&:to_s)
     gems = gems.reject { |g| g[2][:platforms] && (Array(g[2][:platforms]).map(&:to_s) & platforms).empty? }
     gems
@@ -509,23 +509,23 @@ class Gel::Environment
 
     requirements = Gel::Support::GemRequirement.new(requirements)
 
-    if existing = activated_gems[name]
+    if (existing = activated_gems[name])
       if existing.satisfies?(requirements)
         return
       else
-        why = " (#{why.join("; ")})" if why && why.first
+        why = " (#{why.join("; ")})" if why&.first
         raise LoadError, "already loaded gem #{name} #{existing.version}, which is incompatible with: #{requirements}#{why}"
       end
     end
 
-    gem = @store.each(name).find do |g|
+    gem = @store.each(name).find { |g|
       g.satisfies?(requirements)
-    end
+    }
 
     if gem
       activate_gem gem, why: why
     else
-      why = " (#{why.join("; ")})" if why && why.first
+      why = " (#{why.join("; ")})" if why&.first
       raise LoadError, "unable to satisfy requirements for gem #{name}: #{requirements}#{why}"
     end
   end
@@ -568,7 +568,7 @@ class Gel::Environment
   end
 
   def self.scoped_require(gem_name, path)
-    if full_path = gem_has_file?(gem_name, path)
+    if (full_path = gem_has_file?(gem_name, path))
       require full_path
     else
       raise LoadError, "No file #{path.inspect} found in gem #{gem_name.inspect}"

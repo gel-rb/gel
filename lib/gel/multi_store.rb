@@ -4,7 +4,7 @@ require "rbconfig"
 require_relative "stub_set"
 
 class Gel::MultiStore
-  VERSION = "#{RbConfig::CONFIG["ruby_version"]}"
+  VERSION = (RbConfig::CONFIG["ruby_version"]).to_s
 
   attr_reader :root
   attr_reader :monitor
@@ -35,7 +35,7 @@ class Gel::MultiStore
     elsif version
       "#{architecture}-#{VERSION}"
     else
-      "#{architecture}"
+      architecture.to_s
     end
   end
 

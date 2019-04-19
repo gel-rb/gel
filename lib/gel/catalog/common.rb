@@ -26,7 +26,7 @@ module Gel::Catalog::Common
     gems_to_refresh = []
 
     @monitor.synchronize do
-      if info = _info(gem_name)
+      if (info = _info(gem_name))
         gems_to_refresh = walk_gem_dependencies(gem_name, info)
         return info
       end
@@ -59,7 +59,7 @@ module Gel::Catalog::Common
 
   def _info(name)
     raise @error if @error
-    if i = @gem_info[name]
+    if (i = @gem_info[name])
       raise i if i.is_a?(Exception)
       i
     end

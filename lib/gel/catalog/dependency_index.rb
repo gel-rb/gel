@@ -61,7 +61,7 @@ class Gel::Catalog::DependencyIndex
       response =
         begin
           @catalog.send(:http_get, "api/v1/dependencies?gems=#{gem_list}")
-        rescue Exception => ex
+        rescue Exception => ex # rubocop:disable RescueException
           @monitor.synchronize do
             @error = ex
             @refresh_cond.broadcast

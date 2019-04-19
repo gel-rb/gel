@@ -16,7 +16,7 @@ module Gel::PubGrub
         -1000
       elsif @overrides.key?(package.name)
         -100
-      elsif range = ranges[package.name]
+      elsif (range = ranges[package.name])
         yes, no = versions.partition { |version| range.satisfied_by?(version) }
         if yes.any? && no.any?
           -50
@@ -30,7 +30,7 @@ module Gel::PubGrub
 
     def sort_versions_by_preferred(package, versions)
       return versions if @strict # already filtered
-      return versions unless range = ranges[package.name]
+      return versions unless (range = ranges[package.name])
       versions.partition { |version| range.satisfied_by?(version) }.inject(:+)
     end
 

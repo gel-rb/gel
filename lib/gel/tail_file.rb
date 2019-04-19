@@ -65,7 +65,7 @@ class Gel::TailFile
           @done = true
           pinboard.updated(uri, response["ETag"], false)
 
-          return # no-op
+          break
 
         when Net::HTTPRequestedRangeNotSatisfiable
           # This should never happen, but sometimes does: either the
@@ -82,11 +82,10 @@ class Gel::TailFile
             # already have
 
             f.pos = current_length
-            next
           else
             force_reset = true
-            next
           end
+          next
 
         when Net::HTTPOK
           f.pos = 0
@@ -97,7 +96,7 @@ class Gel::TailFile
           @done = true
           pinboard.updated(uri, response["ETag"], true)
 
-          return # Done
+          break
 
         when Net::HTTPPartialContent
           if response["Content-Range"] =~ /\Abytes (\d+)-(\d+)\/(\d+)\z/
@@ -143,7 +142,7 @@ class Gel::TailFile
               @done = true
               pinboard.updated(uri, @etag, false) # keep old etag
 
-              return # Done
+              break
             else
               # Bad overlap
               debug "Bad overlap on short response"
@@ -166,7 +165,7 @@ class Gel::TailFile
               @done = true
               pinboard.updated(uri, response["ETag"], true)
 
-              return # Done
+              break
             else
               # Bad overlap
               debug "Bad overlap on long response"
@@ -195,11 +194,11 @@ class Gel::TailFile
         end
       end
 
-      raise "Giving up after #{MAXIMUM_CHAIN} requests"
+      raise "Giving up after #{MAXIMUM_CHAIN} requests" unless @done
     end
   end
 
   def debug(message)
-    #$stderr.puts message if $DEBUG
+    # $stderr.puts message if $DEBUG
   end
 end

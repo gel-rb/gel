@@ -56,7 +56,7 @@ class Gel::Pinboard
           @work_pool.queue(uri.path) do
             begin
               tail_file.update(force_reset: !tail)
-            rescue Exception => ex
+            rescue Exception => ex # rubocop:disable RescueException
               if error
                 error.call(ex)
               else
@@ -99,7 +99,7 @@ class Gel::Pinboard
   end
 
   def stale(uri, token)
-    if h = read(uri)
+    if (h = read(uri))
       if token && h[:token] == token || token == false
         return h[:stale]
       end
@@ -122,7 +122,7 @@ class Gel::Pinboard
       blocks = @waiting.delete(uri)
     end
 
-    return unless blocks && blocks.any?
+    return unless blocks&.any?
 
     File.open(filename(uri), "r") do |f|
       blocks.each do |block|

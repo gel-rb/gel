@@ -83,7 +83,7 @@ class Gel::LockedStore
   end
 
   def gems_for_lib(file)
-    if c = @lib_cache.fetch(file, nil)
+    if (c = @lib_cache.fetch(file, nil))
       c.each { |gem, subdir| yield gem, subdir }
       return
     end

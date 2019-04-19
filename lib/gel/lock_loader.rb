@@ -22,26 +22,29 @@ class Gel::LockLoader
           gem_spec =~ /\A(.+) \(([^-]+)(?:-(.+))?\)\z/
           name, version, platform = $1, $2, $3
 
-          if dep_specs
-            deps = dep_specs.map do |spec|
+          deps = if dep_specs
+            dep_specs.map do |spec|
               spec =~ /\A(.+?)(?: \((.+)\))?\z/
               [$1, $2 ? $2.split(", ") : []]
             end
           else
-            deps = []
+            []
           end
 
           sym =
             case section
-            when "GEM"; :gem
-            when "PATH"; :path
-            when "GIT"; :git
+            when "GEM" then :gem
+            when "PATH" then :path
+            when "GIT" then :git
             end
           yield sym, body, name, version, platform, deps
         end
       when "PLATFORMS", "DEPENDENCIES"
+        nil # Ignore this
       when "RUBY VERSION"
+        nil # Ignore this
       when "BUNDLED WITH"
+        nil # Ignore this
       else
         warn "Unknown lockfile section #{section.inspect}"
       end
@@ -81,7 +84,7 @@ class Gel::LockLoader
         top_gems << name
         filtered_gems[name] = true
       end
-    elsif pair = lock_content.assoc("DEPENDENCIES")
+    elsif (pair = lock_content.assoc("DEPENDENCIES"))
       _, list = pair
       top_gems = list.map { |name| name.split(" ", 2)[0].chomp("!") }
       top_gems.each do |name|
@@ -95,7 +98,7 @@ class Gel::LockLoader
 
       gems[name] = [section, body, version, platform, deps]
 
-      installer.known_dependencies name => deps.map(&:first) if installer
+      installer&.known_dependencies name => deps.map(&:first)
     end
 
     walk = lambda do |name|
@@ -145,7 +148,7 @@ class Gel::LockLoader
         end
       end
 
-      installer.wait(output) if installer
+      installer&.wait(output)
 
       locks.each do |name, locked|
         locks[name] = locked.call if locked.is_a?(Proc)

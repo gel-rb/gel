@@ -14,7 +14,6 @@ class LockedActivateTest < Minitest::Test
 
       assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
 
-
       output = subprocess_output(<<-'END', store: store)
         locked_store = Gel::LockedStore.new(store)
         locked_store.lock("rack" => "0.1.0")
@@ -39,7 +38,6 @@ class LockedActivateTest < Minitest::Test
       END
 
       assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
-
 
       output = subprocess_output(<<-'END', store: store)
         locked_store = Gel::LockedStore.new(store)

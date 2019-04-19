@@ -39,7 +39,7 @@ class Gel::WorkPool
   def start
     @monitor.synchronize do
       while @workers.size < @concurrency
-        @workers << Thread.new do
+        @workers << Thread.new {
           Thread.current.name = @name if @name && Thread.current.respond_to?(:name=)
           Thread.current.abort_on_exception = true
 
@@ -60,19 +60,19 @@ class Gel::WorkPool
 
               begin
                 current_job[0].call
-              rescue Exception => ex
+              rescue Exception => ex # rubocop:disable RescueException
                 if @errors
-                  $stderr.puts ex if $DEBUG
+                  warn ex if $DEBUG
                   @monitor.synchronize do
                     @errors << [current_job, ex]
                   end
                 else
-                  $stderr.puts "Unhandled exception in work pool #{@name.inspect} for job #{current_job[1].inspect}:\n#{ex.inspect}\n#{ex.backtrace.map { |s| s.sub(/^/, "   ") }.join("\n")}"
+                  warn "Unhandled exception in work pool #{@name.inspect} for job #{current_job[1].inspect}:\n#{ex.inspect}\n#{ex.backtrace.map { |s| s.sub(/^/, "   ") }.join("\n")}"
                 end
               end
             end
           end
-        end
+        }
       end
     end
   end
@@ -110,7 +110,7 @@ class Gel::WorkPool
   def join
     wait
     @monitor.synchronize do
-      if @errors && e = @errors.first
+      if @errors && (e = @errors.first)
         raise e.last
       end
     end
@@ -118,11 +118,11 @@ class Gel::WorkPool
 
   def status
     @monitor.synchronize do
-      { active: @workers.map { |w| w[:active] }.compact, queued: @queue.size }
+      {active: @workers.map { |w| w[:active] }.compact, queued: @queue.size}
     end
   end
 
-  def queue(job = nil, label, &block)
+  def queue(job = nil, label, &block) # rubocop:disable OptionalArguments
     raise ArgumentError if job && block
     job ||= block
     label ||= job
@@ -136,8 +136,10 @@ class Gel::WorkPool
   end
 
   def reorder_queue!
-    @monitor.synchronize do
-      @queue.sort_by!(&@queue_order)
-    end if @queue_order
+    if @queue_order
+      @monitor.synchronize do
+        @queue.sort_by!(&@queue_order)
+      end
+    end
   end
 end

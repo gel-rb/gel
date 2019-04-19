@@ -6,11 +6,11 @@ require "pub_grub/rubygems"
 
 module Gel::PubGrub
   class Source < ::PubGrub::BasicPackageSource
-    Spec = Struct.new(:catalog, :name, :version, :info) do
+    Spec = Struct.new(:catalog, :name, :version, :info) {
       def gem_version
         @gem_version ||= Gel::Support::GemVersion.new(version)
       end
-    end
+    }
 
     attr_reader :root, :root_version
 
@@ -64,11 +64,9 @@ module Gel::PubGrub
 
       case package.name
       when "~arguments"
-        if @preference_strategy
-          @preference_strategy.constraints.each do |name, constraints|
-            deps[name] ||= []
-            deps[name].concat constraints.flatten
-          end
+        @preference_strategy&.constraints&.each do |name, constraints|
+          deps[name] ||= []
+          deps[name].concat constraints.flatten
         end
       when /^~/
         raise "Unknown pseudo-package"
@@ -91,12 +89,12 @@ module Gel::PubGrub
     end
 
     def root_dependencies
-      deps = { "~arguments" => [] }
+      deps = {"~arguments" => []}
 
-      @gemfile.gems.select do |_, _, options|
-        next true unless platforms = options[:platforms]
+      @gemfile.gems.select { |_, _, options|
+        next true unless (platforms = options[:platforms])
         !([*platforms] & [:ruby, :mri]).empty?
-      end.each do |name, constraints, _|
+      }.each do |name, constraints, _|
         deps[name] ||= []
         deps[name].concat constraints.flatten
       end
@@ -122,14 +120,14 @@ module Gel::PubGrub
           next
         end
 
-        if info = catalog.gem_info(package.name)
+        if (info = catalog.gem_info(package.name))
           @cached_specs[catalog][package.name] ||=
             begin
-              grouped_versions = info.to_a.map do |full_version, attributes|
+              grouped_versions = info.to_a.map { |full_version, attributes|
                 version, platform = full_version.split("-", 2)
                 platform ||= "ruby"
                 [version, platform, attributes]
-              end.group_by(&:first)
+              }.group_by(&:first)
 
               grouped_versions.map { |version, tuples| Spec.new(catalog, package.name, version, tuples.map { |_, p, a| [p, a] }) }
             end

@@ -7,7 +7,7 @@ class Gel::LockParser
     sections = []
 
     scanner = StringScanner.new(content)
-    while section = scanner.scan(/^(\w.+)\n/)
+    while (section = scanner.scan(/^(\w.+)\n/))
       section.chomp!
       case section
       when "GIT", "PATH", "GEM"
@@ -30,10 +30,10 @@ class Gel::LockParser
                 children << child
                 scanner.skip(/\n/)
               end
-              if children.empty?
-                value << [entry]
+              value << if children.empty?
+                [entry]
               else
-                value << [entry, children]
+                [entry, children]
               end
             end
             content[label] = value

@@ -7,8 +7,8 @@ class MultiStoreTest < Minitest::Test
     with_fixture_gems_installed(["rack-2.0.3.gem", "rack-0.1.0.gem"]) do |store_1|
       with_fixture_gems_installed(["rack-test-0.6.3.gem"]) do |store_2|
         multi = Gel::MultiStore.new(nil,
-                                       "ruby-#{RbConfig::CONFIG["ruby_version"]}" => store_1,
-                                       "ruby" => store_2)
+          "ruby-#{RbConfig::CONFIG["ruby_version"]}" => store_1,
+          "ruby" => store_2)
 
         output = subprocess_output(<<-'END', store: multi)
           Gel::Environment.open(store)

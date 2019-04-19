@@ -88,8 +88,8 @@ class Gel::Catalog::LegacyIndex
       end
     end
 
-    pinboard.async_file(uri("specs.4.8.gz"), tail: false, error: error, &spec_file_handler.(false))
-    pinboard.async_file(uri("prerelease_specs.4.8.gz"), tail: false, error: error, &spec_file_handler.(true))
+    pinboard.async_file(uri("specs.4.8.gz"), tail: false, error: error, &spec_file_handler.call(false))
+    pinboard.async_file(uri("prerelease_specs.4.8.gz"), tail: false, error: error, &spec_file_handler.call(true))
 
     true
   end
@@ -104,7 +104,7 @@ class Gel::Catalog::LegacyIndex
         return
       end
 
-      unless info = @gem_info[gem_name]
+      unless (info = @gem_info[gem_name])
         @gem_info[gem_name] = {}
         @refresh_cond.broadcast
         return
@@ -133,7 +133,7 @@ class Gel::Catalog::LegacyIndex
         spec = Marshal.load(data)
 
         @monitor.synchronize do
-          loaded_data[v] = { dependencies: spec.dependencies, ruby: spec.required_ruby_version }
+          loaded_data[v] = {dependencies: spec.dependencies, ruby: spec.required_ruby_version}
           if loaded_data.values.all?
             @gem_info[gem_name].update loaded_data
             @refresh_cond.broadcast
@@ -146,10 +146,10 @@ class Gel::Catalog::LegacyIndex
   private
 
   def _info(gem_name)
-    if i = super
+    if (i = super)
       if i.values.all? { |v| v.is_a?(Hash) }
         i
-      elsif e = i.values.grep(Exception).first
+      elsif (e = i.values.grep(Exception).first)
         raise e
       end
     end

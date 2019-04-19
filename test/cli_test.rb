@@ -23,7 +23,7 @@ class CLITest < Minitest::Test
   def test_basic_install
     Gel::Environment.expects(:activate).with(has_entries(install: true, output: $stderr))
 
-    Gel::Command.run(%W(install))
+    Gel::Command.run(%w[install])
   end
 
   # TODO: There's too much behaviour here, yet it's still not a full
@@ -36,7 +36,7 @@ class CLITest < Minitest::Test
       File.write("#{dir}/Gemfile", "")
       File.write("#{dir}/Gemfile.lock", "")
       File.write("#{dir}/ruby-executable", "#!/usr/bin/ruby\n")
-      FileUtils.chmod 0755, "#{dir}/ruby-executable"
+      FileUtils.chmod 0o755, "#{dir}/ruby-executable"
 
       Gel::Environment.expects(:activate)
 
@@ -54,7 +54,7 @@ class CLITest < Minitest::Test
 
       Dir.chdir(dir) do
         catch(:exit) do
-          Gel::Command.run(%W(exec ruby-executable some args))
+          Gel::Command.run(%w[exec ruby-executable some args])
         end
       end
     end
@@ -67,20 +67,20 @@ class CLITest < Minitest::Test
       File.write("#{dir}/Gemfile", "")
       File.write("#{dir}/Gemfile.lock", "")
       File.write("#{dir}/shell-executable", "#!/bin/sh\n")
-      FileUtils.chmod 0755, "#{dir}/shell-executable"
+      FileUtils.chmod 0o755, "#{dir}/shell-executable"
 
-      Kernel.expects(:exec).with do |*command|
+      Kernel.expects(:exec).with { |*command|
         assert_equal [["shell-executable", "shell-executable"], "some", "args"], command
 
         assert_equal "#{dir}/Gemfile", ENV["GEL_GEMFILE"]
         assert_equal "#{dir}/Gemfile.lock", ENV["GEL_LOCKFILE"]
         assert_nil ENV["RUBYOPT"]
         assert_equal File.expand_path("../lib/gel/compatibility", __dir__), ENV["RUBYLIB"]
-      end.throws(:exit)
+      }.throws(:exit)
 
       Dir.chdir(dir) do
         catch(:exit) do
-          Gel::Command.run(%W(exec shell-executable some args))
+          Gel::Command.run(%w[exec shell-executable some args])
         end
       end
     end

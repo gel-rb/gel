@@ -5,24 +5,24 @@ require "test_helper"
 class LockInstallTest < Minitest::Test
   def test_install_simple_lockfile
     lockfile = Tempfile.new("")
-    lockfile.write(<<LOCKFILE)
-GEM
-  remote: https://rubygems.org/
-  specs:
-    rack (2.0.3)
-    rack-test (0.6.3)
-      rack (>= 1.0)
+    lockfile.write(<<~LOCKFILE)
+      GEM
+        remote: https://rubygems.org/
+        specs:
+          rack (2.0.3)
+          rack-test (0.6.3)
+            rack (>= 1.0)
 
-DEPENDENCIES
-  rack-test
-LOCKFILE
+      DEPENDENCIES
+        rack-test
+    LOCKFILE
     lockfile.close
 
-    stub_request(:get, "https://rubygems.org/gems/rack-2.0.3.gem").
-      to_return(body: File.open(fixture_file("rack-2.0.3.gem")))
+    stub_request(:get, "https://rubygems.org/gems/rack-2.0.3.gem")
+      .to_return(body: File.open(fixture_file("rack-2.0.3.gem")))
 
-    stub_request(:get, "https://rubygems.org/gems/rack-test-0.6.3.gem").
-      to_return(body: File.open(fixture_file("rack-test-0.6.3.gem")))
+    stub_request(:get, "https://rubygems.org/gems/rack-test-0.6.3.gem")
+      .to_return(body: File.open(fixture_file("rack-test-0.6.3.gem")))
 
     with_empty_store do |store|
       output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path)
@@ -51,30 +51,30 @@ LOCKFILE
     skip "We (and this test) are not actually arch-aware yet" if jruby?
 
     lockfile = Tempfile.new("")
-    lockfile.write(<<LOCKFILE)
-GEM
-  remote: https://rubygems.org/
-  specs:
-    atomic (1.1.16)
-    atomic (1.1.16-java)
-    rack (2.0.3)
-    rack-test (0.6.3)
-      rack (>= 1.0)
+    lockfile.write(<<~LOCKFILE)
+      GEM
+        remote: https://rubygems.org/
+        specs:
+          atomic (1.1.16)
+          atomic (1.1.16-java)
+          rack (2.0.3)
+          rack-test (0.6.3)
+            rack (>= 1.0)
 
-DEPENDENCIES
-  atomic
-  rack-test
-LOCKFILE
+      DEPENDENCIES
+        atomic
+        rack-test
+    LOCKFILE
     lockfile.close
 
-    stub_request(:get, "https://rubygems.org/gems/atomic-1.1.16.gem").
-      to_return(body: File.open(fixture_file("atomic-1.1.16.gem")))
+    stub_request(:get, "https://rubygems.org/gems/atomic-1.1.16.gem")
+      .to_return(body: File.open(fixture_file("atomic-1.1.16.gem")))
 
-    stub_request(:get, "https://rubygems.org/gems/rack-2.0.3.gem").
-      to_return(body: File.open(fixture_file("rack-2.0.3.gem")))
+    stub_request(:get, "https://rubygems.org/gems/rack-2.0.3.gem")
+      .to_return(body: File.open(fixture_file("rack-2.0.3.gem")))
 
-    stub_request(:get, "https://rubygems.org/gems/rack-test-0.6.3.gem").
-      to_return(body: File.open(fixture_file("rack-test-0.6.3.gem")))
+    stub_request(:get, "https://rubygems.org/gems/rack-test-0.6.3.gem")
+      .to_return(body: File.open(fixture_file("rack-test-0.6.3.gem")))
 
     with_empty_multi_store do |store|
       output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path)

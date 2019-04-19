@@ -116,13 +116,13 @@ class Gel::Catalog::CompactIndex
         version, rest = line.split(" ", 2)
         deps, attrs = rest.split("|", 2)
 
-        deps = deps.split(",").map do |entry|
+        deps = deps.split(",").map { |entry|
           key, constraints = entry.split(":", 2)
           constraints = constraints.split("&")
           [key, constraints]
-        end
+        }
 
-        attributes = { dependencies: deps }
+        attributes = {dependencies: deps}
         attrs.scan(/(\w+):((?:[^,]+|,(?!\w+:))*)/) do |key, value|
           attributes[key.to_sym] = value
         end
