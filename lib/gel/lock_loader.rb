@@ -40,6 +40,7 @@ class Gel::LockLoader
           yield sym, body, name, version, platform, deps
         end
       when "PLATFORMS", "DEPENDENCIES"
+      when "RUBY VERSION"
       when "BUNDLED WITH"
       else
         warn "Unknown lockfile section #{section.inspect}"
