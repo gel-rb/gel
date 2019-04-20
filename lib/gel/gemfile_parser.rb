@@ -55,12 +55,12 @@ module Gel::GemfileParser
       @result.add_gem(name, requirements, options)
     end
 
-    def gemspec
-      if file = Dir["#{File.dirname(@result.filename)}/*.gemspec"].first
+    def gemspec(path: ".", development_group: :development)
+      if file = Dir[File.join(File.expand_path(path, File.dirname(@result.filename)), "/*.gemspec")].first
         spec = Gel::GemspecParser.parse(File.read(file), file)
-        gem spec.name, path: "."
+        gem spec.name, path: path
         spec.development_dependencies.each do |name, constraints|
-          gem name, constraints, group: :development
+          gem name, constraints, group: development_group
         end
       end
     end
