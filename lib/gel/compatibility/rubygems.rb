@@ -137,8 +137,8 @@ module Gem
 
     if g = Gel::Environment.activated_gems[gem_name]
       Gel::Environment.gem g.name, version if version
-    elsif g = Gel::Environment.find_gem(gem_name, *version) do |g|
-        g.executables.include?(bin_name)
+    elsif g = Gel::Environment.find_gem(gem_name, *version) do |gem|
+        gem.executables.include?(bin_name)
       end
 
       Gel::Environment.gem g.name, g.version

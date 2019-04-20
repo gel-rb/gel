@@ -9,3 +9,9 @@
 /man/man?/*.?
 
 /test/fixtures/*.gem
+
+# Jetbrains
+.idea
+
+# RVM
+.ruby-gemset
