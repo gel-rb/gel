@@ -17,10 +17,6 @@ class << Minitest
   end
 end
 
-if false
-  Minitest.after_run { $stderr.puts Thread.list.map(&:inspect) }
-end
-
 def fixture_file(path)
   File.expand_path("../fixtures/#{path}", __FILE__)
 end
@@ -72,13 +68,13 @@ if respond_to?(:fork, true)
   end
 
   def subprocess_output(code, **kwargs)
-    source = caller_locations.first
+    source = caller_locations(1..1).first
 
-    read_from_fork do |ch|
+    read_from_fork { |ch|
       # This (and the matching one below the eval) allow DeepCover's
       # clone mode to correctly pick up activity in the forked process.
-      if defined?($_cov)
-        $_cov.each_value { |arr| arr.map! { 0 } }
+      if defined?($_cov) # rubocop:disable GlobalVars
+        $_cov.each_value { |arr| arr.map! { 0 } } # rubocop:disable GlobalVars
         require "fileutils"
       end
 
@@ -90,7 +86,7 @@ if respond_to?(:fork, true)
         b.local_variable_set(name, value)
       end
 
-      eval code, b, source.path, source.lineno + 1
+      eval code, b, source.path, source.lineno + 1 # rubocop:disable Eval
 
       if defined?(DeepCover::CLONE_MODE_ENTRY_TOP_LEVEL_MODULES)
         # We may have broken require by now. DeepCover will
@@ -100,13 +96,13 @@ if respond_to?(:fork, true)
 
         DeepCover::CLONE_MODE_ENTRY_TOP_LEVEL_MODULES.first::DeepCover.save
       end
-    end.lines.map(&:chomp)
+    }.lines.map(&:chomp)
   end
 
   def read_from_fork
     r, w = IO.pipe
 
-    child_pid = fork do
+    child_pid = fork {
       r.close
 
       yield w
@@ -114,7 +110,7 @@ if respond_to?(:fork, true)
       w.close
 
       exit! true
-    end
+    }
 
     w.close
     r.read
@@ -126,7 +122,7 @@ if respond_to?(:fork, true)
   end
 elsif defined?(org.jruby.Ruby)
   def subprocess_output(code, **kwargs)
-    source = caller_locations.first
+    source = caller_locations(1..1).first
 
     io = StringIO.new
 
@@ -145,7 +141,7 @@ elsif defined?(org.jruby.Ruby)
   end
 else
   def subprocess_output(code, **kwargs)
-    source = caller_locations.first
+    source = caller_locations(1..1).first
 
     wrapped_code = kwargs.map { |name, value| "#{name} = Marshal.load(#{Marshal.dump(value).inspect})\n" }.join +
       "eval(#{code.inspect}, binding, #{source.path.inspect}, #{source.lineno + 1})"

@@ -60,25 +60,25 @@ class Gel::GemspecParser
       in_read, in_write = IO.pipe
       out_read, out_write = IO.pipe
 
-      pid = spawn({ "RUBYLIB" => Gel::Environment.modified_rubylib, "GEL_GEMFILE" => "", "GEL_LOCKFILE" => "" },
-                  RbConfig.ruby,
-                  "-r", File.expand_path("compatibility", __dir__),
-                  "-r", File.expand_path("gemspec_parser", __dir__),
-                  "-e", "puts Marshal.dump(Gel::GemspecParser.parse($stdin.read, ARGV.shift, ARGV.shift.to_i, root: ARGV.shift, isolate: false))",
-                  filename, lineno.to_s, root,
-                  in: in_read, out: out_write)
+      pid = spawn({"RUBYLIB" => Gel::Environment.modified_rubylib, "GEL_GEMFILE" => "", "GEL_LOCKFILE" => ""},
+        RbConfig.ruby,
+        "-r", File.expand_path("compatibility", __dir__),
+        "-r", File.expand_path("gemspec_parser", __dir__),
+        "-e", "puts Marshal.dump(Gel::GemspecParser.parse($stdin.read, ARGV.shift, ARGV.shift.to_i, root: ARGV.shift, isolate: false))",
+        filename, lineno.to_s, root,
+        in: in_read, out: out_write)
 
       in_read.close
       out_write.close
 
-      write_thread = Thread.new do
+      write_thread = Thread.new {
         in_write.write content
         in_write.close
-      end
+      }
 
-      read_thread = Thread.new do
+      read_thread = Thread.new {
         out_read.read
-      end
+      }
 
       _, status = Process.waitpid2(pid)
       raise Gel::Error::ParsedGemspecError unless status.success?

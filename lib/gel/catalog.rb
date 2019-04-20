@@ -82,7 +82,7 @@ class Gel::Catalog
     path
   end
 
-  VARIANT_GEMS = %w(libv8)
+  VARIANT_GEMS = %w[libv8]
   def guess_version(name, version)
     if VARIANT_GEMS.include?(name)
       [name, "#{version}-#{platform_specific_version}"]
@@ -109,7 +109,7 @@ class Gel::Catalog
     uri = URI(uri).dup
     uri.scheme = uri.scheme.downcase
     uri.host = uri.host.downcase
-    if auth = Gel::Environment.config[uri.host]
+    if (auth = Gel::Environment.config[uri.host])
       uri.userinfo = auth
     end
     uri.path = "/" if uri.path == ""

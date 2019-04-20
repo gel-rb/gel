@@ -3,36 +3,36 @@
 require "test_helper"
 
 class GemfileParserTest < Minitest::Test
-  EXAMPLE_LINE, EXAMPLE = __LINE__ + 1, <<'GEMFILE'
-source "https://rubygems.org"
-ruby RUBY_VERSION
+  EXAMPLE_LINE, EXAMPLE = __LINE__ + 1, <<~'GEMFILE'
+    source "https://rubygems.org"
+    ruby RUBY_VERSION
 
-git_source(:github) { |repo| "https://github.com/#{repo}.git" }
+    git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-gem "rake", ">= 11.1"
-gem "mocha", require: false
-gem "bcrypt", "~> 3.1.11", require: false
-gem "stopgap_13632", platforms: :mri if RUBY_VERSION == "2.2.8"
+    gem "rake", ">= 11.1"
+    gem "mocha", require: false
+    gem "bcrypt", "~> 3.1.11", require: false
+    gem "stopgap_13632", platforms: :mri if RUBY_VERSION == "2.2.8"
 
-group :doc do
-  gem "w3c_validators", require: "w3c_validators/validator"
-end
+    group :doc do
+      gem "w3c_validators", require: "w3c_validators/validator"
+    end
 
-group :test do
-  gem "minitest-bisect"
+    group :test do
+      gem "minitest-bisect"
 
-  platforms :mri do
-    gem "stackprof"
-    gem "byebug"
-  end
+      platforms :mri do
+        gem "stackprof"
+        gem "byebug"
+      end
 
-  gem "benchmark-ips"
-end
+      gem "benchmark-ips"
+    end
 
-source "https://rails-assets.org" do
-  gem "rails-assets-bootstrap"
-end
-GEMFILE
+    source "https://rails-assets.org" do
+      gem "rails-assets-bootstrap"
+    end
+  GEMFILE
 
   def test_simple_parse
     result = Gel::GemfileParser.parse(EXAMPLE, __FILE__, EXAMPLE_LINE)
@@ -75,21 +75,21 @@ GEMFILE
 
   def test_autorequire_real
     with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
-      output = subprocess_output(<<-'END', store: store)
-        result = Gel::GemfileParser.parse(<<GEMFILE, __FILE__, __LINE__ + 1)
-gem "rack", require: "rack/query_parser"
-gem "rack-test"
-gem "hoe", require: false
-GEMFILE
+      output = subprocess_output(<<~'END', store: store)
+                result = Gel::GemfileParser.parse(<<GEMFILE, __FILE__, __LINE__ + 1)
+        gem "rack", require: "rack/query_parser"
+        gem "rack-test"
+        gem "hoe", require: false
+        GEMFILE
 
-        Gel::Environment.open(store)
-        Gel::Environment.gem "rack"
-        Gel::Environment.gem "rack-test"
-        result.autorequire(Gel::Environment)
+                Gel::Environment.open(store)
+                Gel::Environment.gem "rack"
+                Gel::Environment.gem "rack-test"
+                result.autorequire(Gel::Environment)
 
-        puts $".grep(/\brack\//).first
-        puts $".grep(/rack\/test\//).first
-        puts $".grep(/\bhoe\b/).first
+                puts $".grep(/\brack\//).first
+                puts $".grep(/rack\/test\//).first
+                puts $".grep(/\bhoe\b/).first
       END
 
       # The first file loaded from rack is the one that was requested

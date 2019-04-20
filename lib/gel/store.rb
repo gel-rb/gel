@@ -29,11 +29,9 @@ class Gel::Store
     bindir = normalize_string(bindir)
     executables = executables.map { |v| normalize_string(v) }
     require_paths = require_paths.map { |v| normalize_string(v) }
-    _dependencies = {}
-    dependencies.each do |key, dep|
-      _dependencies[normalize_string(key)] = dep.map { |pair| pair.map { |v| normalize_string(v) } }
-    end
-    dependencies = _dependencies
+    dependencies = Hash[dependencies.map { |key, dep|
+      [normalize_string(key), dep.map { |pair| pair.map { |v| normalize_string(v) } }]
+    }]
     extensions = !!extensions
 
     @primary_db.writing do
@@ -74,7 +72,7 @@ class Gel::Store
 
         v, d = version
         ls = @rlib_db["#{name}-#{v}"] || []
-        unless sls = ls.assoc(d)
+        unless (sls = ls.assoc(d))
           sls = [d, []]
           ls << sls
         end
@@ -97,7 +95,7 @@ class Gel::Store
     result = {}
 
     name_version_pairs.each do |name, version|
-      if info = gem_info(name, version)
+      if (info = gem_info(name, version))
         result[name] = _gem(name, version, info)
       end
     end
@@ -119,7 +117,7 @@ class Gel::Store
   def libs_for_gems(versions)
     @rlib_db.reading do
       versions.each do |name, version|
-        if libs = @rlib_db["#{name}-#{version}"]
+        if (libs = @rlib_db["#{name}-#{version}"])
           yield name, version, libs
         end
       end
@@ -127,7 +125,7 @@ class Gel::Store
   end
 
   def gems_for_lib(file)
-    if h = @lib_db[file]
+    if (h = @lib_db[file])
       h.each do |name, versions|
         versions.each do |version|
           if version.is_a?(Array)
@@ -146,9 +144,9 @@ class Gel::Store
 
     if gem_name
       @primary_db.reading do
-        return unless vs = @primary_db["v/#{gem_name}"]
+        return unless (vs = @primary_db["v/#{gem_name}"])
         vs.each do |version|
-          if info = @primary_db["i/#{gem_name}/#{version}"]
+          if (info = @primary_db["i/#{gem_name}/#{version}"])
             yield _gem(gem_name, version, info)
           end
         end

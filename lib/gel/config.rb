@@ -11,7 +11,7 @@ class Gel::Config
     @config ||= read
   end
 
-  def [](group = nil, key)
+  def [](group = nil, key) # rubocop:disable OptionalArguments
     if group.nil?
       group, key = key.split(".", 2)
     end
@@ -19,7 +19,7 @@ class Gel::Config
     (group ? (config[group.to_s] || {}) : config)[key.to_s]
   end
 
-  def []=(group = nil, key, value)
+  def []=(group = nil, key, value) # rubocop:disable OptionalArguments
     if group.nil?
       group, key = key.split(".", 2)
     end
@@ -57,7 +57,7 @@ class Gel::Config
     Dir.mkdir(@root) unless Dir.exist?(@root)
 
     tempfile = File.join(@root, ".config.#{Process.pid}")
-    File.open(tempfile, "w", 0644) do |f|
+    File.open(tempfile, "w", 0o644) do |f|
       data.each do |key, value|
         next if value.is_a?(Hash)
         f.puts("#{key}: #{value}")

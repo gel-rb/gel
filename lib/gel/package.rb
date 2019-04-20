@@ -56,13 +56,13 @@ module Gel
       # Based on YAML.safe_load
       def self.load(yaml, filename)
         result = if Psych::VERSION < "3.1" # Ruby 2.5 & below
-                   ::YAML.parse(yaml, filename)
-                 else
-                   ::YAML.parse(yaml, filename: filename)
-                 end
+          ::YAML.parse(yaml, filename)
+        else
+          ::YAML.parse(yaml, filename: filename)
+        end
         return unless result
 
-        class_loader = self.new
+        class_loader = new
         scanner      = ::YAML::ScalarScanner.new class_loader
 
         visitor = ::YAML::Visitors::ToRuby.new scanner, class_loader
@@ -70,35 +70,35 @@ module Gel
       end
 
       def initialize
-        super(%w(Symbol Time), [])
+        super(%w[Symbol Time], [])
       end
 
       def find(klass)
         case klass
         when "Gem::Specification"
-          Gem_Specification
+          GemSpecification
         when "Gem::Version"
-          Gem_Version
+          GemVersion
         when "Gem::Version::Requirement", "Gem::Requirement"
-          Gem_Requirement
+          GemRequirement
         when "Gem::Platform"
-          Gem_Platform
+          GemPlatform
         when "Gem::Dependency"
-          Gem_Dependency
+          GemDependency
         else
           super
         end
       end
 
-      class Gem_Specification
+      class GemSpecification
         attr_accessor :architecture, :bindir, :executables, :name, :require_paths, :specification_version, :version, :dependencies, :extensions
       end
-      class Gem_Dependency
+      class GemDependency
         attr_accessor :name, :requirement, :type, :version_requirements
       end
-      class Gem_Platform; end
-      Gem_Version = Gel::Support::GemVersion
-      class Gem_Requirement
+      class GemPlatform; end
+      GemVersion = Gel::Support::GemVersion
+      class GemRequirement
         attr_accessor :requirements
       end
     end
@@ -110,7 +110,7 @@ module Gel
           stream.rewind
 
           checksums.each do |type, map|
-            next unless %w(SHA1 SHA512).include?(type)
+            next unless %w[SHA1 SHA512].include?(type)
             calculated = Digest(type).hexdigest(data)
             raise "#{type} checksum mismatch on #{filename}" unless calculated == map[filename]
           end
@@ -123,7 +123,7 @@ module Gel
     def self.extract(filename, receiver)
       File.open(filename) do |io|
         Gel::Support::Tar::TarReader.new(io) do |package_reader|
-          sums = with_file(package_reader, "checksums.yaml.gz", nil) do |sum_stream|
+          sums = with_file(package_reader, "checksums.yaml.gz", nil) { |sum_stream|
             yaml = Zlib::GzipReader.new(sum_stream).read
 
             if Psych::VERSION < "3.1" # Ruby 2.5 & below
@@ -131,13 +131,13 @@ module Gel
             else
               ::YAML.safe_load(yaml, filename: "#{filename}:checksums.yaml.gz")
             end
-          end
+          }
 
-          spec = with_file(package_reader, "metadata.gz", sums) do |meta_stream|
+          (spec = with_file(package_reader, "metadata.gz", sums) { |meta_stream|
             yaml = Zlib::GzipReader.new(meta_stream).read
             loaded = YAMLLoader.load(yaml, "#{filename}:metadata.gz")
             Specification.new(loaded)
-          end or raise "no metadata.gz"
+          }) || raise("no metadata.gz")
 
           return receiver.gem(spec) do |target|
             with_file(package_reader, "data.tar.gz", sums) do |data_stream|
@@ -147,7 +147,7 @@ module Gel
                 end
               end
               true
-            end or raise "no data.tar.gz"
+            end || raise("no data.tar.gz")
           end
         end
       end

@@ -174,7 +174,7 @@ class ActivateTest < Minitest::Test
       END
 
       assert_equal ["#{store.root}/gems/fast_blank-1.0.0/lib",
-                    "#{store.root}/ext/fast_blank-1.0.0"], output.shift.split(":")
+                    "#{store.root}/ext/fast_blank-1.0.0",], output.shift.split(":")
 
       assert_equal "false,true,true", output.shift
     end

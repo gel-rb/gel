@@ -1,4 +1,5 @@
 require "rake/testtask"
+require "standard/rake"
 
 Rake::TestTask.class_eval do
   def rake_include_arg
@@ -39,7 +40,7 @@ MAN_PAGES = MAN_SOURCES.map { |source| source.delete(".ronn") }
 
 file MAN_PAGES => :man
 
-task :man => MAN_SOURCES do
+task man: MAN_SOURCES do
   sh "ronn --roff --manual 'Gel Manual' #{Shellwords.shelljoin MAN_SOURCES}"
 end
 
@@ -51,4 +52,4 @@ task build: :man do
   sh "gem build -o pkg/gel-#{version}.gem gel.gemspec"
 end
 
-task default: :test
+task default: [:test, "standard:fix"]

@@ -16,9 +16,9 @@ class PackageTest < Minitest::Test
   def test_parse_files
     files_seen = []
 
-    result = Gel::Package::Inspector.new do |filename, io|
+    result = Gel::Package::Inspector.new { |filename, io|
       files_seen << filename
-    end
+    }
 
     Gel::Package.extract(fixture_file("rack-2.0.3.gem"), result)
 
@@ -28,9 +28,9 @@ class PackageTest < Minitest::Test
   def test_parse_file_content
     spec_body = nil
 
-    result = Gel::Package::Inspector.new do |filename, io|
+    result = Gel::Package::Inspector.new { |filename, io|
       spec_body = io.read if filename == "SPEC"
-    end
+    }
 
     Gel::Package.extract(fixture_file("rack-2.0.3.gem"), result)
 

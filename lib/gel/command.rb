@@ -6,7 +6,7 @@ require_relative "error"
 class Gel::Command
   def self.run(command_line)
     command_line = command_line.dup
-    if command_name = extract_word(command_line)
+    if (command_name = extract_word(command_line))
       const = command_name.downcase.sub(/^./, &:upcase).gsub(/[-_]./) { |s| s[1].upcase }
       if Gel::Command.const_defined?(const, false)
         command = Gel::Command.const_get(const, false).new
@@ -20,20 +20,20 @@ class Gel::Command
       end
     else
       puts <<~EOF
-      Gel doesn't have a default command; please run `gel install`
+        Gel doesn't have a default command; please run `gel install`
       EOF
     end
-  rescue Exception => ex
-    raise if $DEBUG || (command && command.reraise)
+  rescue Exception => ex # rubocop:disable RescueException
+    raise if $DEBUG || (command&.reraise)
     handle_error(ex)
   end
 
   def self.handle_error(ex)
     case ex
     when Gel::ReportableError
-      $stderr.puts "ERROR: #{ex.message}"
-      if more = ex.details
-        $stderr.puts more
+      warn "ERROR: #{ex.message}"
+      if (more = ex.details)
+        warn more
       end
 
       exit ex.exit_code
@@ -63,7 +63,7 @@ class Gel::Command
   end
 
   def self.extract_word(arguments)
-    if idx = arguments.index { |w| w =~ /^[^-]/ }
+    if (idx = arguments.index { |w| w =~ /^[^-]/ })
       arguments.delete_at(idx)
     end
   end

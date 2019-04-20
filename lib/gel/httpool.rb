@@ -87,7 +87,7 @@ class Gel::Httpool
         if http
           checkin ident, http
         end
-      rescue StandardError => exception
+      rescue => exception
         synchronize do
           unless Thread.current[:discard]
             Thread.current[:error] = exception
@@ -108,9 +108,7 @@ class Gel::Httpool
       end
     end
 
-    if http
-      http.finish
-    end
+    http&.finish
   end
 
   def checkout(ident, uri)
@@ -139,7 +137,6 @@ class Gel::Httpool
     http = checkout(ident, uri)
 
     yield http
-
   ensure
     if http
       checkin ident, http

@@ -31,8 +31,8 @@ class Gel::Installer
     @download_pool = Gel::WorkPool.new(DOWNLOAD_CONCURRENCY, monitor: self, name: "gel-download", collect_errors: true)
     @compile_pool = Gel::WorkPool.new(COMPILE_CONCURRENCY, monitor: self, name: "gel-compile", collect_errors: true)
 
-    @download_pool.queue_order = -> ((_, name)) { -@weights[name] }
-    @compile_pool.queue_order = -> ((_, name)) { -@weights[name] }
+    @download_pool.queue_order = ->((_, name)) { -@weights[name] }
+    @compile_pool.queue_order = ->((_, name)) { -@weights[name] }
 
     @git_depot = Gel::GitDepot.new(store)
 
@@ -43,7 +43,10 @@ class Gel::Installer
     deps = deps.dup
 
     synchronize do
-      @dependencies.update(deps) { |k, l, r| deps[k] = r - l; l | r }
+      @dependencies.update(deps) do |k, l, r|
+        deps[k] = r - l
+        l | r
+      end
       return if deps.values.all?(&:empty?)
 
       deps.each do |dependent, dependencies|
@@ -89,7 +92,7 @@ class Gel::Installer
 
   def download_gem(catalogs, name, version)
     catalogs.each do |catalog|
-      if fpath = catalog.cached_gem(name, version)
+      if (fpath = catalog.cached_gem(name, version))
         return fpath
       end
     end
@@ -153,9 +156,9 @@ class Gel::Installer
 
   def wait(output = nil)
     clear = ""
-    tty = output && output.isatty
+    tty = output&.isatty
 
-    pools = { "Downloading" => @download_pool, "Compiling" => @compile_pool }
+    pools = {"Downloading" => @download_pool, "Compiling" => @compile_pool}
 
     return if pools.values.all?(&:idle?)
 
@@ -167,10 +170,10 @@ class Gel::Installer
 
           if tty
             messages = pools.map { |label, pool| pool_status(label, pool, label == "Compiling" ? @compile_waiting.size : 0) }.compact
-            if messages.empty?
-              msgline = ""
+            msgline = if messages.empty?
+              ""
             else
-              msgline = "[" + messages.join(";   ") + "]"
+              "[" + messages.join(";   ") + "]"
             end
             clear = "\r" + " " * msgline.size + "\r"
             output.write msgline
@@ -182,7 +185,7 @@ class Gel::Installer
       end
     end
 
-    pools.values.map do |pool|
+    pools.values.map { |pool|
       Thread.new do
         Thread.current.abort_on_exception = true
 
@@ -190,14 +193,12 @@ class Gel::Installer
         pools.values.each(&:tick!)
         pool.stop
       end
-    end.each(&:join)
+    }.each(&:join)
 
     errors = @download_pool.errors + @compile_pool.errors
 
     if errors.empty?
-      if output
-        output.write "Installed #{@download_pool.count} gems\n"
-      end
+      output&.write "Installed #{@download_pool.count} gems\n"
     else
       if output
         output.write "Installed #{@download_pool.count - errors.size} of #{@download_pool.count} gems\n\nErrors encountered with #{errors.size} gems:\n\n"

@@ -15,7 +15,7 @@ class Gel::Package::Installer
     g = GemInstaller.new(spec, @store)
     begin
       yield g
-    rescue Exception
+    rescue Exception # rubocop:disable RescueException
       g.abort!
       raise
     end
@@ -54,10 +54,10 @@ class Gel::Package::Installer
     end
 
     def abort!
-      $stderr.puts "FileUtils.rm_rf(#{root.inspect})" if root
-      $stderr.puts "FileUtils.rm_rf(#{build_path.inspect})" if build_path
-      #FileUtils.rm_rf(root) if root
-      #FileUtils.rm_rf(build_path) if build_path
+      warn "FileUtils.rm_rf(#{root.inspect})" if root
+      warn "FileUtils.rm_rf(#{build_path.inspect})" if build_path
+      # FileUtils.rm_rf(root) if root
+      # FileUtils.rm_rf(build_path) if build_path
     end
 
     def needs_compile?
@@ -89,7 +89,7 @@ class Gel::Package::Installer
         yield work_dir, short_install_dir, local_config.path, log
       end
     ensure
-      local_config.unlink if local_config
+      local_config&.unlink
     end
 
     def gemfile_and_lockfile(rake: false)
@@ -140,8 +140,8 @@ class Gel::Package::Installer
       pid = spawn(
         env,
         *command,
-        chdir: work_dir,
-        in: IO::NULL,
+        :chdir => work_dir,
+        :in => IO::NULL,
         [:out, :err] => log,
         **options,
       )
@@ -154,7 +154,7 @@ class Gel::Package::Installer
       with_build_environment(ext, install_dir) do |work_dir, short_install_dir, local_config_path, log|
         status = build_command(
           work_dir, log,
-          { "MAKEFLAGS" => "-j3" },
+          {"MAKEFLAGS" => "-j3"},
           RbConfig.ruby,
           "-r", local_config_path,
           File.basename(ext),
@@ -186,9 +186,9 @@ class Gel::Package::Installer
           raise "mkrf_conf exited with #{status.exitstatus}" unless status.success?
         end
 
-        status = build_command(
+        build_command(
           work_dir, log,
-          { "RUBYARCHDIR" => short_install_dir, "RUBYLIBDIR" => short_install_dir },
+          {"RUBYARCHDIR" => short_install_dir, "RUBYLIBDIR" => short_install_dir},
           RbConfig.ruby,
           "-r", File.expand_path("../command", __dir__),
           "-e", "Gel::Command.run(ARGV)",
@@ -229,11 +229,11 @@ class Gel::Package::Installer
         end
 
         if build_path
-          files = Dir["#{build_path}/**/#{loadable_file_types_pattern}"].map do |file|
+          files = Dir["#{build_path}/**/#{loadable_file_types_pattern}"].map { |file|
             file[build_path.size + 1..-1]
-          end.map do |file|
+          }.map { |file|
             file.sub(loadable_file_types_re, "")
-          end
+          }
 
           store.add_lib(spec.name, [spec.version, Gel::StoreGem::EXTENSION_SUBDIR_TOKEN], files)
         end
@@ -253,11 +253,11 @@ class Gel::Package::Installer
       end
       raise "won't overwrite #{target}" if File.exist?(target)
       FileUtils.mkdir_p(File.dirname(target))
-      mode = 0444
-      mode |= source_mode & 0200
-      mode |= 0111 if source_mode & 0111 != 0
-      if exe = spec.executables.find { |e| filename == "#{spec.bindir}/#{e}" }
-        mode |= 0111
+      mode = 0o444
+      mode |= source_mode & 0o200
+      mode |= 0o111 if source_mode & 0o111 != 0
+      if (exe = spec.executables.find { |e| filename == "#{spec.bindir}/#{e}" })
+        mode |= 0o111
         @root_store.stub_set.add(File.basename(@store.root), [exe])
       end
       File.open(target, "wb", mode) do |f|

@@ -10,11 +10,11 @@ class Gel::Command::Lock < Gel::Command
 
     until command_line.empty?
       case argument = command_line.shift
-      when "--strict"; strict = true
-      when "--major"; mode = :major
-      when "--minor"; mode = :minor
-      when "--patch"; mode = :patch
-      when "--hold"; mode = :hold
+      when "--strict" then strict = true
+      when "--major" then mode = :major
+      when "--minor" then mode = :minor
+      when "--patch" then mode = :patch
+      when "--hold" then mode = :hold
       when /\A--lockfile(?:=(.*))?\z/
         options[:lockfile] = $1 || command_line.shift
       when /\A((?!-)[A-Za-z0-9_-]+)(?:(?:[\ :\/]|(?=[<>~=]))([<>~=,\ 0-9A-Za-z.-]+))?\z/x

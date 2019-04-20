@@ -60,11 +60,11 @@ class Gel::GitDepot
     destination = git_path(remote, revision)
     return destination if Dir.exist?(destination)
 
-    mirror = remote(remote) do |cache_dir|
+    mirror = remote(remote) { |cache_dir|
       # Check whether the revision is already in our mirror
       status = git(remote, "rev-list", "--quiet", revision, chdir: cache_dir)
       status.success?
-    end
+    }
 
     status = git(remote, "clone", mirror, destination)
     raise "git clone --local failed" unless status.success?

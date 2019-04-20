@@ -5,7 +5,7 @@ require_relative "gemspec_parser"
 class Gel::PathCatalog
   attr_reader :path
 
-  DEFAULT_GLOB = '{,*,*/*}.gemspec'
+  DEFAULT_GLOB = "{,*,*/*}.gemspec"
 
   def initialize(path)
     @path = path

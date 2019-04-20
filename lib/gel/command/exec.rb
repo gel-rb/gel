@@ -42,14 +42,14 @@ class Gel::Command::Exec < Gel::Command
       return [File.expand_path(original_command), :path]
     end
 
-    if source = Gel::Environment.activate_for_executable([original_command])
-      if found = Gel::Environment.find_executable(original_command)
+    if (source = Gel::Environment.activate_for_executable([original_command]))
+      if (found = Gel::Environment.find_executable(original_command))
         return [found, source]
       end
     end
 
     path_attempts = ENV["PATH"].split(File::PATH_SEPARATOR).map { |e| File.join(e, original_command) }
-    if found = path_attempts.find { |path| File.executable?(path) }
+    if (found = path_attempts.find { |path| File.executable?(path) })
       return [File.expand_path(found), :path]
     end
 

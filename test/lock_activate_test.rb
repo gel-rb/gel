@@ -5,17 +5,17 @@ require "test_helper"
 class LockActivateTest < Minitest::Test
   def test_activate_simple_lockfile
     lockfile = Tempfile.new("")
-    lockfile.write(<<LOCKFILE)
-GEM
-  remote: https://rubygems.org/
-  specs:
-    rack (2.0.3)
-    rack-test (0.6.3)
-      rack (>= 1.0)
+    lockfile.write(<<~LOCKFILE)
+      GEM
+        remote: https://rubygems.org/
+        specs:
+          rack (2.0.3)
+          rack-test (0.6.3)
+            rack (>= 1.0)
 
-DEPENDENCIES
-  rack-test
-LOCKFILE
+      DEPENDENCIES
+        rack-test
+    LOCKFILE
     lockfile.close
 
     with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
@@ -44,22 +44,22 @@ LOCKFILE
   def test_activate_lockfile_with_path
     Dir.mktmpdir("rack-") do |temp_dir|
       lockfile = Tempfile.new("")
-      lockfile.write(<<LOCKFILE)
-PATH
-  remote: #{temp_dir}
-  specs:
-    rack (2.0.3)
+      lockfile.write(<<~LOCKFILE)
+        PATH
+          remote: #{temp_dir}
+          specs:
+            rack (2.0.3)
 
-GEM
-  remote: https://rubygems.org/
-  specs:
-    rack-test (0.6.3)
-      rack (>= 1.0)
+        GEM
+          remote: https://rubygems.org/
+          specs:
+            rack-test (0.6.3)
+              rack (>= 1.0)
 
-DEPENDENCIES
-  rack!
-  rack-test
-LOCKFILE
+        DEPENDENCIES
+          rack!
+          rack-test
+      LOCKFILE
       lockfile.close
 
       with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
@@ -89,24 +89,24 @@ LOCKFILE
   end
 
   def test_ignore_gems_excluded_by_gemfile
-    gemfile_content = <<GEMFILE
-gem "rack"
-gem "rack-test", platforms: :rbx
-GEMFILE
+    gemfile_content = <<~GEMFILE
+      gem "rack"
+      gem "rack-test", platforms: :rbx
+    GEMFILE
 
     lockfile = Tempfile.new("")
-    lockfile.write(<<LOCKFILE)
-GEM
-  remote: https://rubygems.org/
-  specs:
-    rack (2.0.3)
-    rack-test (0.6.3)
-      rack (>= 1.0)
+    lockfile.write(<<~LOCKFILE)
+      GEM
+        remote: https://rubygems.org/
+        specs:
+          rack (2.0.3)
+          rack-test (0.6.3)
+            rack (>= 1.0)
 
-DEPENDENCIES
-  rack
-  rack-test
-LOCKFILE
+      DEPENDENCIES
+        rack
+        rack-test
+    LOCKFILE
     lockfile.close
 
     with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
@@ -130,22 +130,22 @@ LOCKFILE
   end
 
   def test_ignore_dependent_gems_excluded_by_gemfile
-    gemfile_content = <<GEMFILE
-gem "rack-test", platforms: :rbx
-GEMFILE
+    gemfile_content = <<~GEMFILE
+      gem "rack-test", platforms: :rbx
+    GEMFILE
 
     lockfile = Tempfile.new("")
-    lockfile.write(<<LOCKFILE)
-GEM
-  remote: https://rubygems.org/
-  specs:
-    rack (2.0.3)
-    rack-test (0.6.3)
-      rack (>= 1.0)
+    lockfile.write(<<~LOCKFILE)
+      GEM
+        remote: https://rubygems.org/
+        specs:
+          rack (2.0.3)
+          rack-test (0.6.3)
+            rack (>= 1.0)
 
-DEPENDENCIES
-  rack-test
-LOCKFILE
+      DEPENDENCIES
+        rack-test
+    LOCKFILE
     lockfile.close
 
     with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|

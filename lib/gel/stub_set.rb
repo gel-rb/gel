@@ -37,11 +37,11 @@ class Gel::StubSet
   def create_stub(exe)
     Dir.mkdir(@dir) unless Dir.exist?(@dir)
 
-    File.open(bin(exe), "w", 0755) do |f|
-      f.write(<<STUB)
-#!/usr/bin/env gel stub #{exe}
-# This file is generated and managed by Gel.
-STUB
+    File.open(bin(exe), "w", 0o755) do |f|
+      f.write(<<~STUB)
+        #!/usr/bin/env gel stub #{exe}
+        # This file is generated and managed by Gel.
+      STUB
     end
   end
 

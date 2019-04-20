@@ -147,7 +147,7 @@ end
 class Gel::DB::SDBM < Gel::DB
   prepend Gel::DB::AutoTransaction
   SDBM_MAX_STORE_SIZE = 1000 - 1 # arbitrary on PBLKSIZ-N
-  SAFE_DELIMITER = '---'
+  SAFE_DELIMITER = "---"
 
   def initialize(root, name)
     @sdbm = ::SDBM.new("#{root}/#{name}")
@@ -183,14 +183,13 @@ class Gel::DB::SDBM < Gel::DB
     return nil unless value
 
     if value =~ /\A~(\d+)\z/
-      value = $1.to_i.times.map do |idx|
+      value = $1.to_i.times.map { |idx|
         @sdbm["#{key}#{SAFE_DELIMITER}#{idx}"]
-      end.join
+      }.join
     end
 
-    return Marshal.load(value)
+    Marshal.load(value)
   end
-
 
   ##
   # SDBM has an arbitrary limit on the size of a string it stores,
@@ -208,9 +207,9 @@ class Gel::DB::SDBM < Gel::DB
 
     if count > 0
       count += 1
-      @sdbm["#{key.to_s}"] = "~#{count}"
+      @sdbm[key.to_s] = "~#{count}"
       count.times.map do |idx|
-        @sdbm["#{key.to_s}#{SAFE_DELIMITER}#{idx}"] = dump.slice!(0, SDBM_MAX_STORE_SIZE)
+        @sdbm["#{key}#{SAFE_DELIMITER}#{idx}"] = dump.slice!(0, SDBM_MAX_STORE_SIZE)
       end
     else
       @sdbm[key.to_s] = dump
