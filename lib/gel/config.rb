@@ -46,7 +46,7 @@ class Gel::Config
         elsif line =~ /\A\s*(?:#|\z)/
           # comment / empty
         else
-          raise "Unexpected config line #{line.inspect}"
+          raise Gel::Error::UnexpectedConfigError.new(line: line)
         end
       end
     end

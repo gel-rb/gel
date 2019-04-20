@@ -16,7 +16,7 @@ class Gel::Command
         command = Gel::Command::Exec.new
         command.run([command_name, *command_line])
       else
-        raise "Unknown command #{command_name.inspect}"
+        raise Gel::Error::UnknownCommandError.new(command_name: command_name)
       end
     else
       puts <<~EOF

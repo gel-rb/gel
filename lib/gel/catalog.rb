@@ -144,7 +144,7 @@ class Gel::Catalog
       end
     end
 
-    raise "Too many redirects for #{original_uri}"
+    raise Gel::Error::TooManyRedirectsError.new(original_uri: original_uri)
   end
 end
 
