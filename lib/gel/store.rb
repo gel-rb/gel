@@ -141,7 +141,7 @@ class Gel::Store
     end
   end
 
-  def each(gem_name = nil)
+  def each(gem_name = nil, &block)
     return enum_for(__callee__, gem_name) unless block_given?
 
     if gem_name
@@ -159,7 +159,6 @@ class Gel::Store
         gem_names << $1 if k =~ /\Av\/(.*)\z/
       end
 
-      block = Proc.new
       gem_names.each do |n|
         each(n, &block)
       end
