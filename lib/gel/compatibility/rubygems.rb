@@ -135,6 +135,15 @@ module Gem
       exec RbConfig.ruby, "--", $0, *ARGV
     end
 
+    if gem_name == "gel" && bin_name == "gel"
+      # Another extra-special case: gel is already activated, but it's
+      # being invoked via a rubygems-installed binstub. We can't
+      # activate gel inside gel, but we also don't need to: we know
+      # exactly which file they need.
+
+      return File.expand_path("../../../exe/gel", __dir__)
+    end
+
     if g = Gel::Environment.activated_gems[gem_name]
       Gel::Environment.gem g.name, version if version
     elsif g = Gel::Environment.find_gem(gem_name, *version) do |g|
