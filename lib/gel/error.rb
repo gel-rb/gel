@@ -142,6 +142,16 @@ module Gel::Error
     end
   end
 
+  class MkrfConfError < Gel::UserError
+    def initialzie(exitstatus:)
+      super
+    end
+
+    def message
+      "mkrf_conf exited with #{self[:exitstatus].inspect}"
+    end
+  end
+
   class NoGemfile < Gel::UserError
     def initialzie(path:)
       super
