@@ -65,9 +65,17 @@ module Gel::GemfileParser
       @result.add_gem(name, requirements, options)
     end
 
-    def gemspec(path: ".", development_group: :development)
-      if file = Dir[File.join(File.expand_path(path, File.dirname(@result.filename)), "/*.gemspec")].first
-        spec = Gel::GemspecParser.parse(File.read(file), file)
+    def gemspec(name: nil, path: ".", development_group: :development)
+      dirname = File.expand_path(path, File.dirname(@result.filename))
+      gemspecs = Dir[File.join(dirname, "*.gemspec")]
+      gemspecs.map! { |file| Gel::GemspecParser.parse(File.read(file), file) }
+      gemspecs.select! { |s| s.name == name } if name
+      if gemspecs.empty?
+        raise "No gemspecs at #{dirname}"
+      elsif gemspecs.count > 1
+        raise "Multiple gemspecs at #{dirname}"
+      else
+        spec = gemspecs[0]
         gem spec.name, path: path
         spec.development_dependencies.each do |name, constraints|
           gem name, constraints, group: development_group
