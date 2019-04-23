@@ -49,7 +49,7 @@ class Gel::LockLoader
   end
 
   def bundler_version
-    _, (version,) = lock_content.assoc("BUNDLED WITH")
+    _, version = lock_content.assoc("BUNDLED WITH")
     version
   end
 
