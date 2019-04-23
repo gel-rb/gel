@@ -4,8 +4,7 @@
 
 A modern gem manager.
 
-Gel is a lightweight alternative to Bundler. 
-
+Gel is a lightweight alternative to Bundler.
 
 |         |         Gel        | Bundler & Rubygems |
 |---------|--------------------|--------------------|
@@ -87,6 +86,15 @@ Use `gel install`, `gel lock`, `gel update`, and `gel exec` as you would the equ
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `bin/rake test` to run the tests.
+
+It's a good idea to setup your `$PATH` with a local version of gel.
+
+Open up your `.bashrc` or `.zshrc` and add `path-to-your-gel-repo/exe` onto your `$PATH`. NOTE: Add before the shell-setup invocation, and before any gem `bin` directory. Here is an example;
+
+```SHELL
+PATH="$HOME/projects/gel/exe:$PATH"
+eval "$(gel shell-setup)"
+```
 
 ## Contributing
 
