@@ -6,6 +6,12 @@ require "gel/package"
 require "gel/package/installer"
 
 class InstallTest < Minitest::Test
+  def test_no_gemfile
+    Gel::Environment.gemfile = nil
+    exception = assert_raises(Exception) { Gel::Environment.find_gemfile("/blub") }
+    assert_equal( "No Gemfile found in \"/blub\"", exception.message )
+  end
+
   def test_install_single_package
     Dir.mktmpdir do |dir|
       store = Gel::Store.new(dir)
