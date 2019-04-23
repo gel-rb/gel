@@ -183,7 +183,7 @@ class Gel::Package::Installer
             File.basename(ext),
             rake: true,
           )
-          raise "mkrf_conf exited with #{status.exitstatus}" unless status.success?
+          raise Gel::Error::ExtensionBuildError.new(program_name: "mkrf_conf", exitstatus: status.exitstatus) unless status.success?
         end
 
         status = build_command(
@@ -197,6 +197,7 @@ class Gel::Package::Installer
           "rake",
           rake: true,
         )
+        raise Gel::Error::ExtensionBuildError.new(program_name: "rake", exitstatus: status.exitstatus) unless status.success?
       end
     end
 

@@ -142,8 +142,18 @@ module Gel::Error
     end
   end
 
+  class ExtensionBuildError < Gel::UserError
+    def initialize(program_name:, exitstatus:)
+      super
+    end
+
+    def message
+      "#{self[:program_name].inspect} exited with #{self[:exitstatus].inspect}"
+    end
+  end
+
   class NoGemfile < Gel::UserError
-    def initialzie(path:)
+    def initialize(path:)
       super
     end
 
