@@ -122,7 +122,7 @@ module Gel::GemfileParser
 
     def add_gem(name, requirements, options)
       return if name == "bundler"
-      raise "Only git sources can specify a :branch" if options[:branch] && !options[:git]
+      raise "Only git sources can specify a :branch" if options[:branch] && !options[:git] && !options[:github]
       raise "Duplicate entry for gem #{name.inspect}" if @gems.assoc(name)
 
       @gems << [name, requirements, options]

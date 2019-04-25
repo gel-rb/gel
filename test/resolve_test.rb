@@ -462,6 +462,61 @@ LOCKFILE
     end
   end
 
+  def test_github_is_automatic_git_source
+    skip if ENV["CI"] # FIXME
+
+    Dir.mktmpdir do |shush_dir|
+
+      gemfile = <<GEMFILE
+source "https://gem-mimer.org"
+
+gem "activerecord"
+gem "example-ruby-gem", github: "jsyeo/example-ruby-gem", branch: "master"
+GEMFILE
+
+      stub_gem_mimer
+
+      assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile)
+GIT
+  remote: https://github.com/jsyeo/example-ruby-gem
+  revision: 59d40dc55382c9df042ef56ea6a1b4eeaddf929c
+  branch: master
+  specs:
+    example-ruby-gem (0.1.0)
+
+GEM
+  remote: https://gem-mimer.org/
+  specs:
+    activemodel (5.2.2)
+      activesupport (= 5.2.2)
+    activerecord (5.2.2)
+      activemodel (= 5.2.2)
+      activesupport (= 5.2.2)
+      arel (>= 9.0)
+    activesupport (5.2.2)
+      concurrent-ruby (~> 1.0, >= 1.0.2)
+      i18n (>= 0.7, < 2)
+      minitest (~> 5.1)
+      tzinfo (~> 1.1)
+    arel (9.0.0)
+    concurrent-ruby (1.1.4)
+    i18n (1.3.0)
+      concurrent-ruby (~> 1.0)
+    minitest (5.11.3)
+    thread_safe (0.3.6)
+    tzinfo (1.2.5)
+      thread_safe (~> 0.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  activerecord
+  example-ruby-gem
+LOCKFILE
+    end
+  end
+
   def test_conflicting_version_constraints
     gemfile = <<GEMFILE
 source "https://gem-mimer.org"

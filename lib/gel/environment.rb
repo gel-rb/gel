@@ -163,6 +163,14 @@ class Gel::Environment
         else
           [o[:git], :ref, o[:ref]]
         end
+      elsif o[:github]
+        if o[:branch]
+          ["https://github.com/" + o[:github], :branch, o[:branch]]
+        elsif o[:tag]
+          ["https://github.com/" + o[:github], :tag, o[:tag]]
+        else
+          ["https://github.com/" + o[:github], :ref, o[:ref]]
+        end
       end
     }.compact.uniq
 
