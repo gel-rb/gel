@@ -1,4 +1,5 @@
 require "rake/testtask"
+require "shellwords"
 
 Rake::TestTask.class_eval do
   def rake_include_arg
