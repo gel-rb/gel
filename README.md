@@ -68,11 +68,15 @@ Note that all of the performance numbers were gathered using just a regular lapt
 
 ## Installation
 
-Install the gem:
+If you're on a Mac, we recommend that you install via Homebrew:
+
+    $ brew install gel
+
+Otherwise, you can install Gel as a gem:
 
     $ gem install gel
 
-Then, either activate gel in your current shell:
+Then, either activate Gel in your current shell:
 
     $ eval "$(gel shell-setup)"
 
