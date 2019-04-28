@@ -1,0 +1,13 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+class HelpTest < Minitest::Test
+  def test_help
+    output = capture_stdout { Gel::Command::Help.run(["help"]) }
+
+    assert output =~ %r{Gel is a modern gem manager}
+    assert output =~ %r{Usage}
+    assert output =~ %r{https://gel.dev}
+  end
+end

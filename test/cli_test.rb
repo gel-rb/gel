@@ -20,6 +20,12 @@ class CLITest < Minitest::Test
     end
   end
 
+  def test_basic_help
+    Gel::Command::Help.expects(:new).returns(mock(run: true))
+
+    Gel::Command.run(%W(help))
+  end
+
   def test_basic_install
     Gel::Environment.expects(:activate).with(has_entries(install: true, output: $stderr))
 
