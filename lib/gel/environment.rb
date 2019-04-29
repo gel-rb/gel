@@ -141,7 +141,8 @@ class Gel::Environment
     output = nil if $DEBUG
 
     if lockfile && File.exist?(lockfile)
-      loader = Gel::LockLoader.new(lockfile, gemfile)
+      require_relative "resolved_gem_set"
+      gem_set = Gel::ResolvedGemSet.load(lockfile)
     end
 
     require_relative "catalog"
@@ -204,7 +205,7 @@ class Gel::Environment
     end
     require_relative "pub_grub/source"
 
-    strategy = loader && preference_strategy && preference_strategy.call(loader)
+    strategy = gem_set && preference_strategy && preference_strategy.call(gem_set)
     source = Gel::PubGrub::Source.new(gemfile, catalogs, ["ruby"], strategy)
     solver = PubGrub::VersionSolver.new(source: source)
     solver.define_singleton_method(:next_package_to_try) do
@@ -339,9 +340,9 @@ class Gel::Environment
       lock_content << ""
     end
 
-    if loader&.bundler_version
+    if gem_set&.bundler_version
       lock_content << "BUNDLED WITH"
-      lock_content << "   #{loader.bundler_version}"
+      lock_content << "   #{gem_set.bundler_version}"
       lock_content << ""
     end
 

@@ -2,8 +2,8 @@
 
 module Gel::PubGrub
   class PreferenceStrategy
-    def initialize(loader, overrides, bump: :major, strict: false)
-      @loader = loader
+    def initialize(gem_set, overrides, bump: :major, strict: false)
+      @gem_set = gem_set
       @overrides = overrides
       @bump = bump
       @strict = strict
@@ -50,10 +50,10 @@ module Gel::PubGrub
       @ranges ||=
         begin
           result = @overrides.dup
-          @loader.each_gem do |section, body, name, version, platform, deps|
+          @gem_set.gems.each do |name, resolved_gems|
             next if @overrides.key?(name)
 
-            result[name] = range_for(version, @bump)
+            result[name] = range_for(resolved_gems.first.version, @bump)
           end
           result.delete_if { |_, v| !v }
           result
