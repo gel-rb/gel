@@ -141,7 +141,8 @@ class Gel::Environment
     output = nil if $DEBUG
 
     if lockfile && File.exist?(lockfile)
-      loader = Gel::LockLoader.new(lockfile, gemfile)
+      require_relative "resolved_gem_set"
+      gem_set = Gel::ResolvedGemSet.load(lockfile)
     end
 
     require_relative "catalog"
@@ -204,7 +205,7 @@ class Gel::Environment
     end
     require_relative "pub_grub/source"
 
-    strategy = loader && preference_strategy && preference_strategy.call(loader)
+    strategy = gem_set && preference_strategy && preference_strategy.call(gem_set)
     source = Gel::PubGrub::Source.new(gemfile, catalogs, ["ruby"], strategy)
     solver = PubGrub::VersionSolver.new(source: source)
     solver.define_singleton_method(:next_package_to_try) do
@@ -241,111 +242,61 @@ class Gel::Environment
 
     catalog_pool.stop
 
-    lock_content = []
+    new_resolution = Gel::ResolvedGemSet.new
 
-    output_specs_for = lambda do |results|
-      lock_content << "  specs:"
-      results.each do |(package, version)|
-        next if package.name == "bundler" || package.name == "ruby" || package.name =~ /^~/
+    solution.each do |(package, version)|
+      next if package.name =~ /^~/
 
-        lock_content << "    #{package} (#{version})"
-
-        deps = source.dependencies_for(package, version)
-        next unless deps && deps.first
-
-        dep_lines = deps.map do |(dep_name, dep_requirements)|
-          next dep_name if dep_requirements == [">= 0"] || dep_requirements == []
-
-          req = Gel::Support::GemRequirement.new(dep_requirements)
-          req_strings = req.requirements.sort_by { |(_op, ver)| ver }.map { |(op, ver)| "#{op} #{ver}" }
-
-          "#{dep_name} (#{req_strings.join(", ")})"
-        end
-
-        dep_lines.sort.each do |line|
-          lock_content << "      #{line}"
-        end
-      end
-    end
-
-    grouped_graph = solution.sort_by { |package,_| package.name }.group_by { |(package, version)|
       spec = source.spec_for_version(package, version)
-      catalog = spec.catalog
-      catalog.is_a?(Gel::Catalog) || catalog.is_a?(Gel::StoreCatalog) ? nil : catalog
-    }
-    server_gems = grouped_graph.delete(nil)
 
-    grouped_graph.keys.sort_by do |catalog|
-      case catalog
-      when Gel::GitCatalog
-        [1, catalog.remote, catalog.revision]
-      when Gel::PathCatalog
-        [2, catalog.path]
-      end
-    end.each do |catalog|
-      case catalog
-      when Gel::GitCatalog
-        lock_content << "GIT"
-        lock_content << "  remote: #{catalog.remote}"
-        lock_content << "  revision: #{catalog.revision}"
-        lock_content << "  #{catalog.ref_type}: #{catalog.ref}" if catalog.ref
-      when Gel::PathCatalog
-        lock_content << "PATH"
-        lock_content << "  remote: #{catalog.path}"
-      end
+      type = case spec.catalog
+             when Gel::GitCatalog; :git
+             when Gel::PathCatalog; :path
+             else; :gem
+             end
 
-      output_specs_for.call(grouped_graph[catalog])
-      lock_content << ""
+      deps = source.dependencies_for(package, version)
+
+      platform = nil # TODO
+
+      body = nil
+
+      (new_resolution.gems[package.name] ||= []) <<
+        Gel::ResolvedGemSet::ResolvedGem.new(
+          type, body, package.name, version, platform,
+          deps.map do |(dep_name, dep_requirements)|
+            next dep_name if dep_requirements == [">= 0"] || dep_requirements == []
+
+            req = Gel::Support::GemRequirement.new(dep_requirements)
+            req_strings = req.requirements.sort_by { |(_op, ver)| ver }.map { |(op, ver)| "#{op} #{ver}" }
+
+            [dep_name, req_strings.join(", ")]
+          end,
+          set: new_resolution,
+          catalog: spec.catalog
+        )
     end
-
-    if server_gems
-      lock_content << "GEM"
-      server_catalogs.each do |catalog|
-        lock_content << "  remote: #{catalog}"
-      end
-      output_specs_for.call(server_gems)
-      lock_content << ""
-    end
-
-    lock_content << "PLATFORMS"
-    lock_content << "  ruby"
-    lock_content << ""
-
-    lock_content << "DEPENDENCIES"
-
-    bang_deps = gemfile.gems.select { |_, _, options|
-      options[:path] || options[:git] || options[:source]
-    }.map { |name, _, _| name }
 
     root_deps = source.root_dependencies
-    root_deps.sort_by { |name,_| name }.each do |name, constraints|
+    new_resolution.dependencies = root_deps.sort_by { |name, _| name }.map do |name, constraints|
       next if name =~ /^~/
 
-      bang = "!" if bang_deps.include?(name)
       if constraints == []
-        lock_content << "  #{name}#{bang}"
+        name
       else
         r = Gel::Support::GemRequirement.new(constraints)
         req_strings = r.requirements.sort_by { |(_op, ver)| ver }.map { |(op, ver)| "#{op} #{ver}" }
 
-        lock_content << "  #{name} (#{req_strings.join(", ")})#{bang}"
+        "#{name} (#{req_strings.join(", ")})"
       end
-    end
-    lock_content << ""
+    end.compact
 
-    unless gemfile.ruby.empty?
-      lock_content << "RUBY VERSION"
-      lock_content << "   #{RUBY_DESCRIPTION.split.first(2).join(" ")}"
-      lock_content << ""
-    end
+    new_resolution.platforms = ["ruby"]
+    new_resolution.server_catalogs = server_catalogs
+    new_resolution.bundler_version = gem_set&.bundler_version
+    new_resolution.ruby_version = RUBY_DESCRIPTION.split.first(2).join(" ") if gem_set&.ruby_version
 
-    if loader&.bundler_version
-      lock_content << "BUNDLED WITH"
-      lock_content << "   #{loader.bundler_version}"
-      lock_content << ""
-    end
-
-    lock_body = lock_content.join("\n")
+    lock_body = new_resolution.dump
 
     if lockfile
       output.puts "Writing lockfile to #{File.expand_path(lockfile)}" if output

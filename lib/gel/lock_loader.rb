@@ -1,64 +1,17 @@
 # frozen_string_literal: true
 
+require_relative "resolved_gem_set"
+
 class Gel::LockLoader
-  attr_reader :filename
   attr_reader :gemfile
 
   def initialize(filename, gemfile = nil)
-    @filename = filename
+    @gem_set = Gel::ResolvedGemSet.load(filename)
     @gemfile = gemfile
   end
 
-  def lock_content
-    @lock_content ||= Gel::LockParser.new.parse(File.read(filename))
-  end
-
-  def each_gem
-    lock_content.each do |(section, body)|
-      case section
-      when "GEM", "PATH", "GIT"
-        specs = body["specs"]
-        specs.each do |gem_spec, dep_specs|
-          gem_spec =~ /\A(.+) \(([^-]+)(?:-(.+))?\)\z/
-          name, version, platform = $1, $2, $3
-
-          if dep_specs
-            deps = dep_specs.map do |spec|
-              spec =~ /\A(.+?)(?: \((.+)\))?\z/
-              [$1, $2 ? $2.split(", ") : []]
-            end
-          else
-            deps = []
-          end
-
-          sym =
-            case section
-            when "GEM"; :gem
-            when "PATH"; :path
-            when "GIT"; :git
-            end
-          yield sym, body, name, version, platform, deps
-        end
-      when "PLATFORMS", "DEPENDENCIES"
-      when "RUBY VERSION"
-      when "BUNDLED WITH"
-      else
-        warn "Unknown lockfile section #{section.inspect}"
-      end
-    end
-  end
-
-  def bundler_version
-    _, (version,) = lock_content.assoc("BUNDLED WITH")
-    version
-  end
-
   def gem_names
-    names = []
-    each_gem do |section, body, name, version, platform, deps|
-      names << name
-    end
-    names
+    @gem_set.gem_names
   end
 
   def activate(env, base_store, install: false, output: nil)
@@ -81,28 +34,29 @@ class Gel::LockLoader
         top_gems << name
         filtered_gems[name] = true
       end
-    elsif pair = lock_content.assoc("DEPENDENCIES")
-      _, list = pair
-      top_gems = list.map { |name| name.split(" ", 2)[0].chomp("!") }
+    elsif list = @gem_set.dependencies
+      top_gems = list
       top_gems.each do |name|
         filtered_gems[name] = true
       end
     end
 
-    gems = {}
-    each_gem do |section, body, name, version, platform, deps|
-      next if env && !env.platform?(platform)
+    @gem_set.gems.each do |name, resolved_gems|
+      resolved_gems.each do |resolved_gem|
+        next if env && !env.platform?(resolved_gem.platform)
 
-      gems[name] = [section, body, version, platform, deps]
-
-      installer.known_dependencies name => deps.map(&:first) if installer
+        installer.known_dependencies name => resolved_gem.deps.map(&:first) if installer
+      end
     end
 
     walk = lambda do |name|
       filtered_gems[name] = true
-      next unless gems[name]
-      gems[name].last.map(&:first).each do |dep_name|
-        walk[dep_name] unless filtered_gems[dep_name]
+
+      @gem_set.gems[name]&.each do |resolved_gem|
+        next if env && !env.platform?(resolved_gem.platform)
+        resolved_gem.deps.map(&:first).each do |dep_name|
+          walk[dep_name] unless filtered_gems[dep_name]
+        end
       end
     end
 
@@ -114,34 +68,38 @@ class Gel::LockLoader
     Gel::WorkPool.new(8) do |work_pool|
       git_depot = Gel::GitDepot.new(base_store)
 
-      gems.each do |name, (section, body, version, platform, _deps)|
+      @gem_set.gems.each do |name, resolved_gems|
         next unless filtered_gems[name]
 
-        if section == :gem
-          if installer && !base_store.gem?(name, version, platform)
-            require_relative "catalog"
-            catalogs = body["remote"].map { |r| Gel::Catalog.new(r, work_pool: work_pool) }
-            installer.install_gem(catalogs, name, platform ? "#{version}-#{platform}" : version)
-          end
+        resolved_gems.each do |resolved_gem|
+          next if env && !env.platform?(resolved_gem.platform)
 
-          locks[name] = version
-        else
-          if section == :git
-            remote = body["remote"].first
-            revision = body["revision"].first
-
-            dir = git_depot.git_path(remote, revision)
-            if installer && !Dir.exist?(dir)
-              installer.load_git_gem(remote, revision, name)
-
-              locks[name] = -> { Gel::DirectGem.new(dir, name, version) }
-              next
+          if resolved_gem.type == :gem
+            if installer && !base_store.gem?(name, resolved_gem.version, resolved_gem.platform)
+              require_relative "catalog"
+              catalogs = resolved_gem.body["remote"].map { |r| Gel::Catalog.new(r, work_pool: work_pool) }
+              installer.install_gem(catalogs, name, resolved_gem.platform ? "#{resolved_gem.version}-#{resolved_gem.platform}" : resolved_gem.version)
             end
-          else
-            dir = File.expand_path(body["remote"].first, File.dirname(filename))
-          end
 
-          locks[name] = Gel::DirectGem.new(dir, name, version)
+            locks[name] = resolved_gem.version
+          else
+            if resolved_gem.type == :git
+              remote = resolved_gem.body["remote"].first
+              revision = resolved_gem.body["revision"].first
+
+              dir = git_depot.git_path(remote, revision)
+              if installer && !Dir.exist?(dir)
+                installer.load_git_gem(remote, revision, name)
+
+                locks[name] = -> { Gel::DirectGem.new(dir, name, resolved_gem.version) }
+                next
+              end
+            else
+              dir = File.expand_path(resolved_gem.body["remote"].first, File.dirname(@gem_set.filename))
+            end
+
+            locks[name] = Gel::DirectGem.new(dir, name, resolved_gem.version)
+          end
         end
       end
 
