@@ -614,24 +614,6 @@ LOCKFILE
     locked
   end
 
-  # Set up stubs for a small but real-world-shaped gem source (which
-  # supports compact index).
-  #
-  # Use this when catalog interaction is incidental (i.e., the test is
-  # focused on the resolution process/ result) and you just need the
-  # test to exist in a world where some gems exist; use explicit request
-  # stubs to test catalog interaction details (exactly which/when paths
-  # do/don't get downloaded, fallback between catalog formats, etc).
-  def stub_gem_mimer
-    require fixture_file("index/info.rb")
-
-    stub_request(:get, "https://gem-mimer.org/versions").
-      to_return(body: File.open(fixture_file("index/versions")))
-
-    stub_request(:get, Addressable::Template.new("https://gem-mimer.org/info/{gem}")).
-      to_return(body: lambda { |request| FIXTURE_INDEX[File.basename(request.uri)] })
-  end
-
   def gemspec_rz(name:, version:, dependencies: [], ruby: [">=", "0"], platform: "ruby")
     m = lambda { |x| Marshal.dump(x)[2..-1] }
 
