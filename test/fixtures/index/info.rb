@@ -12285,4 +12285,8 @@ INFO
 1.2.5 win32-api:>= 1.4.5,windows-api:>= 0.4.0|checksum:2b8666a0b64f19cb784b94c9a57dbe6c4c20140755aa017a08c432e613cd690f
 1.2.6 win32-api:>= 1.4.5,windows-api:>= 0.4.0|checksum:5d6172fd42de5d57b032f86d7981da766fe7279b13e27688aaa6c7918f47a9eb
 INFO
+  "pub_grub" => <<INFO,
+---
+0.5.0 |checksum:x
+INFO
 }

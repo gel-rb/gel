@@ -130,14 +130,14 @@ class Gel::Environment
           Gel::WorkPool.new(2) do |work_pool|
             catalog = Gel::Catalog.new("https://rubygems.org", work_pool: work_pool)
 
-            install_gem([catalog], "pub_grub", [">= 0.5.0"])
+            install_gem_without_dependencies([catalog], "pub_grub", [">= 0.5.0"])
           end
         end
       end
     end
   end
 
-  def self.lock(store: store(), output: nil, gemfile: Gel::Environment.load_gemfile, lockfile: Gel::Environment.lockfile_name, catalog_options: {}, preference_strategy: nil)
+  def self._lock(store: store(), output: nil, gemfile: Gel::Environment.load_gemfile, lockfile: Gel::Environment.lockfile_name, catalog_options: {}, preference_strategy: nil)
     output = nil if $DEBUG
 
     if lockfile && File.exist?(lockfile)
@@ -295,8 +295,11 @@ class Gel::Environment
     new_resolution.server_catalogs = server_catalogs
     new_resolution.bundler_version = gem_set&.bundler_version
     new_resolution.ruby_version = RUBY_DESCRIPTION.split.first(2).join(" ") if gem_set&.ruby_version
+    new_resolution
+  end
 
-    lock_body = new_resolution.dump
+  def self.lock(output: nil, lockfile: lockfile_name, **args)
+    lock_body = _lock(output: output, lockfile: lockfile, **args).dump
 
     if lockfile
       output.puts "Writing lockfile to #{File.expand_path(lockfile)}" if output
@@ -309,19 +312,28 @@ class Gel::Environment
     base_store = Gel::Environment.store
     base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
 
+    gem_set = _lock(output: output, gemfile: Gel::GemfileParser.parse(<<~END))
+      source "https://rubygems.org"
+
+      gem #{gem_name.inspect} #{", #{requirements.inspect}" if requirements}
+    END
+
+    loader = Gel::LockLoader.new(gem_set)
+    loader.activate(self, base_store, install: true, output: output)
+  end
+
+  # This should only be used to install gel's own dependencies (i.e. pub_grub)
+  def self.install_gem_without_dependencies(catalogs, gem_name, requirements = nil, output: nil)
+    base_store = Gel::Environment.store
+    base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
+
     req = Gel::Support::GemRequirement.new(requirements)
-    #base_store.each(gem_name) do |g|
-    #  return false if g.satisfies?(req)
-    #end
 
     require_relative "installer"
     installer = Gel::Installer.new(base_store)
 
     found_any = false
     catalogs.each do |catalog|
-      # TODO: Hand this over to resolution so we pick up dependencies
-      # too
-
       info = catalog.gem_info(gem_name)
       next if info.nil?
 
@@ -342,7 +354,7 @@ class Gel::Environment
     end
 
     if found_any
-      raise Gel::Error::NoVersionSatisfyError.new(
+      raise Gel::Error::NoVersionSatisfy.new(
         gem_name: gem_name,
         requirements: requirements,
       )
@@ -362,7 +374,7 @@ class Gel::Environment
     end
 
     @active_lockfile = true
-    loader = Gel::LockLoader.new(lockfile, gemfile)
+    loader = Gel::LockLoader.new(Gel::ResolvedGemSet.load(lockfile), gemfile)
 
     base_store = Gel::Environment.store
     base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
@@ -378,7 +390,7 @@ class Gel::Environment
         lock(output: $stderr, lockfile: lockfile)
       end
 
-      loader = Gel::LockLoader.new(lockfile, gemfile)
+      loader = Gel::LockLoader.new(Gel::ResolvedGemSet.load(lockfile), gemfile)
 
       base_store = Gel::Environment.store
       base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)

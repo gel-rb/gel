@@ -20,11 +20,11 @@ when "gemfile"
   Gel::WorkPool.new(2) do |work_pool|
     catalog = Gel::Catalog.new("https://rubygems.org", work_pool: work_pool)
 
-    Gel::Environment.install_gem([catalog], "pub_grub", nil, output: $stderr)
+    Gel::Environment.install_gem_without_dependencies([catalog], "pub_grub", nil, output: $stderr)
   end
 
   # `gel install`
-  loader = Gel::LockLoader.new("Gemfile.lock")
+  loader = Gel::LockLoader.new(Gel::ResolvedGemSet.load("Gemfile.lock"))
   loader.activate(nil, Gel::Environment.store.inner, install: true, output: $stderr)
 
 else

@@ -26,7 +26,7 @@ LOCKFILE
 
     with_empty_store do |store|
       output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path)
-        loader = Gel::LockLoader.new(lock_path)
+        loader = Gel::LockLoader.new(Gel::ResolvedGemSet.load(lock_path))
         loader.activate(Gel::Environment, store, install: true)
 
         puts $:.grep(/\brack(?!-test)/).join(":")
@@ -78,7 +78,7 @@ LOCKFILE
 
     with_empty_multi_store do |store|
       output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path)
-        loader = Gel::LockLoader.new(lock_path)
+        loader = Gel::LockLoader.new(Gel::ResolvedGemSet.load(lock_path))
         loader.activate(Gel::Environment, store, install: true)
 
         puts $:.grep(/\brack(?!-test)/).join(":")
