@@ -21,8 +21,8 @@ class InstallGemTest < Minitest::Test
             .to_return(body: File.open(fixture_file("pub_grub-0.5.0.gem")))
 
           Gel::Environment.open(store)
+
           require "gel/command"
-          require "gel/command/install_gem"
           Gel::Command.run(["install-gem", "rack-test", "0.6.3"])
         END
       end
@@ -33,19 +33,13 @@ class InstallGemTest < Minitest::Test
 
         puts $:.grep(/\brack(?!-test)/).join(":")
         puts $:.grep(/rack-test/).join(":")
-        puts $:.grep(/hoe/).join(":")
-        puts $".grep(/rack\/test\//).join(":")
       END
 
-      # Both gems listed in the lockfile are activated
+      # Both expected gems have been installed and activated: the
+      # requested version of rack-test, and the latest version of rack
+      # listed in our fixture catalog.
       assert_equal "#{store.root}/gems/rack-2.0.6/lib", output.shift
       assert_equal "#{store.root}/gems/rack-test-0.6.3/lib", output.shift
-
-      # Other installed gems are not
-      assert_equal "", output.shift
-
-      # Nothing has been required
-      assert_equal "", output.shift
     end
   end
 end
