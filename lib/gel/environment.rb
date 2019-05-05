@@ -130,14 +130,14 @@ class Gel::Environment
           Gel::WorkPool.new(2) do |work_pool|
             catalog = Gel::Catalog.new("https://rubygems.org", work_pool: work_pool)
 
-            install_gem_without_dependencies([catalog], "pub_grub", [">= 0.5.0"])
+            install_gem([catalog], "pub_grub", [">= 0.5.0"], solve: false)
           end
         end
       end
     end
   end
 
-  def self._lock(store: store(), output: nil, gemfile: Gel::Environment.load_gemfile, lockfile: Gel::Environment.lockfile_name, catalog_options: {}, preference_strategy: nil)
+  def self._lock(store: store(), output: nil, gemfile: Gel::Environment.load_gemfile, lockfile: Gel::Environment.lockfile_name, catalog_options: {}, solve: true, preference_strategy: nil)
     output = nil if $DEBUG
 
     if lockfile && File.exist?(lockfile)
@@ -199,26 +199,21 @@ class Gel::Environment
       end
     end
 
-    auto_install_pub_grub!
-    with_root_store do
-      gem "pub_grub"
-    end
-    require_relative "pub_grub/source"
+    require_relative "catalog_set"
+    catalog_set = Gel::CatalogSet.new(catalogs)
 
-    strategy = gem_set && preference_strategy && preference_strategy.call(gem_set)
-    source = Gel::PubGrub::Source.new(gemfile, catalogs, ["ruby"], strategy)
-    solver = PubGrub::VersionSolver.new(source: source)
-    solver.define_singleton_method(:next_package_to_try) do
-      self.solution.unsatisfied.min_by do |term|
-        package = term.package
-        versions = self.source.versions_for(package, term.constraint.range)
+    if solve
+      auto_install_pub_grub!
+      with_root_store do
+        gem "pub_grub"
+      end
+      require_relative "pub_grub/solver"
 
-        if strategy
-          strategy.package_priority(package, versions) + @package_depth[package]
-        else
-          @package_depth[package]
-        end * 1000 + versions.count
-      end.package
+      strategy = gem_set && preference_strategy && preference_strategy.call(gem_set)
+      solver = Gel::PubGrub::Solver.new(gemfile: gemfile, catalog_set: catalog_set, platforms: ["ruby"], strategy: strategy)
+    else
+      require_relative "null_solver"
+      solver = Gel::NullSolver.new(gemfile: gemfile, catalog_set: catalog_set, platforms: ["ruby"])
     end
 
     if output
@@ -237,25 +232,21 @@ class Gel::Environment
       solver.work until solver.solved?
     end
 
-    solution = solver.result
-    solution.delete(source.root)
-
     catalog_pool.stop
 
     new_resolution = Gel::ResolvedGemSet.new
 
-    solution.each do |(package, version)|
-      next if package.name =~ /^~/
+    solver.each_resolved_package do |package, version|
+      catalog = catalog_set.catalog_for_version(package, version)
 
-      spec = source.spec_for_version(package, version)
+      type =
+        case catalog
+        when Gel::GitCatalog; :git
+        when Gel::PathCatalog; :path
+        else; :gem
+        end
 
-      type = case spec.catalog
-             when Gel::GitCatalog; :git
-             when Gel::PathCatalog; :path
-             else; :gem
-             end
-
-      deps = source.dependencies_for(package, version)
+      deps = catalog_set.dependencies_for(package, version, platforms: ["ruby"])
 
       platform = nil # TODO
 
@@ -273,23 +264,26 @@ class Gel::Environment
             [dep_name, req_strings.join(", ")]
           end,
           set: new_resolution,
-          catalog: spec.catalog
+          catalog: catalog
         )
     end
 
-    root_deps = source.root_dependencies
-    new_resolution.dependencies = root_deps.sort_by { |name, _| name }.map do |name, constraints|
-      next if name =~ /^~/
+    new_resolution.dependencies =
+      gemfile.gems_for_platforms([:ruby, :mri]).
+      group_by { |name, _constraints, _options| name }.
+      map do |name, list|
+        constraints = list.flat_map { |_name, constraints, _options| constraints }.compact
 
-      if constraints == []
-        name
-      else
-        r = Gel::Support::GemRequirement.new(constraints)
-        req_strings = r.requirements.sort_by { |(_op, ver)| ver }.map { |(op, ver)| "#{op} #{ver}" }
+        if constraints == []
+          name
+        else
+          r = Gel::Support::GemRequirement.new(constraints)
+          req_strings = r.requirements.sort_by { |(_op, ver)| ver }.map { |(op, ver)| "#{op} #{ver}" }
 
-        "#{name} (#{req_strings.join(", ")})"
-      end
-    end.compact
+          "#{name} (#{req_strings.join(", ")})"
+        end
+      end.
+      sort
 
     new_resolution.platforms = ["ruby"]
     new_resolution.server_catalogs = server_catalogs
@@ -308,11 +302,11 @@ class Gel::Environment
     lock_body
   end
 
-  def self.install_gem(catalogs, gem_name, requirements = nil, output: nil)
+  def self.install_gem(catalogs, gem_name, requirements = nil, output: nil, solve: true)
     base_store = Gel::Environment.store
     base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
 
-    gem_set = _lock(output: output, gemfile: Gel::GemfileParser.parse(<<~END))
+    gem_set = _lock(output: output, solve: solve, gemfile: Gel::GemfileParser.parse(<<~END))
       source "https://rubygems.org"
 
       gem #{gem_name.inspect} #{", #{requirements.inspect}" if requirements}
@@ -320,47 +314,6 @@ class Gel::Environment
 
     loader = Gel::LockLoader.new(gem_set)
     loader.activate(self, base_store, install: true, output: output)
-  end
-
-  # This should only be used to install gel's own dependencies (i.e. pub_grub)
-  def self.install_gem_without_dependencies(catalogs, gem_name, requirements = nil, output: nil)
-    base_store = Gel::Environment.store
-    base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
-
-    req = Gel::Support::GemRequirement.new(requirements)
-
-    require_relative "installer"
-    installer = Gel::Installer.new(base_store)
-
-    found_any = false
-    catalogs.each do |catalog|
-      info = catalog.gem_info(gem_name)
-      next if info.nil?
-
-      found_any = true
-      version = info.keys.
-        map { |v| Gel::Support::GemVersion.new(v.split("-", 2).first) }.
-        sort_by { |v| [v.prerelease? ? 0 : 1, v] }.
-        reverse.find { |v| req.satisfied_by?(v) }
-      next if version.nil?
-
-      return false if base_store.gem?(gem_name, version.to_s)
-
-      installer.install_gem([catalog], gem_name, version.to_s)
-
-      installer.wait(output)
-
-      return true
-    end
-
-    if found_any
-      raise Gel::Error::NoVersionSatisfy.new(
-        gem_name: gem_name,
-        requirements: requirements,
-      )
-    else
-      raise Gel::Error::UnknownGemError.new(gem_name: gem_name)
-    end
   end
 
   def self.activate(install: false, output: nil, error: true)

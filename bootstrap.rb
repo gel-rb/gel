@@ -15,12 +15,14 @@ when "gemfile"
   Dir.mkdir "tmp" unless Dir.exist?("tmp")
 
   # `gel install-gem pub_grub`
+  #
+  # TODO: Is this still required given +auto_install_pub_grub!+?
   require_relative "lib/gel/catalog"
   require_relative "lib/gel/work_pool"
   Gel::WorkPool.new(2) do |work_pool|
     catalog = Gel::Catalog.new("https://rubygems.org", work_pool: work_pool)
 
-    Gel::Environment.install_gem_without_dependencies([catalog], "pub_grub", nil, output: $stderr)
+    Gel::Environment.install_gem([catalog], "pub_grub", nil, output: $stderr, solve: false)
   end
 
   # `gel install`
