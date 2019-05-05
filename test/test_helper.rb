@@ -36,6 +36,19 @@ def with_empty_store(multi: false, &block)
   end
 end
 
+def with_empty_cache
+  previous = ENV["GEL_CACHE"]
+
+  begin
+    Dir.mktmpdir do |dir|
+      ENV["GEL_CACHE"] = dir
+      yield
+    end
+  ensure
+    ENV["GEL_CACHE"] = previous
+  end
+end
+
 def with_empty_multi_store
   Dir.mktmpdir do |dir|
     stores = {}

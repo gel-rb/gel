@@ -15,6 +15,7 @@ Rake::TestTask.new(:test) do |t|
 end
 
 FIXTURE_GEMS = [
+  ["rack", "2.0.6"],
   ["rack", "2.0.3"],
   ["rack", "0.1.0"],
   ["hoe", "3.0.0"],

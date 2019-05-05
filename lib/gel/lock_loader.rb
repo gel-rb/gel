@@ -34,7 +34,7 @@ class Gel::LockLoader
         top_gems << name
         filtered_gems[name] = true
       end
-    elsif list = @gem_set.dependencies
+    elsif list = @gem_set.dependency_names
       top_gems = list
       top_gems.each do |name|
         filtered_gems[name] = true
@@ -77,11 +77,11 @@ class Gel::LockLoader
           if resolved_gem.type == :gem
             if installer && !base_store.gem?(name, resolved_gem.version, resolved_gem.platform)
               require_relative "catalog"
-              catalogs = resolved_gem.body["remote"].map { |r| Gel::Catalog.new(r, work_pool: work_pool) }
+              catalogs = @gem_set.server_catalogs || resolved_gem.body["remote"].map { |r| Gel::Catalog.new(r, work_pool: work_pool) }
               installer.install_gem(catalogs, name, resolved_gem.platform ? "#{resolved_gem.version}-#{resolved_gem.platform}" : resolved_gem.version)
             end
 
-            locks[name] = resolved_gem.version
+            locks[name] = resolved_gem.version.to_s
           else
             if resolved_gem.type == :git
               remote = resolved_gem.body["remote"].first

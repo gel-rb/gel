@@ -206,8 +206,8 @@ class Gel::Environment
       auto_install_pub_grub!
       with_root_store do
         gem "pub_grub"
+        require_relative "pub_grub/solver"
       end
-      require_relative "pub_grub/solver"
 
       strategy = gem_set && preference_strategy && preference_strategy.call(gem_set)
       solver = Gel::PubGrub::Solver.new(gemfile: gemfile, catalog_set: catalog_set, platforms: ["ruby"], strategy: strategy)
@@ -228,7 +228,10 @@ class Gel::Environment
       end
       output.puts
     else
-      PubGrub.logger.info "Resolving dependencies..."
+      if solver.respond_to?(:logger)
+        solver.logger.info "Resolving dependencies..."
+      end
+
       solver.work until solver.solved?
     end
 
@@ -459,8 +462,13 @@ class Gel::Environment
   end
 
   def self.activate_gem(gem, why: nil)
+    raise gem.version.class.name unless gem.version.class == String
+    if activated_gems[gem.name]
+      raise activated_gems[gem.name].version.class.name unless activated_gems[gem.name].version.class == String
+    end
+
     return if activated_gems[gem.name] && activated_gems[gem.name].version == gem.version
-    raise LoadError, "already activated #{gem.name} #{activated_gems[gem.name].version}" if activated_gems[gem.name]
+    raise LoadError, "already activated #{gem.name} #{activated_gems[gem.name].version} (can't activate #{gem.version})" if activated_gems[gem.name]
 
     gem.dependencies.each do |dep, reqs|
       self.gem(dep, *reqs.map { |(qual, ver)| "#{qual} #{ver}" }, why: ["required by #{gem.name} #{gem.version}", *why])
