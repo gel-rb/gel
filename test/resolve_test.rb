@@ -600,7 +600,7 @@ LOCKFILE
     Dir.mktmpdir do |cache_dir|
       with_empty_store do |store|
         output = StringIO.new
-        locked = Gel::Environment.lock(
+        locked = Gel::Environment.write_lock(
           output: output,
           gemfile: Gel::GemfileParser.parse(gemfile),
           lockfile: nil,

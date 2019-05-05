@@ -29,6 +29,6 @@ class Gel::Command::Lock < Gel::Command
       Gel::PubGrub::PreferenceStrategy.new(gem_set, overrides, bump: mode, strict: strict)
     end
 
-    Gel::Environment.lock(output: $stderr, **options)
+    Gel::Environment.write_lock(output: $stderr, **options)
   end
 end

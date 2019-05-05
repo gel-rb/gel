@@ -137,7 +137,7 @@ class Gel::Environment
     end
   end
 
-  def self._lock(store: store(), output: nil, gemfile: Gel::Environment.load_gemfile, lockfile: Gel::Environment.lockfile_name, catalog_options: {}, solve: true, preference_strategy: nil)
+  def self.solve_for_gemfile(store: store(), output: nil, gemfile: Gel::Environment.load_gemfile, lockfile: Gel::Environment.lockfile_name, catalog_options: {}, solve: true, preference_strategy: nil)
     output = nil if $DEBUG
 
     if lockfile && File.exist?(lockfile)
@@ -272,7 +272,7 @@ class Gel::Environment
       gemfile.gems_for_platforms([:ruby, :mri]).
       group_by { |name, _constraints, _options| name }.
       map do |name, list|
-        constraints = list.flat_map { |_name, constraints, _options| constraints }.compact
+        constraints = list.flat_map { |_, c, _| c }.compact
 
         if constraints == []
           name
@@ -292,8 +292,8 @@ class Gel::Environment
     new_resolution
   end
 
-  def self.lock(output: nil, lockfile: lockfile_name, **args)
-    lock_body = _lock(output: output, lockfile: lockfile, **args).dump
+  def self.write_lock(output: nil, lockfile: lockfile_name, **args)
+    lock_body = solve_for_gemfile(output: output, lockfile: lockfile, **args).dump
 
     if lockfile
       output.puts "Writing lockfile to #{File.expand_path(lockfile)}" if output
@@ -306,7 +306,7 @@ class Gel::Environment
     base_store = Gel::Environment.store
     base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
 
-    gem_set = _lock(output: output, solve: solve, gemfile: Gel::GemfileParser.parse(<<~END))
+    gem_set = solve_for_gemfile(output: output, solve: solve, gemfile: Gel::GemfileParser.parse(<<~END))
       source "https://rubygems.org"
 
       gem #{gem_name.inspect} #{", #{requirements.inspect}" if requirements}
@@ -323,7 +323,7 @@ class Gel::Environment
 
     lockfile = Gel::Environment.lockfile_name
     unless File.exist?(lockfile)
-      lock(output: $stderr, lockfile: lockfile)
+      write_lock(output: $stderr, lockfile: lockfile)
     end
 
     @active_lockfile = true
@@ -340,7 +340,7 @@ class Gel::Environment
     if Gel::Environment.load_gemfile(error: false)
       lockfile = Gel::Environment.lockfile_name
       unless File.exist?(lockfile)
-        lock(output: $stderr, lockfile: lockfile)
+        write_lock(output: $stderr, lockfile: lockfile)
       end
 
       loader = Gel::LockLoader.new(Gel::ResolvedGemSet.load(lockfile), gemfile)

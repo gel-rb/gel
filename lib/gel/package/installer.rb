@@ -114,7 +114,7 @@ class Gel::Package::Installer
           lockfile = Tempfile.new(["#{spec.name}.lockfile", ".lock"])
           lockfile.close
 
-          Gel::Environment.lock(store: @root_store, output: nil, gemfile: Gel::GemfileParser.parse(File.read(gemfile.path), gemfile.path, 1), lockfile: lockfile.path)
+          Gel::Environment.write_lock(store: @root_store, output: nil, gemfile: Gel::GemfileParser.parse(File.read(gemfile.path), gemfile.path, 1), lockfile: lockfile.path)
 
           lockfile
         end
