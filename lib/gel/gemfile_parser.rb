@@ -14,6 +14,20 @@ module Gel::GemfileParser
     raise Gel::Error::GemfileEvaluationError.new(filename: filename)
   end
 
+  class RunningRuby
+    def self.version
+      RUBY_VERSION
+    end
+
+    def self.engine
+      RUBY_ENGINE
+    end
+
+    def self.engine_version
+      RUBY_ENGINE_VERSION
+    end
+  end
+
   class ParseContext
     def initialize(result, filename)
       @result = result
@@ -38,26 +52,30 @@ module Gel::GemfileParser
       @result.git_sources[name] = block
     end
 
-    def ruby(version, engine: nil, engine_version: nil)
-      req = Gel::Support::GemRequirement.new(version)
-      unless req.satisfied_by?(Gel::Support::GemVersion.new(RUBY_VERSION))
+    def ruby(*versions, engine: nil, engine_version: nil)
+      req = Gel::Support::GemRequirement.new(versions)
+      running_ruby_version = RunningRuby.version
+      running_engine = RunningRuby.engine
+      running_engine_version = RunningRuby.engine_version
+
+      unless req.satisfied_by?(Gel::Support::GemVersion.new(running_ruby_version))
         raise Gel::Error::MismatchRubyVersionError.new(
-          running: RUBY_VERSION,
-          requested: version,
+          running: running_ruby_version,
+          requested: versions,
         )
       end
-      unless !engine || RUBY_ENGINE == engine
+      unless !engine || running_engine == engine
         raise Gel::Error::MismatchRubyEngineError.new(
-          running: RUBY_ENGINE,
+          running: running_engine,
           engine: engine,
         )
       end
       if engine_version
         raise "Cannot specify :engine_version without :engine" unless engine
-        req = Gel::Support::GemRequirement.new(version)
-        raise "Running ruby engine version #{RUBY_ENGINE_VERSION} does not match requested #{engine_version.inspect}" unless req.satisfied_by?(Gel::Support::GemVersion.new(RUBY_ENGINE_VERSION))
+        req = Gel::Support::GemRequirement.new(engine_version)
+        raise "Running ruby engine version #{running_engine_version} does not match requested #{engine_version.inspect}" unless req.satisfied_by?(Gel::Support::GemVersion.new(running_engine_version))
       end
-      @result.ruby << [version, engine: engine, engine_version: engine_version]
+      @result.ruby << [versions, engine: engine, engine_version: engine_version]
     end
 
     def gem(name, *requirements, **options)
