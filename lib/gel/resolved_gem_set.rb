@@ -1,13 +1,14 @@
 # frozen_string_literal: true
 
 require "set"
-require_relative "catalog"
 
 class Gel::ResolvedGemSet
   class ResolvedGem < Struct.new(:type, :body, :name, :version, :platform, :deps)
     attr_reader :set
 
     def initialize(*args, set:, catalog: nil)
+      require_relative "catalog"
+
       super(*args)
       @set = set
       @catalog = catalog

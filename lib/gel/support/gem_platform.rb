@@ -6,8 +6,6 @@
 # Redistributed under the terms of the MIT license
 #
 
-require "rubygems/deprecate"
-
 ##
 # Available list of platforms for targeting Gem installations.
 #
