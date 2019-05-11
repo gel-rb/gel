@@ -309,11 +309,13 @@ class Gel::Environment
     base_store = Gel::Environment.store
     base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
 
-    gem_set = solve_for_gemfile(output: output, solve: solve, gemfile: Gel::GemfileParser.parse(<<~END))
+    gemfile = Gel::GemfileParser.inline do
       source "https://rubygems.org"
 
-      gem #{gem_name.inspect} #{", #{requirements.inspect}" if requirements}
-    END
+      gem gem_name, *requirements
+    end
+
+    gem_set = solve_for_gemfile(output: output, solve: solve, gemfile: gemfile)
 
     loader = Gel::LockLoader.new(gem_set)
     loader.activate(self, base_store, install: true, output: output)

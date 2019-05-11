@@ -14,6 +14,15 @@ module Gel::GemfileParser
     raise Gel::Error::GemfileEvaluationError.new(filename: filename)
   end
 
+  def self.inline(&block)
+    filename, _lineno = block.source_location
+
+    result = GemfileContent.new(filename)
+    context = ParseContext.new(result, filename)
+    context.instance_eval(&block)
+    result
+  end
+
   class ParseContext
     def initialize(result, filename)
       @result = result
