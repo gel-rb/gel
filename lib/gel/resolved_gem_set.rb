@@ -96,6 +96,7 @@ class Gel::ResolvedGemSet
       end
     end
 
+    require_relative "work_pool"
     catalog_pool = Gel::WorkPool.new(8, name: "gel-catalog")
     result.server_catalogs = catalog_uris.map { |uri| Gel::Catalog.new(uri, work_pool: catalog_pool) }
 
