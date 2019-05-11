@@ -53,6 +53,13 @@ class Gel::LockParser
           content << entry
           scanner.skip(/\n/)
         end
+      when "RUBY VERSION"
+        content = []
+        while scanner.skip(/^   \b/)
+          entry = scanner.scan(/.*/)
+          content << entry
+          scanner.skip(/\n/)
+        end
       end
       scanner.skip(/\n+/)
 

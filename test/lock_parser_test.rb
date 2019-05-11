@@ -36,6 +36,9 @@ DEPENDENCIES
   rake
   rubocop-rails
 
+RUBY VERSION
+   ruby 2.6.3p62
+
 BUNDLED WITH
    1.15.4
 LOCKFILE
@@ -66,6 +69,7 @@ LOCKFILE
         ] }],
       ["PLATFORMS", ["ruby"]],
       ["DEPENDENCIES", ["minitest", "rake", "rubocop-rails"]],
+      ["RUBY VERSION", ["ruby 2.6.3p62"]],
       ["BUNDLED WITH", ["1.15.4"]],
     ], parser.parse(EXAMPLE)
   end
