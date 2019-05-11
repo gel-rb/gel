@@ -102,4 +102,42 @@ GEMFILE
       assert_equal "", output.shift
     end
   end
+
+  def test_jruby_9000
+    Gel::GemfileParser::RunningRuby.expects(:version).returns("2.2.2")
+    Gel::GemfileParser::RunningRuby.expects(:engine).returns("jruby")
+    Gel::GemfileParser::RunningRuby.expects(:engine_version).returns("9.0.0.0")
+
+    result = Gel::GemfileParser.parse(<<GEMFILE, __FILE__, __LINE__ + 1)
+source "https://rubygems.org"
+
+ruby "2.2.2", engine: "jruby", engine_version: "9.0.0.0"
+GEMFILE
+
+    assert_equal [["2.2.2"], {:engine=>"jruby", :engine_version=>"9.0.0.0"}], result.ruby.first
+  end
+
+  def test_ruby_version_specifier
+    Gel::GemfileParser::RunningRuby.expects(:version).returns("2.6.3")
+
+    result = Gel::GemfileParser.parse(<<GEMFILE, __FILE__, __LINE__ + 1)
+source "https://rubygems.org"
+
+ruby "~> 2.6.0"
+GEMFILE
+
+    assert_equal [["~> 2.6.0"], {:engine=>nil, :engine_version=>nil}], result.ruby.first
+  end
+
+  def test_ruby_version_specifiers
+    Gel::GemfileParser::RunningRuby.expects(:version).returns("2.9.9")
+
+    result = Gel::GemfileParser.parse(<<GEMFILE, __FILE__, __LINE__ + 1)
+source "https://rubygems.org"
+
+ruby ">= 2.3.0", "< 3.0.0"
+GEMFILE
+
+    assert_equal [[">= 2.3.0", "< 3.0.0"], {:engine=>nil, :engine_version=>nil}], result.ruby.first
+  end
 end
