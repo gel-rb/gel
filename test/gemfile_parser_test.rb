@@ -102,4 +102,26 @@ GEMFILE
       assert_equal "", output.shift
     end
   end
+
+  def test_install_if_with_falsy_proc
+    result = Gel::GemfileParser.parse(<<GEMFILE, __FILE__, __LINE__ + 1)
+install_if(lambda { false }) do
+  gem "mini_racer", platforms: :ruby
+end
+GEMFILE
+
+    assert_equal [], result.gems
+  end
+
+  def test_install_if_with_truthy_proc
+    result = Gel::GemfileParser.parse(<<GEMFILE, __FILE__, __LINE__ + 1)
+install_if(-> { true }) do
+  gem "mini_racer", platforms: :ruby
+end
+GEMFILE
+
+    assert_equal [
+      ["mini_racer", [], {platforms: :ruby}]
+    ], result.gems
+  end
 end

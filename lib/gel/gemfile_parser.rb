@@ -96,6 +96,16 @@ module Gel::GemfileParser
     ensure
       @stack.pop
     end
+
+    def install_if(test_proc)
+      if test_proc.call
+        name, requirements, options = yield.flatten(1)
+
+        unless @result.gems.assoc(name)
+          @result.add_gem(name, requirements, options)
+        end
+      end
+    end
   end
 
   class GemfileContent
