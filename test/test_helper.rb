@@ -184,3 +184,7 @@ def capture_stdout
 ensure
   $stdout = original_stdout
 end
+
+def assert_nothing_raised
+  yield
+end

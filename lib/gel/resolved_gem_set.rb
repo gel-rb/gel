@@ -116,7 +116,8 @@ class Gel::ResolvedGemSet
         next if resolved_gem.name == "bundler" || resolved_gem.name == "ruby"
 
         lock_content << "    #{resolved_gem.name} (#{resolved_gem.full_version})"
-        resolved_gem.deps.sort.each do |dep_name, dep_reqs|
+        sorted_deps = resolved_gem.deps.sort_by { |dep_name, dep_reqs| dep_name }
+        sorted_deps.each do |dep_name, dep_reqs|
           if dep_reqs
             lock_content << "      #{dep_name} (#{dep_reqs})"
           else

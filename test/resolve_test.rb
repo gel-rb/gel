@@ -594,6 +594,44 @@ DEPENDENCIES
 LOCKFILE
   end
 
+  def test_dependency_has_no_requirement
+    gemfile = <<GEMFILE
+source "https://rubygems.org"
+
+gem "railties"
+GEMFILE
+
+    stub_request(:get, "https://index.rubygems.org/versions").
+      to_return(body: <<VERSIONS)
+created_at: 2017-03-27T04:38:13+00:00
+---
+
+actionpack 5.2.3
+activesupport 5.2.3
+method_source 0.9.2
+rake 12.3.2
+railties 5.2.3
+thor 0.20.3
+VERSIONS
+
+    stub_request(:get, "https://index.rubygems.org/info/railties").
+      to_return(body: <<INFO)
+---
+5.2.3 actionpack:= 5.2.3,activesupport:= 5.2.3,method_source:>= 0,rake:>= 0.8.7,thor:< 2.0&>= 0.19.0|checksum:zzz,ruby:>= 2.2.2
+INFO
+
+    stub_dep_info("thor", "0.20.3")
+    stub_dep_info("rake", "12.3.2")
+    stub_dep_info("method_source", "0.9.2")
+    stub_dep_info("rake", "12.3.2")
+    stub_dep_info("activesupport", "5.2.3")
+    stub_dep_info("actionpack", "5.2.3")
+
+    assert_nothing_raised do
+      lockfile_for_gemfile(gemfile)
+    end
+  end
+
   def lockfile_for_gemfile(gemfile)
     locked = nil
 
@@ -716,5 +754,13 @@ LOCKFILE
     gz.close
 
     io.string
+  end
+
+  def stub_dep_info(name, version)
+    stub_request(:get, "https://index.rubygems.org/info/#{name}").
+      to_return(body: <<INFO)
+---
+#{version} |checksum:zzz
+INFO
   end
 end
