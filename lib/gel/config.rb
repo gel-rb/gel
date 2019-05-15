@@ -2,13 +2,21 @@
 
 class Gel::Config
   def initialize
-    @root = File.expand_path("~/.config/gel")
+    @root = file_path
     @path = File.join(@root, "config")
     @config = nil
   end
 
   def config
     @config ||= read
+  end
+
+  def all
+    config
+  end
+
+  def file_path
+    File.expand_path("~/.config/gel")
   end
 
   def [](group = nil, key)
