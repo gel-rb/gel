@@ -435,7 +435,12 @@ class Gel::Environment
 
   def self.filtered_gems(gems = self.gemfile.gems)
     platforms = GEMFILE_PLATFORMS.map(&:to_s)
-    gems = gems.reject { |g| g[2][:platforms] && (Array(g[2][:platforms]).map(&:to_s) & platforms).empty? }
+    gems = gems.reject do |_, _, options|
+      platform_options = Array(options[:platforms]).map(&:to_s)
+
+      next true if platform_options.any? && (platform_options & platforms).empty?
+      next true unless options.fetch(:install_if, true)
+    end
     gems
   end
 

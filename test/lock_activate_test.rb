@@ -90,8 +90,12 @@ LOCKFILE
 
   def test_ignore_gems_excluded_by_gemfile
     gemfile_content = <<GEMFILE
-gem "rack"
+gem "rack", install_if: true
 gem "rack-test", platforms: :rbx
+gem "hoe", install_if: false
+install_if ->{ false } do
+  gem "atomic"
+end
 GEMFILE
 
     lockfile = Tempfile.new("")
@@ -99,6 +103,8 @@ GEMFILE
 GEM
   remote: https://rubygems.org/
   specs:
+    atomic (1.1.16)
+    hoe (3.0.0)
     rack (2.0.3)
     rack-test (0.6.3)
       rack (>= 1.0)
@@ -109,7 +115,7 @@ DEPENDENCIES
 LOCKFILE
     lockfile.close
 
-    with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
+    with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem", "atomic-1.1.16.gem"]) do |store|
       output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path, gemfile_content: gemfile_content)
         loader = Gel::LockLoader.new(lock_path, Gel::GemfileParser.parse(gemfile_content))
         loader.activate(Gel::Environment, store)
