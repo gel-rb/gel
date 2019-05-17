@@ -2,7 +2,7 @@
 
 class Gel::Config
   def initialize
-    @root = file_path
+    @root = File.expand_path("~/.config/gel")
     @path = File.join(@root, "config")
     @config = nil
   end
@@ -15,8 +15,12 @@ class Gel::Config
     config
   end
 
-  def file_path
-    File.expand_path("~/.config/gel")
+  def config_exists?
+    File.exist?(@path)
+  end
+
+  def config_file
+    File.read(@path)
   end
 
   def [](group = nil, key)
@@ -41,9 +45,9 @@ class Gel::Config
 
   def read
     result = {}
-    if File.exist?(@path)
+    if config_exists?
       context = nil
-      File.read(@path).each_line do |line|
+      config_file.each_line do |line|
         line.chomp!
         if line =~ /\A(\S[^:]*):\z/
           context = result[$1] = {}
