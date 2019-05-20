@@ -108,6 +108,13 @@ module Gel::GemfileParser
       @stack.pop
     end
 
+    def install_if(*conditions)
+      @stack << { install_if: conditions }
+      yield
+    ensure
+      @stack.pop
+    end
+
     def platforms(*names)
       @stack << { platforms: names }
       yield
@@ -150,6 +157,12 @@ module Gel::GemfileParser
       return if name == "bundler"
       raise "Only git sources can specify a :branch" if options[:branch] && !options[:git]
       raise "Duplicate entry for gem #{name.inspect}" if @gems.assoc(name)
+
+      if options[:install_if]
+        options[:install_if] = Array(options[:install_if]).all? do |condition|
+          condition.respond_to?(:call) ? condition.call : condition
+        end
+      end
 
       @gems << [name, requirements, options]
     end

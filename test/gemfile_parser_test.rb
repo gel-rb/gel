@@ -140,4 +140,28 @@ GEMFILE
 
     assert_equal [[">= 2.3.0", "< 3.0.0"], {:engine=>nil, :engine_version=>nil}], result.ruby.first
   end
+
+
+  def test_install_if
+    result = Gel::GemfileParser.parse(<<GEMFILE, __FILE__, __LINE__ + 1)
+source "https://rubygems.org"
+install_if true do
+  gem "activesupport", "2.3.5"
+end
+gem "thin", :install_if => lambda { false }
+install_if lambda { false } do
+  gem "foo"
+end
+gem "bar", :install_if => [true, lambda { 1 }]
+gem "rack"
+GEMFILE
+
+    assert_equal [
+      ["activesupport", ["2.3.5"],  { install_if: true }],
+      ["thin",          [],         { install_if: false }],
+      ["foo",           [],         { install_if: false }],
+      ["bar",           [],         { install_if: true }],
+      ["rack",          [],         {}],
+    ], result.gems
+  end
 end
