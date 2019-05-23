@@ -15,6 +15,7 @@ require_relative "gel/store_gem"
 require_relative "gel/direct_gem"
 require_relative "gel/locked_store"
 require_relative "gel/multi_store"
+require_relative "gel/error"
 
 require_relative "gel/gemspec_parser"
 require_relative "gel/gemfile_parser"
