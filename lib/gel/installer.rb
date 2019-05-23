@@ -143,9 +143,9 @@ class Gel::Installer
     synchronize do
       compile_recheck, @compile_waiting = @compile_waiting, []
 
-      compile_recheck.each do |g|
-        @compile_pool.queue(g.spec.name) do
-          work_compile(g)
+      compile_recheck.each do |gem|
+        @compile_pool.queue(gem.spec.name) do
+          work_compile(gem)
         end
       end
     end
