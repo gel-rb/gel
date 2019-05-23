@@ -20,7 +20,7 @@ class Gel::Command::Env < Gel::Command
     def self.format(data)
       data.each do |section, value_hash|
         puts "\n## #{section}"
-        value_hash.each do |name, value|
+        value_hash.reject { |_, v| v.nil? }.each do |name, value|
 
           if value.is_a?(RelevantFile)
             print_codeblock(name, value)
@@ -71,7 +71,7 @@ class Gel::Command::Env < Gel::Command
     "Gemfile",
     "Gemfile.lock",
     "*.gemspec",
-  ].compact.map { |path| [path, RelevantFile.new(path)] }.to_h
+  ].map { |path| [path, RelevantFile.new(path)] }.to_h
   private_constant :RELEVANT_FILES
 
   def env_fetch(key, fallback = nil)
