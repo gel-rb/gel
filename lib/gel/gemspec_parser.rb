@@ -37,6 +37,7 @@ class Gel::GemspecParser
       self.metadata = {}
       self.requirements = []
       self.rdoc_options = []
+      self.extra_rdoc_files = []
       self.development_dependencies = []
       self.runtime_dependencies = []
       self.executables = []
