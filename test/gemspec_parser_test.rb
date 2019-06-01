@@ -48,4 +48,10 @@ GEMSPEC
     assert gemspec.files.include?("lib/gel/gemspec_parser.rb")
     assert_equal [["rake", ["~> 10.0"]], ["minitest", ["~> 5.0"]]], gemspec.development_dependencies
   end
+
+  def test_spec_with_extra_rdoc_files
+    result = Gel::GemspecParser::Result.new
+    result.extra_rdoc_files += ["README.md"]
+    assert_equal ["README.md"], result.extra_rdoc_files
+  end
 end
