@@ -2,18 +2,23 @@
 
 class Gel::Command::Env < Gel::Command
   def run(command_line)
-    MarkdownFormatter.format(metadata)
+    option = { full: (command_line.shift == "--full") }
+    data = metadata(option)
+    MarkdownFormatter.format(data)
   end
 
   private
 
-  def metadata
-    {
+  def metadata(option)
+    metadata = {
       "Gel" => gel_envs,
       "User" => user_envs,
       "Ruby" => ruby_envs,
-      "Relevant Files" => RELEVANT_FILES,
     }
+    if option[:full]
+      metadata.merge!("Relevant Files" => RELEVANT_FILES)
+    end
+    metadata
   end
 
   module MarkdownFormatter
