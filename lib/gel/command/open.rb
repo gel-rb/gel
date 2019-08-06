@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-class Gel::Command::Open < Gel::Command
-  require "shellwords"
+require "shellwords"
 
+class Gel::Command::Open < Gel::Command
   def run(command_line)
     raise "Please provide the name of a gem to open in your editor" if command_line.empty?
     raise "Too many arguments, only 1 gem name is supported" if command_line.length > 1
