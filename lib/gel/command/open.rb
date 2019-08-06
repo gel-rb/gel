@@ -10,6 +10,8 @@ class Gel::Command::Open < Gel::Command
     editor = ENV.fetch("GEL_EDITOR", ENV["EDITOR"])
     raise "An editor must be set using either $GEL_EDITOR or $EDITOR" unless editor
 
+    Gel::Environment.activate(output: $stderr)
+
     found_gem = Gel::Environment.find_gem(command_line.first)
     raise "Can't find gem `#{command_line.first}`" unless found_gem
 
