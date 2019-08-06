@@ -17,6 +17,8 @@ class Gel::Command::Open < Gel::Command
     raise "Can't find gem `#{gem_name}`" unless found_gem
 
     command = [*Shellwords.split(editor), found_gem.root]
-    exec(*command)
+    Dir.chdir(found_gem.root) do
+      exec(*command)
+    end
   end
 end
