@@ -146,8 +146,7 @@ end
 
 class Gel::DB::SDBM < Gel::DB
   prepend Gel::DB::AutoTransaction
-  SDBM_MAX_STORE_SIZE = 1000 - 1 # arbitrary on PBLKSIZ-N
-  SAFE_DELIMITER = '---'
+  SDBM_PAIRMAX = 1008 # private constant from sdbm.h
 
   def initialize(root, name)
     @sdbm = ::SDBM.new("#{root}/#{name}")
@@ -184,7 +183,7 @@ class Gel::DB::SDBM < Gel::DB
 
     if value =~ /\A~(\d+)\z/
       value = $1.to_i.times.map do |idx|
-        @sdbm["#{key}#{SAFE_DELIMITER}#{idx}"]
+        @sdbm["#{key}~#{idx}"]
       end.join
     end
 
@@ -193,25 +192,27 @@ class Gel::DB::SDBM < Gel::DB
 
 
   ##
-  # SDBM has an arbitrary limit on the size of a string it stores,
-  # so we simply split any string over multiple stores for the edge
-  # case when it reaches this. It's optimised to take advantage of the common
-  # case where this is not needed.
-  # When the edge case is hit, the first value in the storage will be the amount
-  # of extra values stored to hold the split string. This amount is determined by string
-  # size split by the arbitrary limit imposed by SDBM
+  # SDBM has an arbitrary limit on the size of the key and value pair that it
+  # can store (PAIRMAX) so we simply split any string over multiple stores for
+  # the edge case when it reaches this. It's optimised to take advantage of the
+  # common case where this is not needed.
+  # When the edge case is hit, the first value in the storage will be the
+  # amount of extra values stored to hold the split string. This amount is
+  # determined by string size split by the arbitrary limit imposed by SDBM
   def []=(key, value)
     return unless value && key
 
     dump = Marshal.dump(value)
-    count = dump.length / SDBM_MAX_STORE_SIZE
+    slicesize = SDBM_PAIRMAX - key.length - 3 # "#{key}~#{i}" where i <= 99
+    slices = dump.length / slicesize + 1
 
-    if count > 0
-      count += 1
-      count.times.map do |idx|
-        @sdbm["#{key.to_s}#{SAFE_DELIMITER}#{idx}"] = dump.slice!(0, SDBM_MAX_STORE_SIZE)
+    if slices > 1
+      slices.times.map do |idx|
+        slicekey = "#{key.to_s}~#{idx}"
+        slicedump = dump.slice!(0, slicesize)
+        @sdbm[slicekey] = slicedump
       end
-      @sdbm["#{key.to_s}"] = "~#{count}"
+      @sdbm["#{key.to_s}"] = "~#{slices}"
     else
       @sdbm[key.to_s] = dump
     end
