@@ -208,10 +208,10 @@ class Gel::DB::SDBM < Gel::DB
 
     if count > 0
       count += 1
-      @sdbm["#{key.to_s}"] = "~#{count}"
       count.times.map do |idx|
         @sdbm["#{key.to_s}#{SAFE_DELIMITER}#{idx}"] = dump.slice!(0, SDBM_MAX_STORE_SIZE)
       end
+      @sdbm["#{key.to_s}"] = "~#{count}"
     else
       @sdbm[key.to_s] = dump
     end
