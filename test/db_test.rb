@@ -25,6 +25,10 @@ class DbTest < Minitest::Test
       db['test'] = long_string
       assert_equal db['test'], long_string
 
+      # Long keys must be storable, too
+      db[long_string] = long_string
+      assert_equal db[long_string], long_string
+
       # A object with a long string gets stored and marshaled correctly
       hash_string = { a: long_string, b: long_string }
       db['test'] = hash_string
