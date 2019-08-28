@@ -57,6 +57,10 @@ class DbTest < Minitest::Test
       hash_string = { a: long_string, b: long_string }
       db['test'] = hash_string
       assert_equal db['test'], hash_string
+
+      # A key with a slash works
+      db['foo/bar'] = hash_string
+      assert_equal db['foo/bar'], hash_string
     end
   end
 end

@@ -267,28 +267,38 @@ class Gel::DB::File < Gel::DB
   end
 
   def each_key
-    @path.each_child(false) do |child|
-      yield child.to_s
+    Dir.each_child(@path) do |child|
+      yield unmangle(child)
     end
   end
 
   def key?(key)
-    @path.join(key).exist?
+    @path.join(mangle(key)).exist?
   end
 
   def [](key)
-    child = @path.join(key)
+    child = @path.join(mangle(key))
     if child.exist?
       Marshal.load(child.binread)
     end
   end
 
   def []=(key, value)
-    child = @path.join(key)
+    child = @path.join(mangle(key))
     if value
       child.binwrite Marshal.dump(value)
     elsif child.exist?
       child.unlink
     end
+  end
+
+  private
+
+  def mangle(key)
+    [key].pack("m").chomp
+  end
+
+  def unmangle(filename)
+    filename.unpack1("m")
   end
 end
