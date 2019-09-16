@@ -117,7 +117,8 @@ class Gel::Pinboard
   def updated(uri, etag, changed = true)
     blocks = nil
     @monitor.synchronize do
-      @db[uri.to_s] = read(uri).merge(etag: etag, stale: false)
+      h = read(uri) || {}
+      @db[uri.to_s] = h.merge(etag: etag, stale: false)
 
       blocks = @waiting.delete(uri)
     end
