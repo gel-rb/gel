@@ -166,10 +166,10 @@ class Gel::Package::Installer
         # Ignore exit status
 
         status = build_command(work_dir, log, "make", "-j3", "DESTDIR=")
-        raise "make exited with #{status.exitstatus}" unless status.success?
+        raise "make exited with #{status.exitstatus}\n Check #{log.path} for more details" unless status.success?
 
         status = build_command(work_dir, log, "make", "install", "DESTDIR=")
-        raise "make install exited with #{status.exitstatus}" unless status.success?
+        raise "make exited with #{status.exitstatus}\n Check #{log.path} for more details" unless status.success?
       end
     end
 
