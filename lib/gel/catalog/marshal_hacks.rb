@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+module Gem; end unless defined? Gem
+
 class Gem::Specification
   class Unmarshalled
     attr_accessor :required_ruby_version
