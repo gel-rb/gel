@@ -21,9 +21,14 @@ class DbTest < Minitest::Test
       assert_equal db['test'], { a: 'Hello World' }
 
       # A string that will be split up over multiple stores
-      long_string = '*' * (Gel::DB::SDBM::SDBM_MAX_STORE_SIZE + 200)
+      long_string = '*' * (Gel::DB::SDBM::SDBM_PAIRMAX + 200)
       db['test'] = long_string
       assert_equal db['test'], long_string
+
+      # Long keys must be storable, too
+      long_key = "*" * 200
+      db[long_key] = long_string
+      assert_equal db[long_key], long_string
 
       # A object with a long string gets stored and marshaled correctly
       hash_string = { a: long_string, b: long_string }
