@@ -13,6 +13,13 @@ module Bundler
     Pathname.new(Gel::Environment.lockfile_name)
   end
 
+  def self.bundle_path
+    base_store = Gel::Environment.store
+    base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
+
+    Pathname.new(base_store.root)
+  end
+
   module Rubygems
     def self.loaded_specs(gem_name)
       Gem::Specification.new(Gel::Environment.activated_gems[gem_name])
