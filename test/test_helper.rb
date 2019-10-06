@@ -36,6 +36,19 @@ def with_empty_store(multi: false, &block)
   end
 end
 
+def with_empty_cache
+  previous = ENV["GEL_CACHE"]
+
+  begin
+    Dir.mktmpdir do |dir|
+      ENV["GEL_CACHE"] = dir
+      yield
+    end
+  ensure
+    ENV["GEL_CACHE"] = previous
+  end
+end
+
 def with_empty_multi_store
   Dir.mktmpdir do |dir|
     stores = {}
@@ -65,6 +78,24 @@ def with_fixture_gems_installed(paths, multi: false)
   end
 end
 
+# Set up stubs for a small but real-world-shaped gem source (which
+# supports compact index).
+#
+# Use this when catalog interaction is incidental (i.e., the test is
+# focused on the resolution process/ result) and you just need the
+# test to exist in a world where some gems exist; use explicit request
+# stubs to test catalog interaction details (exactly which/when paths
+# do/don't get downloaded, fallback between catalog formats, etc).
+def stub_gem_mimer(source: "https://gem-mimer.org")
+  require fixture_file("index/info.rb")
+
+  stub_request(:get, "#{source}/versions")
+    .to_return(body: File.open(fixture_file("index/versions")))
+
+  stub_request(:get, Addressable::Template.new("#{source}/info/{gem}"))
+    .to_return(body: lambda { |request| FIXTURE_INDEX[File.basename(request.uri)] })
+end
+
 if respond_to?(:fork, true)
   module RequireHack
     def require(path)
@@ -74,7 +105,7 @@ if respond_to?(:fork, true)
   def subprocess_output(code, **kwargs)
     source = caller_locations.first
 
-    read_from_fork do |ch|
+    read_from_fork { |ch|
       # This (and the matching one below the eval) allow DeepCover's
       # clone mode to correctly pick up activity in the forked process.
       if defined?($_cov)
@@ -100,13 +131,13 @@ if respond_to?(:fork, true)
 
         DeepCover::CLONE_MODE_ENTRY_TOP_LEVEL_MODULES.first::DeepCover.save
       end
-    end.lines.map(&:chomp)
+    }.lines.map(&:chomp)
   end
 
   def read_from_fork
     r, w = IO.pipe
 
-    child_pid = fork do
+    child_pid = fork {
       r.close
 
       yield w
@@ -114,7 +145,7 @@ if respond_to?(:fork, true)
       w.close
 
       exit! true
-    end
+    }
 
     w.close
     r.read

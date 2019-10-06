@@ -14,6 +14,15 @@ module Gel::GemfileParser
     raise Gel::Error::GemfileEvaluationError.new(filename: filename)
   end
 
+  def self.inline(&block)
+    filename, _lineno = block.source_location
+
+    result = GemfileContent.new(filename)
+    context = ParseContext.new(result, filename)
+    context.instance_eval(&block)
+    result
+  end
+
   class RunningRuby
     def self.version
       RUBY_VERSION
@@ -187,6 +196,13 @@ module Gel::GemfileParser
         else
           target.scoped_require name, options[:require]
         end
+      end
+    end
+
+    def gems_for_platforms(match_platforms)
+      gems.select do |_, _, options|
+        next true unless entry_platforms = options[:platforms]
+        !([*entry_platforms] & match_platforms).empty?
       end
     end
   end

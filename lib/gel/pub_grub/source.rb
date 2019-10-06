@@ -6,17 +6,11 @@ require "pub_grub/rubygems"
 
 module Gel::PubGrub
   class Source < ::PubGrub::BasicPackageSource
-    Spec = Struct.new(:catalog, :name, :version, :info) do
-      def gem_version
-        @gem_version ||= Gel::Support::GemVersion.new(version)
-      end
-    end
-
     attr_reader :root, :root_version
 
-    def initialize(gemfile, catalogs, active_platforms, preference_strategy)
+    def initialize(gemfile, catalog_set, active_platforms, preference_strategy)
       @gemfile = gemfile
-      @catalogs = catalogs
+      @catalog_set = catalog_set
       @active_platforms = active_platforms
       @preference_strategy = preference_strategy
 
@@ -24,18 +18,7 @@ module Gel::PubGrub
       @root = PubGrub::Package.root
       @root_version = PubGrub::Package.root_version
 
-      @cached_specs = Hash.new { |h, k| h[k] = {} }
-      @specs_by_package_version = {}
-
       super()
-    end
-
-    def spec_for_version(package, version)
-      if package.name =~ /^~/
-        return Spec.new(nil, package.name, version, [])
-      end
-
-      @specs_by_package_version[package][version.to_s]
     end
 
     def all_versions_for(package)
@@ -43,9 +26,7 @@ module Gel::PubGrub
         return [Gem::Version.new("0")]
       end
 
-      fetch_package_info(package)
-
-      @specs_by_package_version[package].values.map(&:gem_version)
+      @catalog_set.entries_for(package).map(&:gem_version)
     end
 
     def sort_versions_by_preferred(package, sorted_versions)
@@ -73,18 +54,10 @@ module Gel::PubGrub
       when /^~/
         raise "Unknown pseudo-package"
       else
-        fetch_package_info(package) # probably already done, can't hurt
-
-        spec = @specs_by_package_version[package][version.to_s]
-        info = spec.info
-        info = info.select { |p, i| @active_platforms.include?(p) }
-
-        info.flat_map { |_, i| i[:dependencies] }.each do |n, cs|
+        @catalog_set.dependencies_for(package, version, platforms: @active_platforms).each do |n, cs|
           deps[n] ||= []
           deps[n].concat cs
         end
-
-        # FIXME: ruby_constraints ???
       end
 
       deps
@@ -93,10 +66,7 @@ module Gel::PubGrub
     def root_dependencies
       deps = { "~arguments" => [] }
 
-      @gemfile.gems.select do |_, _, options|
-        next true unless platforms = options[:platforms]
-        !([*platforms] & [:ruby, :mri]).empty?
-      end.each do |name, constraints, _|
+      @gemfile.gems_for_platforms([:ruby, :mri]).each do |name, constraints, _|
         deps[name] ||= []
         deps[name].concat constraints.flatten
       end
@@ -111,39 +81,6 @@ module Gel::PubGrub
     end
 
     private
-
-    def fetch_package_info(package)
-      return if @specs_by_package_version.key?(package)
-
-      specs = []
-      @catalogs.each do |catalog|
-        if catalog.nil?
-          break unless specs.empty?
-          next
-        end
-
-        if info = catalog.gem_info(package.name)
-          @cached_specs[catalog][package.name] ||=
-            begin
-              grouped_versions = info.to_a.map do |full_version, attributes|
-                version, platform = full_version.split("-", 2)
-                platform ||= "ruby"
-                [version, platform, attributes]
-              end.group_by(&:first)
-
-              grouped_versions.map { |version, tuples| Spec.new(catalog, package.name, version, tuples.map { |_, p, a| [p, a] }) }
-            end
-
-          specs.concat @cached_specs[catalog][package.name]
-        end
-      end
-
-      @specs_by_package_version[package] = {}
-      specs.each do |spec|
-        # TODO: are we going to find specs in multiple catalogs this way?
-        @specs_by_package_version[package][spec.version] = spec
-      end
-    end
 
     def to_range(constraints)
       requirement = Gel::Support::GemRequirement.new(constraints)

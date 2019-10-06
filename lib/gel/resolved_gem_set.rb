@@ -40,7 +40,6 @@ class Gel::ResolvedGemSet
     @filename = filename
 
     @gems = {}
-    @catalogs = []
   end
 
   def catalog_for(resolved_gem)
@@ -86,7 +85,7 @@ class Gel::ResolvedGemSet
       when "PLATFORMS"
         result.platforms = body
       when "DEPENDENCIES"
-        result.dependencies = body.map { |name| name.split(" ", 2)[0].chomp("!") }
+        result.dependencies = body.map { |name| name.chomp("!") }
       when "RUBY VERSION"
         result.ruby_version = body.first
       when "BUNDLED WITH"
@@ -105,6 +104,10 @@ class Gel::ResolvedGemSet
 
   def gem_names
     @gems.keys
+  end
+
+  def dependency_names
+    dependencies&.map { |dep| dep.split(" ").first }
   end
 
   def dump

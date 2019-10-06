@@ -20,7 +20,7 @@ LOCKFILE
 
     with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
       output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path)
-        loader = Gel::LockLoader.new(lock_path)
+        loader = Gel::LockLoader.new(Gel::ResolvedGemSet.load(lock_path))
         loader.activate(Gel::Environment, store)
 
         puts $:.grep(/\brack(?!-test)/).join(":")
@@ -64,7 +64,7 @@ LOCKFILE
 
       with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
         output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path)
-          loader = Gel::LockLoader.new(lock_path)
+          loader = Gel::LockLoader.new(Gel::ResolvedGemSet.load(lock_path))
           loader.activate(Gel::Environment, store)
 
           puts $:.grep(/\brack(?!-test)/).join(":")
@@ -117,7 +117,8 @@ LOCKFILE
 
     with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem", "atomic-1.1.16.gem"]) do |store|
       output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path, gemfile_content: gemfile_content)
-        loader = Gel::LockLoader.new(lock_path, Gel::GemfileParser.parse(gemfile_content))
+        loader = Gel::LockLoader.new(Gel::ResolvedGemSet.load(lock_path), Gel::GemfileParser.parse(gemfile_content))
+
         loader.activate(Gel::Environment, store)
 
         puts $:.grep(/\brack(?!-test)/).join(":")
@@ -156,7 +157,7 @@ LOCKFILE
 
     with_fixture_gems_installed(["rack-test-0.6.3.gem", "rack-2.0.3.gem", "hoe-3.0.0.gem"]) do |store|
       output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path, gemfile_content: gemfile_content)
-        loader = Gel::LockLoader.new(lock_path, Gel::GemfileParser.parse(gemfile_content))
+        loader = Gel::LockLoader.new(Gel::ResolvedGemSet.load(lock_path), Gel::GemfileParser.parse(gemfile_content))
         loader.activate(Gel::Environment, store)
 
         puts $:.grep(/\brack(?!-test)/).join(":")
