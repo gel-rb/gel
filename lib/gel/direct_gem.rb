@@ -24,6 +24,6 @@ class Gel::DirectGem < Gel::StoreGem
       dependencies: gemspec.runtime_dependencies,
     }
 
-    super(root, name, version || gemspec.version, gemspec.extensions, info)
+    super(root, name, version || Gel::Support::GemVersion.new(gemspec.version).to_s, gemspec.extensions, info)
   end
 end

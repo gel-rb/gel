@@ -198,12 +198,5 @@ module Gel::GemfileParser
         end
       end
     end
-
-    def gems_for_platforms(match_platforms)
-      gems.select do |_, _, options|
-        next true unless entry_platforms = options[:platforms]
-        !([*entry_platforms] & match_platforms).empty?
-      end
-    end
   end
 end

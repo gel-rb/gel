@@ -4,9 +4,12 @@ require "pub_grub"
 require "pub_grub/basic_package_source"
 require "pub_grub/rubygems"
 
+require_relative "package"
+require_relative "../platform"
+
 module Gel::PubGrub
   class Source < ::PubGrub::BasicPackageSource
-    attr_reader :root, :root_version
+    attr_reader :root
 
     def initialize(gemfile, catalog_set, active_platforms, preference_strategy)
       @gemfile = gemfile
@@ -14,15 +17,27 @@ module Gel::PubGrub
       @active_platforms = active_platforms
       @preference_strategy = preference_strategy
 
-      @packages = Hash.new {|h, k| h[k] = PubGrub::Package.new(k) }
-      @root = PubGrub::Package.root
-      @root_version = PubGrub::Package.root_version
+      # pub_grub-0.5.0/lib/pub_grub/basic_package_source.rb:165
+      @packages = {}
+
+      @root = Package::Pseudo.new(:root)
 
       super()
     end
 
+    def active_platforms_map
+      @active_platforms_map ||= Hash.new(@active_platforms).tap do |result|
+        @gemfile.gems.each do |name, _, options|
+          if options.key?(:platforms)
+            filter = Array(options[:platforms] || ["ruby"]).map(&:to_s)
+            result[name] = Gel::Platform.filter(@active_platforms, filter)
+          end
+        end
+      end
+    end
+
     def all_versions_for(package)
-      if package.name =~ /^~/
+      if package.is_a?(Package::Pseudo)
         return [Gem::Version.new("0")]
       end
 
@@ -43,41 +58,59 @@ module Gel::PubGrub
     def dependencies_for(package, version)
       deps = {}
 
-      case package.name
-      when "~arguments"
-        if @preference_strategy
-          @preference_strategy.constraints.each do |name, constraints|
-            deps[name] ||= []
-            deps[name].concat constraints.flatten
+      if package.is_a?(Package::Pseudo)
+        case package.role
+        when :root
+          deps = { Package::Pseudo.new(:arguments) => [], Package::Pseudo.new(:gemfile) => [] }
+
+        when :gemfile
+          @gemfile.gems.each do |name, constraints, _|
+            active_platforms_map[name].each do |platform|
+              (deps[Package.new(name, platform)] ||= []).concat(constraints.flatten)
+            end
           end
+
+          deps.values.each(&:uniq!)
+
+        when :arguments
+          if @preference_strategy
+            @preference_strategy.constraints.each do |name, constraints|
+              @active_platforms.each do |platform|
+                (deps[Package.new(name, platform)] ||= []).concat(constraints.flatten)
+              end
+            end
+          end
+
+        else
+          raise "Unknown pseudo-package #{package.inspect}"
         end
-      when /^~/
-        raise "Unknown pseudo-package"
       else
-        @catalog_set.dependencies_for(package, version, platforms: @active_platforms).each do |n, cs|
-          deps[n] ||= []
-          deps[n].concat cs
+        @catalog_set.dependencies_for(package, version).each do |n, cs|
+          (deps[Package.new(n, package.platform)] ||= []).concat(cs.flatten)
         end
       end
-
-      deps
-    end
-
-    def root_dependencies
-      deps = { "~arguments" => [] }
-
-      @gemfile.gems_for_platforms([:ruby, :mri]).each do |name, constraints, _|
-        deps[name] ||= []
-        deps[name].concat constraints.flatten
-      end
-
-      deps.values.each(&:uniq!)
 
       deps
     end
 
     def parse_dependency(package, requirement)
-      ::PubGrub::VersionConstraint.new(@packages[package], range: to_range(requirement))
+      ::PubGrub::VersionConstraint.new(package, range: to_range(requirement))
+    end
+
+    def incompatibilities_for(package, version)
+      result = super
+
+      unless package.is_a?(Package::Pseudo)
+        other_platforms = @active_platforms - [package.platform]
+
+        self_constraint = PubGrub::VersionConstraint.new(package, range: PubGrub::VersionRange.new(min: version, max: version, include_min: true, include_max: true))
+        result += other_platforms.map do |other_platform|
+          other_constraint = PubGrub::VersionConstraint.new(Package.new(package.name, other_platform), range: PubGrub::VersionUnion.new([PubGrub::VersionRange.new(max: version), PubGrub::VersionRange.new(min: version)]))
+          PubGrub::Incompatibility.new([PubGrub::Term.new(self_constraint, true), PubGrub::Term.new(other_constraint, true)], cause: :dependency)
+        end
+      end
+
+      result
     end
 
     private

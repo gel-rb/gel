@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "platform"
+
 class Gel::CatalogSet
   CatalogEntry = Struct.new(:catalog, :name, :version, :info) do
     def gem_version
@@ -15,35 +17,56 @@ class Gel::CatalogSet
   end
 
   def catalog_for_version(package, version)
-    @specs_by_package_version[package][version.to_s]&.catalog
+    @specs_by_package_version[package.name][version.to_s]&.catalog
   end
 
   def entries_for(package)
     fetch_package_info(package)
 
-    @specs_by_package_version[package].values
+    @specs_by_package_version[package.name].values.select do |spec|
+      available_platforms = spec.info.map(&:first)
+      Gel::Platform.match(package.platform, available_platforms)
+    end
   end
 
   # Returns a list of [name, version_contraint] pairs representing the
   # specified package's dependencies. Note that a given +name+ may
   # appear multiple times, and the resulting dependency is the
   # intersection of all constraints.
-  def dependencies_for(package, version, platforms: nil)
+  def dependencies_for(package, version)
     fetch_package_info(package) # probably already done, can't hurt
 
-    spec = @specs_by_package_version[package][version.to_s]
+    spec = @specs_by_package_version[package.name][version.to_s]
+
+    raise "missing spec #{package.inspect} / #{version.inspect}" if spec.nil?
+
     info = spec.info
-    info = info.select { |p, i| platforms.include?(p) } if platforms
+
+    available_platforms = info.map(&:first)
+    matching_platform = Gel::Platform.match(package.platform, available_platforms)
+
+    info = info.select { |p, i| p == matching_platform }
 
     # FIXME: ruby_constraints ???
 
     info.flat_map { |_, i| i[:dependencies] }
   end
 
+  def platform_for(package, version)
+    fetch_package_info(package) # probably already done, can't hurt
+
+    spec = @specs_by_package_version[package.name][version.to_s]
+
+    info = spec.info
+
+    available_platforms = info.map(&:first)
+    Gel::Platform.match(package.platform, available_platforms)
+  end
+
   private
 
   def fetch_package_info(package)
-    return if @specs_by_package_version.key?(package)
+    return if @specs_by_package_version.key?(package.name)
 
     specs = []
     @catalogs.each do |catalog|
@@ -68,10 +91,10 @@ class Gel::CatalogSet
       end
     end
 
-    @specs_by_package_version[package] = {}
+    @specs_by_package_version[package.name] = {}
     specs.each do |spec|
       # TODO: are we going to find specs in multiple catalogs this way?
-      @specs_by_package_version[package][spec.version] = spec
+      @specs_by_package_version[package.name][spec.version] = spec
     end
   end
 end

@@ -12,7 +12,7 @@ module Gel::PubGrub
     # Overrides first, then packages for which we have a preference (and
     # that preference is still in play), then everything else.
     def package_priority(package, versions)
-      if package.name =~ /^~/
+      if package.is_a?(Package::Pseudo)
         -1000
       elsif @overrides.key?(package.name)
         -100

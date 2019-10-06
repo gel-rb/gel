@@ -10,7 +10,7 @@ class Gel::PubGrub::Solver < PubGrub::VersionSolver
   def initialize(gemfile:, catalog_set:, platforms:, strategy:)
     source = Gel::PubGrub::Source.new(gemfile, catalog_set, platforms, strategy)
 
-    super(source: source)
+    super(source: source, root: source.root)
 
     @strategy = strategy
   end
@@ -29,12 +29,8 @@ class Gel::PubGrub::Solver < PubGrub::VersionSolver
   end
 
   def each_resolved_package(&block)
-    solution = result
-    solution.delete(source.root)
-
-    solution.reject do |package, _version|
-      package.name =~ /^~/
-    end.each do |package, version|
+    result.each do |package, version|
+      next if package.is_a?(Gel::PubGrub::Package::Pseudo)
       yield package, version
     end
   end
