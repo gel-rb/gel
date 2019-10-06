@@ -40,6 +40,8 @@ class Gel::TailFile
     uri = self.uri
 
     File.open(@filename, "a+b") do |f|
+      f.flock(File::LOCK_EX)
+
       f.seek(0, IO::SEEK_END)
 
       MAXIMUM_CHAIN.times do
