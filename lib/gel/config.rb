@@ -16,20 +16,13 @@ class Gel::Config
   end
 
   def [](group = nil, key)
-    if group.nil?
-      group, key = key.split(".", 2)
-    end
-
-    (group ? (config[group.to_s] || {}) : config)[key.to_s]
+    key = "#{group}.#{key}" unless group.nil?
+    config[key.downcase]
   end
 
   def []=(group = nil, key, value)
-    if group.nil?
-      group, key = key.split(".", 2)
-    end
-
-    (group ? (config[group.to_s] ||= {}) : config)[key.to_s] = value.to_s
-
+    key = "#{group}.#{key}" unless group.nil?
+    config[key] = value.to_s
     write(config)
   end
 
@@ -38,20 +31,11 @@ class Gel::Config
   def read
     result = {}
     if File.exist?(@path)
-      context = nil
       File.read(@path).each_line do |line|
         line.chomp!
-        if line =~ /\A(\S[^:]*):\z/
-          context = result[$1] = {}
-        elsif line =~ /\A  ([^:]*): (.*)\z/
-          context[$1] = $2
-        elsif line =~ /\A([^:]*): (.*)\z/
-          result[$1] = $2
-        elsif line =~ /\A\s*(?:#|\z)/
-          # comment / empty
-        else
-          raise Gel::Error::UnexpectedConfigError.new(line: line)
-        end
+        key, value = line.split(':')
+        next unless key
+        result[key.downcase] = value&.strip
       end
     end
     result
@@ -62,19 +46,7 @@ class Gel::Config
 
     tempfile = File.join(@root, ".config.#{Process.pid}")
     File.open(tempfile, "w", 0644) do |f|
-      data.each do |key, value|
-        next if value.is_a?(Hash)
-        f.puts("#{key}: #{value}")
-      end
-
-      data.each do |key, value|
-        next unless value.is_a?(Hash)
-        f.puts
-        f.puts("#{key}:")
-        value.each do |subkey, subvalue|
-          f.puts("  #{subkey}: #{subvalue}")
-        end
-      end
+      data.each { |key, value| f.puts("#{key}: #{value}") }
     end
 
     File.rename(tempfile, @path)

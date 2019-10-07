@@ -1,4 +1,3 @@
-jobs:
-  : 1
-gem:
-  mit: true
+packages.example.io: 316429e
+gem.mit: true
+timeout: 10
