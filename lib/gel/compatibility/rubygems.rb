@@ -54,7 +54,7 @@ module Gem
 
     def dependencies
       @store_gem.dependencies.map do |name, pairs|
-        Gem::Dependency.new(name, pairs.map { |op, ver| "#{op} #{ver}" }, :runtime)
+        Gem::Dependency.new(name, Gem::Requirement.new(pairs.map { |op, ver| "#{op} #{ver}" }), :runtime)
       end
     end
     alias runtime_dependencies dependencies
