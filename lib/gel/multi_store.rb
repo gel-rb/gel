@@ -10,9 +10,18 @@ class Gel::MultiStore
   attr_reader :monitor
 
   def initialize(root, stores)
-    @root = File.realpath(File.expand_path(root)) if root
+    @root = root && File.realpath(File.expand_path(root))
     @stores = stores
 
+    @monitor = Monitor.new
+  end
+
+  def marshal_dump
+    [@root, @stores]
+  end
+
+  def marshal_load(v)
+    @root, @stores = v
     @monitor = Monitor.new
   end
 

@@ -170,7 +170,7 @@ class Gel::ResolvedGemSet
 
     if platforms && !platforms.empty?
       lock_content << "PLATFORMS"
-      platforms.each do |platform|
+      platforms.sort.each do |platform|
         lock_content << "  #{platform}"
       end
       lock_content << ""

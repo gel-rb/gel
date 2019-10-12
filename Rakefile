@@ -25,6 +25,7 @@ FIXTURE_GEMS = [
   ["rack-test", "0.6.3"],
   ["fast_blank", "1.0.0"],
   ["atomic", "1.1.16"],
+  ["atomic", "1.1.16-java"],
   ["rainbow", "2.2.2"],
   ["rake", "12.3.2"],
   ["pub_grub", "0.5.0"],
@@ -41,10 +42,16 @@ FIXTURE_GEMS = [
 MIMED_GEMS = [
   "pub_grub",
 
+  "activerecord-jdbcpostgresql-adapter",
+  "activerecord-jdbcsqlite3-adapter",
   "foreman",
+  "gruff",
+  "pg",
   "quiet_assets",
   "rails",
   "rspec-rails",
+  "sqlite3",
+  "tzinfo-data",
 ]
 
 task :fixtures do

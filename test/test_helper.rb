@@ -165,9 +165,11 @@ elsif defined?(org.jruby.Ruby)
     config.input = StringIO.new.tap(&:close_write).to_input_stream
     config.output = java.io.PrintStream.new(io.to_output_stream)
 
-    config.required_libraries << File.expand_path("../gel/compatibility", __dir__)
+    config.load_paths << File.expand_path("../lib/gel/compatibility", __dir__)
+    config.required_libraries << __FILE__
 
     wrapped_code = kwargs.map { |name, value| "#{name} = Marshal.load(#{Marshal.dump(value).inspect})\n" }.join +
+      "include WebMock::API; WebMock.enable!\n" +
       "eval(#{code.inspect}, binding, #{source.path.inspect}, #{source.lineno + 1})"
 
     org.jruby.Ruby.new_instance(config).eval_scriptlet(wrapped_code)

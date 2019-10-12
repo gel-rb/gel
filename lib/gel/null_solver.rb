@@ -8,8 +8,6 @@ class Gel::NullSolver
     @catalog_set = catalog_set
     @platforms = platforms
 
-    raise "NullSolver can't process multiple platforms" if platforms.size > 1
-
     @platform = @platforms.first
 
     @packages = Hash.new { |h, k| h[k] = NullPackage.new(k, @platform) }

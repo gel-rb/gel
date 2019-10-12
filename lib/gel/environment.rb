@@ -12,11 +12,17 @@ class Gel::Environment
   end
   self.gemfile = nil
   @active_lockfile = false
-  @architectures = ["ruby"].freeze
+  @architectures = [defined?(org.jruby.Ruby) ? "java" : nil, "ruby"].compact.freeze
 
   GEMFILE_PLATFORMS = begin
     v = RbConfig::CONFIG["ruby_version"].split(".")[0..1].inject(:+)
-    ["ruby", "ruby_#{v}", "mri", "mri_#{v}"]
+
+    # FIXME: This isn't the right condition
+    if defined?(org.jruby.Ruby)
+      ["jruby", "jruby_#{v}", "java", "java_#{v}"]
+    else
+      ["ruby", "ruby_#{v}", "mri", "mri_#{v}"]
+    end
   end
 
   def self.platform?(platform)
@@ -137,16 +143,19 @@ class Gel::Environment
     end
   end
 
-  def self.solve_for_gemfile(store: store(), output: nil, gemfile: Gel::Environment.load_gemfile, lockfile: Gel::Environment.lockfile_name, catalog_options: {}, solve: true, preference_strategy: nil)
+  def self.solve_for_gemfile(store: store(), output: nil, gemfile: Gel::Environment.load_gemfile, lockfile: Gel::Environment.lockfile_name, catalog_options: {}, solve: true, preference_strategy: nil, platforms: nil)
     output = nil if $DEBUG
+
+    target_platforms = Array(platforms)
 
     if lockfile && File.exist?(lockfile)
       require_relative "resolved_gem_set"
       gem_set = Gel::ResolvedGemSet.load(lockfile)
-      target_platforms = gem_set.platforms
+      target_platforms |= gem_set.platforms if gem_set.platforms
     end
 
-    target_platforms ||= ["ruby"]
+    # Should we just _always_ include our own architecture, maybe?
+    target_platforms |= [architectures.first] if target_platforms.empty?
 
     require_relative "catalog"
     all_sources = (gemfile.sources | gemfile.gems.flat_map { |_, _, o| o[:source] }).compact

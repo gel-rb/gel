@@ -15,6 +15,14 @@ class Gel::Store
     @monitor = Monitor.new
   end
 
+  def marshal_dump
+    @root
+  end
+
+  def marshal_load(v)
+    initialize(v)
+  end
+
   def stub_set
     @stub_set ||= Gel::StubSet.new(@root)
   end

@@ -88,6 +88,13 @@ module Gel::GemfileParser
     end
 
     def gem(name, *requirements, **options)
+      aliases = GemfileContent::OPTION_ALIASES
+      options.keys.each do |key|
+        if original = aliases[key]
+          raise "Duplicate key #{key.inspect} == #{original.inspect}" if options.key?(original)
+          options[original] = options.delete(key)
+        end
+      end
       options = @result.flatten(options, @stack)
       @result.add_gem(name, requirements, options)
     end
@@ -104,8 +111,8 @@ module Gel::GemfileParser
       else
         spec = gemspecs[0]
         gem spec.name, path: path
-        spec.development_dependencies.each do |name, constraints|
-          gem name, constraints, group: development_group
+        spec.development_dependencies.each do |dep_name, constraints|
+          gem dep_name, constraints, group: development_group
         end
       end
     end
@@ -133,6 +140,10 @@ module Gel::GemfileParser
   end
 
   class GemfileContent
+    OPTION_ALIASES = {
+      platform: :platforms,
+    }
+
     attr_reader :filename
 
     attr_reader :sources
