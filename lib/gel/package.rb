@@ -24,6 +24,10 @@ module Gel
         @inner.architecture
       end
 
+      def platform
+        @inner.platform
+      end
+
       def bindir
         @inner.bindir
       end
@@ -91,7 +95,7 @@ module Gel
       end
 
       class Gem_Specification
-        attr_accessor :architecture, :bindir, :executables, :name, :require_paths, :specification_version, :version, :dependencies, :extensions
+        attr_accessor :architecture, :bindir, :executables, :name, :platform, :require_paths, :specification_version, :version, :dependencies, :extensions
       end
       class Gem_Dependency
         attr_accessor :name, :requirement, :type, :version_requirements

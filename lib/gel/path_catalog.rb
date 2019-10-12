@@ -27,7 +27,7 @@ class Gel::PathCatalog
     gemspec = gemspec_from(gemspec)
 
     info = {}
-    info[gemspec.version] = {
+    info[Gel::Support::GemVersion.new(gemspec.version).to_s] = {
       dependencies: gemspec.runtime_dependencies,
       ruby: gemspec.required_ruby_version,
     }

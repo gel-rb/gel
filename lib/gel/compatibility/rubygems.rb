@@ -11,6 +11,7 @@ require_relative "../runtime"
 module Gem
   Version = Gel::Support::GemVersion
   Requirement = Gel::Support::GemRequirement
+  Platform = Gel::Support::GemPlatform
 
   class Dependency
     attr_reader :name
@@ -27,6 +28,10 @@ module Gem
   LoadError = Class.new(::LoadError)
 
   class Specification
+    class << self
+      include Enumerable
+    end
+
     def self.find_by_name(name, *requirements)
       if g = Gel::Environment.find_gem(name, *requirements)
         new(g)
@@ -96,6 +101,10 @@ module Gem
     RbConfig.ruby
   end
 
+  def self.platforms
+    Gel::Support::GemPlatform.platforms
+  end
+
   def self.win_platform?
     false
   end
@@ -146,8 +155,8 @@ module Gem
 
     if g = Gel::Environment.activated_gems[gem_name]
       Gel::Environment.gem g.name, version if version
-    elsif g = Gel::Environment.find_gem(gem_name, *version) do |g|
-        g.executables.include?(bin_name)
+    elsif g = Gel::Environment.find_gem(gem_name, *version) do |gg|
+        gg.executables.include?(bin_name)
       end
 
       Gel::Environment.gem g.name, g.version

@@ -30,7 +30,13 @@ class Gel::Package::Installer
       @root_store = store
 
       if store.is_a?(Gel::MultiStore)
-        store = store[spec.architecture, spec.extensions.any?]
+        platform_parts = []
+        platform_parts << spec.platform if spec.platform && spec.platform != "ruby"
+        platform_parts << spec.architecture if spec.architecture
+
+        platform_dir = platform_parts.join("-") unless platform_parts.empty?
+
+        store = store[platform_dir, spec.extensions.any?]
       end
       @store = store
 

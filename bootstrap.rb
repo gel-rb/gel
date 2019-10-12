@@ -26,8 +26,8 @@ when "gemfile"
   end
 
   # `gel install`
-  loader = Gel::LockLoader.new(Gel::ResolvedGemSet.load("Gemfile.lock"))
-  loader.activate(nil, Gel::Environment.store.inner, install: true, output: $stderr)
+  loader = Gel::LockLoader.new(Gel::ResolvedGemSet.load("Gemfile.lock"), Gel::GemfileParser.parse(File.read("Gemfile"), "Gemfile", 1))
+  loader.activate(Gel::Environment, Gel::Environment.store.inner, install: true, output: $stderr)
 
 else
   usage

@@ -1,19 +1,22 @@
 # frozen_string_literal: true
 
 class Gel::NullSolver
-  NullPackage = Struct.new(:name)
+  NullPackage = Struct.new(:name, :platform)
 
   def initialize(gemfile:, catalog_set:, platforms:)
     @gemfile = gemfile
     @catalog_set = catalog_set
     @platforms = platforms
 
-    @packages = Hash.new { |h, k| h[k] = NullPackage.new(k) }
+    @platform = @platforms.first
+
+    @packages = Hash.new { |h, k| h[k] = NullPackage.new(k, @platform) }
 
     @solution = {}
     @constraints = Hash.new { |h, k| h[k] = [] }
 
-    @gemfile.gems_for_platforms(@platforms).each do |name, constraints, _|
+    @gemfile.gems.each do |name, constraints, options|
+      raise "NullSolver can't apply platform constraints" if options[:platforms]
       @constraints[name].concat(constraints || [])
     end
   end
@@ -38,7 +41,7 @@ class Gel::NullSolver
 
     @solution[name] = choice
 
-    @catalog_set.dependencies_for(@packages[name], choice, platforms: @platforms).each do |dep_name, constraints|
+    @catalog_set.dependencies_for(@packages[name], choice).each do |dep_name, constraints|
       if @solution[dep_name]
         new_req = Gel::Support::GemRequirement.new(constraints)
         unless new_req.satisfied_by?(@solution[dep_name])

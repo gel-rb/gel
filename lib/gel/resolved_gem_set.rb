@@ -130,7 +130,7 @@ class Gel::ResolvedGemSet
       end
     end
 
-    grouped_graph = gems.values.flatten(1).sort_by(&:name).group_by { |rg|
+    grouped_graph = gems.values.flatten(1).sort_by { |rg| [rg.name, "#{rg.full_version}"] }.group_by { |rg|
       catalog = rg.catalog
       catalog.is_a?(Gel::Catalog) || catalog.is_a?(Gel::StoreCatalog) ? nil : catalog
     }
@@ -170,7 +170,7 @@ class Gel::ResolvedGemSet
 
     if platforms && !platforms.empty?
       lock_content << "PLATFORMS"
-      platforms.each do |platform|
+      platforms.sort.each do |platform|
         lock_content << "  #{platform}"
       end
       lock_content << ""

@@ -12,11 +12,17 @@ class Gel::Environment
   end
   self.gemfile = nil
   @active_lockfile = false
-  @architectures = ["ruby"].freeze
+  @architectures = [defined?(org.jruby.Ruby) ? "java" : nil, "ruby"].compact.freeze
 
   GEMFILE_PLATFORMS = begin
     v = RbConfig::CONFIG["ruby_version"].split(".")[0..1].inject(:+)
-    ["ruby", "ruby_#{v}", "mri", "mri_#{v}"]
+
+    # FIXME: This isn't the right condition
+    if defined?(org.jruby.Ruby)
+      ["jruby", "jruby_#{v}", "java", "java_#{v}"]
+    else
+      ["ruby", "ruby_#{v}", "mri", "mri_#{v}"]
+    end
   end
 
   def self.platform?(platform)
@@ -137,13 +143,19 @@ class Gel::Environment
     end
   end
 
-  def self.solve_for_gemfile(store: store(), output: nil, gemfile: Gel::Environment.load_gemfile, lockfile: Gel::Environment.lockfile_name, catalog_options: {}, solve: true, preference_strategy: nil)
+  def self.solve_for_gemfile(store: store(), output: nil, gemfile: Gel::Environment.load_gemfile, lockfile: Gel::Environment.lockfile_name, catalog_options: {}, solve: true, preference_strategy: nil, platforms: nil)
     output = nil if $DEBUG
+
+    target_platforms = Array(platforms)
 
     if lockfile && File.exist?(lockfile)
       require_relative "resolved_gem_set"
       gem_set = Gel::ResolvedGemSet.load(lockfile)
+      target_platforms |= gem_set.platforms if gem_set.platforms
     end
+
+    # Should we just _always_ include our own architecture, maybe?
+    target_platforms |= [architectures.first] if target_platforms.empty?
 
     require_relative "catalog"
     all_sources = (gemfile.sources | gemfile.gems.flat_map { |_, _, o| o[:source] }).compact
@@ -210,10 +222,10 @@ class Gel::Environment
       end
 
       strategy = gem_set && preference_strategy && preference_strategy.call(gem_set)
-      solver = Gel::PubGrub::Solver.new(gemfile: gemfile, catalog_set: catalog_set, platforms: ["ruby"], strategy: strategy)
+      solver = Gel::PubGrub::Solver.new(gemfile: gemfile, catalog_set: catalog_set, platforms: target_platforms, strategy: strategy)
     else
       require_relative "null_solver"
-      solver = Gel::NullSolver.new(gemfile: gemfile, catalog_set: catalog_set, platforms: ["ruby"])
+      solver = Gel::NullSolver.new(gemfile: gemfile, catalog_set: catalog_set, platforms: target_platforms)
     end
 
     if output
@@ -239,40 +251,58 @@ class Gel::Environment
 
     new_resolution = Gel::ResolvedGemSet.new
 
+    packages_by_name = {}
+    versions_by_name = {}
     solver.each_resolved_package do |package, version|
-      catalog = catalog_set.catalog_for_version(package, version)
+      ((packages_by_name[package.name] ||= {})[catalog_set.platform_for(package, version)] ||= []) << package
 
-      type =
-        case catalog
-        when Gel::GitCatalog; :git
-        when Gel::PathCatalog; :path
-        else; :gem
+      if versions_by_name[package.name]
+        raise "Conflicting version resolution #{versions_by_name[package.name].inspect} != #{version.inspect}" if versions_by_name[package.name] != version
+      else
+        versions_by_name[package.name] = version
+      end
+    end
+
+    packages_by_name.each do |package_name, platformed_packages|
+      version = versions_by_name[package_name]
+
+      new_resolution.gems[package_name] =
+        platformed_packages.map do |resolved_platform, packages|
+          package = packages.first
+
+          catalog = catalog_set.catalog_for_version(package, version)
+
+          type =
+            case catalog
+            when Gel::GitCatalog; :git
+            when Gel::PathCatalog; :path
+            else; :gem
+            end
+
+          deps = catalog_set.dependencies_for(package, version)
+
+          body = nil
+
+          resolved_platform = nil if resolved_platform == "ruby"
+
+          Gel::ResolvedGemSet::ResolvedGem.new(
+            type, body, package.name, version, resolved_platform,
+            deps.map do |(dep_name, dep_requirements)|
+              next [dep_name] if dep_requirements == [">= 0"] || dep_requirements == []
+
+              req = Gel::Support::GemRequirement.new(dep_requirements)
+              req_strings = req.requirements.sort_by { |(_op, ver)| [ver, ver.segments] }.map { |(op, ver)| "#{op} #{ver}" }
+
+              [dep_name, req_strings.join(", ")]
+            end,
+            set: new_resolution,
+            catalog: catalog
+          )
         end
-
-      deps = catalog_set.dependencies_for(package, version, platforms: ["ruby"])
-
-      platform = nil # TODO
-
-      body = nil
-
-      (new_resolution.gems[package.name] ||= []) <<
-        Gel::ResolvedGemSet::ResolvedGem.new(
-          type, body, package.name, version, platform,
-          deps.map do |(dep_name, dep_requirements)|
-            next [dep_name] if dep_requirements == [">= 0"] || dep_requirements == []
-
-            req = Gel::Support::GemRequirement.new(dep_requirements)
-            req_strings = req.requirements.sort_by { |(_op, ver)| ver }.map { |(op, ver)| "#{op} #{ver}" }
-
-            [dep_name, req_strings.join(", ")]
-          end,
-          set: new_resolution,
-          catalog: catalog
-        )
     end
 
     new_resolution.dependencies =
-      gemfile.gems_for_platforms([:ruby, :mri]).
+      gemfile.gems.
       group_by { |name, _constraints, _options| name }.
       map do |name, list|
         constraints = list.flat_map { |_, c, _| c }.compact
@@ -281,14 +311,14 @@ class Gel::Environment
           name
         else
           r = Gel::Support::GemRequirement.new(constraints)
-          req_strings = r.requirements.sort_by { |(_op, ver)| ver }.map { |(op, ver)| "#{op} #{ver}" }
+          req_strings = r.requirements.sort_by { |(_op, ver)| [ver, ver.segments] }.map { |(op, ver)| "#{op} #{ver}" }
 
           "#{name} (#{req_strings.join(", ")})"
         end
       end.
       sort
 
-    new_resolution.platforms = ["ruby"]
+    new_resolution.platforms = target_platforms
     new_resolution.server_catalogs = server_catalogs
     new_resolution.bundler_version = gem_set&.bundler_version
     new_resolution.ruby_version = RUBY_DESCRIPTION.split.first(2).join(" ") if gem_set&.ruby_version

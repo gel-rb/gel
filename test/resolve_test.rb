@@ -3,10 +3,6 @@
 require "test_helper"
 
 class ResolveTest < Minitest::Test
-  def setup
-    skip if jruby?
-  end
-
   def test_trivial_gemfile
     gemfile = <<GEMFILE
 source "https://rubygems.org"
@@ -27,7 +23,7 @@ VERSIONS
 2.0.3 |checksum:zzz
 INFO
 
-    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile)
+    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile, platforms: "ruby")
 GEM
   remote: https://rubygems.org/
   specs:
@@ -64,7 +60,7 @@ VERSIONS
 0.1.1 |checksum:zzz
 INFO
 
-    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile)
+    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile, platforms: "ruby")
 GEM
   remote: https://rubygems.org/
   specs:
@@ -101,7 +97,7 @@ VERSIONS
 0.1.1 |checksum:zzz
 INFO
 
-    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile)
+    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile, platforms: "ruby")
 GEM
   remote: https://rubygems.org/
   specs:
@@ -124,7 +120,7 @@ GEMFILE
 
     stub_gem_mimer
 
-    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile)
+    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile, platforms: "ruby")
 GEM
   remote: https://gem-mimer.org/
   specs:
@@ -158,6 +154,209 @@ DEPENDENCIES
 LOCKFILE
   end
 
+  def test_multiple_platforms_resolve_together
+    gemfile = <<GEMFILE
+source "https://gem-mimer.org"
+
+gem "activerecord", "~> 4.0"
+GEMFILE
+
+    stub_gem_mimer
+
+    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile, platforms: ["ruby", "java"])
+GEM
+  remote: https://gem-mimer.org/
+  specs:
+    activemodel (4.2.11)
+      activesupport (= 4.2.11)
+      builder (~> 3.1)
+    activerecord (4.2.11)
+      activemodel (= 4.2.11)
+      activesupport (= 4.2.11)
+      arel (~> 6.0)
+    activesupport (4.2.11)
+      i18n (~> 0.7)
+      minitest (~> 5.1)
+      thread_safe (~> 0.3, >= 0.3.4)
+      tzinfo (~> 1.1)
+    arel (6.0.4)
+    builder (3.2.3)
+    concurrent-ruby (1.1.4)
+    i18n (0.9.5)
+      concurrent-ruby (~> 1.0)
+    minitest (5.11.3)
+    thread_safe (0.3.6)
+    thread_safe (0.3.6-java)
+    tzinfo (1.2.5)
+      thread_safe (~> 0.1)
+
+PLATFORMS
+  java
+  ruby
+
+DEPENDENCIES
+  activerecord (~> 4.0)
+LOCKFILE
+  end
+
+  def test_single_platform_gems_accepted
+    gemfile = <<GEMFILE
+source "https://gem-mimer.org"
+
+gem "rake"
+gem "jruby-pageant", platform: :java
+GEMFILE
+
+    stub_gem_mimer
+
+    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile, platforms: ["ruby", "java"])
+GEM
+  remote: https://gem-mimer.org/
+  specs:
+    jruby-pageant (1.1.1-java)
+    rake (12.3.2)
+
+PLATFORMS
+  java
+  ruby
+
+DEPENDENCIES
+  jruby-pageant
+  rake
+LOCKFILE
+  end
+
+  def test_platform_specific_dependencies_resolve
+    gemfile = <<GEMFILE
+source "https://gem-mimer.org"
+
+gem "gruff"
+GEMFILE
+
+    stub_gem_mimer
+
+    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile, platforms: ["ruby", "java"])
+GEM
+  remote: https://gem-mimer.org/
+  specs:
+    gruff (0.7.0)
+      rmagick (~> 2.13, >= 2.13.4)
+    gruff (0.7.0-java)
+      rmagick4j (~> 0.3, >= 0.3.9)
+    rmagick (2.16.0)
+    rmagick4j (0.4.0-java)
+
+PLATFORMS
+  java
+  ruby
+
+DEPENDENCIES
+  gruff
+LOCKFILE
+  end
+
+  def test_platform_specific_dependencies_interact
+    gemfile = <<GEMFILE
+source "https://gem-mimer.org"
+
+gem "nokogiri"
+gem "mini_portile2", "2.2.0"
+GEMFILE
+
+    stub_gem_mimer
+
+    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile, platforms: ["ruby"])
+GEM
+  remote: https://gem-mimer.org/
+  specs:
+    mini_portile2 (2.2.0)
+    nokogiri (1.8.0)
+      mini_portile2 (~> 2.2.0)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  mini_portile2 (= 2.2.0)
+  nokogiri
+LOCKFILE
+
+    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile, platforms: ["java"])
+GEM
+  remote: https://gem-mimer.org/
+  specs:
+    mini_portile2 (2.2.0)
+    nokogiri (1.9.1-java)
+
+PLATFORMS
+  java
+
+DEPENDENCIES
+  mini_portile2 (= 2.2.0)
+  nokogiri
+LOCKFILE
+
+    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile, platforms: ["ruby", "java"])
+GEM
+  remote: https://gem-mimer.org/
+  specs:
+    mini_portile2 (2.2.0)
+    nokogiri (1.8.0)
+      mini_portile2 (~> 2.2.0)
+    nokogiri (1.8.0-java)
+
+PLATFORMS
+  java
+  ruby
+
+DEPENDENCIES
+  mini_portile2 (= 2.2.0)
+  nokogiri
+LOCKFILE
+  end
+
+  def test_platform_defaults_to_local
+    gemfile = <<GEMFILE
+source "https://gem-mimer.org"
+
+gem "gruff"
+GEMFILE
+
+    stub_gem_mimer
+
+    if jruby?
+      assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile, platforms: nil)
+GEM
+  remote: https://gem-mimer.org/
+  specs:
+    gruff (0.7.0-java)
+      rmagick4j (~> 0.3, >= 0.3.9)
+    rmagick4j (0.4.0-java)
+
+PLATFORMS
+  java
+
+DEPENDENCIES
+  gruff
+LOCKFILE
+    else
+      assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile, platforms: nil)
+GEM
+  remote: https://gem-mimer.org/
+  specs:
+    gruff (0.7.0)
+      rmagick (~> 2.13, >= 2.13.4)
+    rmagick (2.16.0)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  gruff
+LOCKFILE
+    end
+  end
+
   def test_dependencies_constrain_each_other
     gemfile = <<GEMFILE
 source "https://gem-mimer.org"
@@ -168,7 +367,7 @@ GEMFILE
 
     stub_gem_mimer
 
-    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile)
+    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile, platforms: "ruby")
 GEM
   remote: https://gem-mimer.org/
   specs:
@@ -264,7 +463,7 @@ GEMFILE
 
       stub_gem_mimer
 
-      assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile)
+      assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile, platforms: "ruby")
 PATH
   remote: #{shush_dir}
   specs:
@@ -377,7 +576,7 @@ GEMFILE
 
       stub_gem_mimer
 
-      assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile)
+      assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile, platforms: "ruby")
 GIT
   remote: #{shush_dir}
   revision: #{sha}
@@ -487,7 +686,7 @@ INFO
 
     stub_gem_mimer
 
-    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile)
+    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile, platforms: "ruby")
 GEM
   remote: https://gem-mimer.org/
   remote: https://extra-gems.org/
@@ -533,7 +732,7 @@ GEMFILE
     stub_request(:get, "https://rubygems.org/quick/Marshal.4.8/rack-2.0.6.gemspec.rz").
       to_return(body: gemspec_rz(name: "rack", version: "2.0.6", dependencies: []))
 
-    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile)
+    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile, platforms: "ruby")
 GEM
   remote: https://rubygems.org/
   specs:
@@ -580,7 +779,7 @@ GEMFILE
     stub_request(:get, "https://rubygems.org/quick/Marshal.4.8/rack-2.0.4.gemspec.rz").
       to_return(body: gemspec_rz(name: "rack", version: "2.0.4", dependencies: []))
 
-    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile)
+    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile, platforms: "ruby")
 GEM
   remote: https://rubygems.org/
   specs:
@@ -628,11 +827,11 @@ INFO
     stub_dep_info("actionpack", "5.2.3")
 
     assert_nothing_raised do
-      lockfile_for_gemfile(gemfile)
+      lockfile_for_gemfile(gemfile, platforms: "ruby")
     end
   end
 
-  def lockfile_for_gemfile(gemfile)
+  def lockfile_for_gemfile(gemfile, **options)
     locked = nil
 
     Dir.mktmpdir do |cache_dir|
@@ -643,6 +842,7 @@ INFO
           gemfile: Gel::GemfileParser.parse(gemfile),
           lockfile: nil,
           catalog_options: { cache: cache_dir },
+          **options,
         )
 
         assert_match(/\AFetching sources\.\.\.+\nResolving dependencies\.\.\.+\n\z/, output.string)

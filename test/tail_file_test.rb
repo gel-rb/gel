@@ -358,6 +358,8 @@ class TailFileTest < Minitest::Test
   end
 
   def test_async_requests_occur_simultaneously
+    lock = Mutex.new
+
     requested_files = []
     received_files = []
 
@@ -367,7 +369,7 @@ class TailFileTest < Minitest::Test
       stub_request(:get, "https://example.org/x/a").
         with(headers: { "Accept-Encoding" => /gzip/ }).
         to_return(
-          body: proc { requested_files << "a"; barrier.meet(:A); "A" },
+          body: proc { lock.synchronize { requested_files << "a" }; barrier.meet(:A); "A" },
         )
     }
 
@@ -375,7 +377,7 @@ class TailFileTest < Minitest::Test
       stub_request(:get, "https://example.org/x/b").
         with(headers: { "Accept-Encoding" => /gzip/ }).
         to_return(
-          body: proc { requested_files << "b"; barrier.meet(:B); "B" },
+          body: proc { lock.synchronize { requested_files << "b" }; barrier.meet(:B); "B" },
         )
     }
 
@@ -383,47 +385,51 @@ class TailFileTest < Minitest::Test
       stub_request(:get, "https://example.org/x/c").
         with(headers: { "Accept-Encoding" => /gzip/ }).
         to_return(
-          body: proc { requested_files << "c"; barrier.meet(:C); "C" },
+          body: proc { lock.synchronize { requested_files << "c" }; barrier.meet(:C); "C" },
         )
     }
 
     @pinboard.async_file(URI("https://example.org/x/a")) do |f|
-      received_files << "a1#{f.read}"
+      lock.synchronize { received_files << "a1#{f.read}" }
     end
 
     @pinboard.async_file(URI("https://example.org/x/a")) do |f|
-      received_files << "a2#{f.read}"
+      lock.synchronize { received_files << "a2#{f.read}" }
     end
 
     @pinboard.async_file(URI("https://example.org/x/b")) do |f|
-      received_files << "b1#{f.read}"
+      lock.synchronize { received_files << "b1#{f.read}" }
     end
 
     @pinboard.async_file(URI("https://example.org/x/b")) do |f|
-      received_files << "b2#{f.read}"
+      lock.synchronize { received_files << "b2#{f.read}" }
     end
 
     @pinboard.async_file(URI("https://example.org/x/c")) do |f|
-      received_files << "c1#{f.read}"
+      lock.synchronize { received_files << "c1#{f.read}" }
     end
 
     @pinboard.async_file(URI("https://example.org/x/c")) do |f|
-      received_files << "c2#{f.read}"
+      lock.synchronize { received_files << "c2#{f.read}" }
     end
 
     @pinboard.instance_variable_get(:@work_pool).join
 
-    # We got back all the responses we expected
-    assert_equal %w(a1A a2A b1B b2B c1C c2C), received_files.sort
+    lock.synchronize do
+      # We got back all the responses we expected
+      assert_equal %w(a1A a2A b1B b2B c1C c2C), received_files.sort
 
-    # .. and only made the requests we expected
-    assert_equal %w(a b c), requested_files.sort
+      # .. and only made the requests we expected
+      assert_equal %w(a b c), requested_files.sort
+    end
 
     # The real assertion of this test is hidden: the requests occurred
     # in parallel because otherwise the barrier wouldn't've released.
   end
 
   def test_interleaved_async_requests
+    lock = Mutex.new
+
     requested_files = []
     received_files = []
 
@@ -434,7 +440,7 @@ class TailFileTest < Minitest::Test
       stub_request(:get, "https://example.org/y/a").
         with(headers: { "Accept-Encoding" => /gzip/ }).
         to_return(
-          body: proc { requested_files << "a"; first.wait; "A" },
+          body: proc { lock.synchronize { requested_files << "a" }; first.wait; "A" },
         )
     }
 
@@ -442,7 +448,7 @@ class TailFileTest < Minitest::Test
       stub_request(:get, "https://example.org/y/b").
         with(headers: { "Accept-Encoding" => /gzip/ }).
         to_return(
-          body: proc { requested_files << "b"; "B" },
+          body: proc { lock.synchronize { requested_files << "b" }; "B" },
         )
     }
 
@@ -450,72 +456,100 @@ class TailFileTest < Minitest::Test
       stub_request(:get, "https://example.org/y/c").
         with(headers: { "Accept-Encoding" => /gzip/ }).
         to_return(
-          body: proc { requested_files << "c"; second.wait; "C" },
+          body: proc { lock.synchronize { requested_files << "c" }; second.wait; "C" },
         )
     }
 
     @pinboard.async_file(URI("https://example.org/y/a")) do |f|
-      received_files << "a1"
-      second.release :a1
+      lock.synchronize do
+        received_files << "a1"
+        second.release :a1
+      end
     end
 
     @pinboard.async_file(URI("https://example.org/y/a")) do |f|
-      received_files << "a2"
-      second.release :a2
+      lock.synchronize do
+        received_files << "a2"
+        second.release :a2
+      end
     end
 
     @pinboard.async_file(URI("https://example.org/y/b")) do |f|
-      received_files << "b1"
-      first.release :b1
+      lock.synchronize do
+        received_files << "b1"
+        first.release :b1
+      end
     end
 
     @pinboard.async_file(URI("https://example.org/y/b")) do |f|
-      received_files << "b2"
-      first.release :b2
+      lock.synchronize do
+        received_files << "b2"
+        first.release :b2
+      end
     end
 
     @pinboard.async_file(URI("https://example.org/y/c")) do |f|
-      received_files << "c1"
+      lock.synchronize do
+        received_files << "c1"
+      end
     end
 
     @pinboard.async_file(URI("https://example.org/y/c")) do |f|
-      received_files << "c2"
+      lock.synchronize do
+        received_files << "c2"
+      end
     end
 
     @pinboard.instance_variable_get(:@work_pool).join
 
-    # The "server" only responds after we've received the earlier
-    # responses, so responses arrive in a fixed order based on
-    # 1) the order dictated by the server logic (b then a then c), and
-    # 2) the order the requests were made (b1 before b2, a1 before a2)
-    #
-    # This is important because it shows we're receiving and handling
-    # the responses in the order the server provides them, not queueing
-    # them all together.
-    assert_equal %w(b1 b2 a1 a2 c1 c2), received_files
+    lock.synchronize do
+      # The "server" only responds after we've received the earlier
+      # responses, so responses arrive in a fixed order based on the
+      # order dictated by the server logic (b then a then c). There's no
+      # guarantee that our identical requests' blocks will be invoked in
+      # a particular order, though, so we do have to account for that.
+      #
+      # This order check is important because it shows we're receiving
+      # and handling the responses in the order the server provides
+      # them, not queueing them all together.
+      assert_equal %w(b b a a c c), received_files.map { |x| x[0] }
 
-    # The order the server first saw the requests is still arbitrary --
-    # but it only gets one each
-    assert_equal %w(a b c), requested_files.sort
+      # Each block got invoked exactly once
+      assert_equal %w(a1 a2 b1 b2 c1 c2), received_files.sort
+
+      # The order the server first saw the requests is still arbitrary --
+      # but it only gets one each
+      assert_equal %w(a b c), requested_files.sort
+    end
+
+    already_received = received_files.dup
 
     @pinboard.async_file(URI("https://example.org/y/a")) do |f|
-      received_files << "a3"
+      lock.synchronize do
+        received_files << "a3"
+      end
     end
 
     @pinboard.async_file(URI("https://example.org/y/b")) do |f|
-      received_files << "b3"
+      lock.synchronize do
+        received_files << "b3"
+      end
     end
 
     @pinboard.async_file(URI("https://example.org/y/c")) do |f|
-      received_files << "c3"
+      lock.synchronize do
+        received_files << "c3"
+      end
     end
 
     @pinboard.instance_variable_get(:@work_pool).join
 
-    # The extra requests are served by the already-loaded files, so the
-    # "3" blocks are called, but no more requests occur.
-    assert_equal %w(b1 b2 a1 a2 c1 c2 a3 b3 c3), received_files
-    assert_equal %w(a b c), requested_files.sort
+    lock.synchronize do
+      # The extra requests are served by the already-loaded files, so the
+      # "3" blocks are called, but no more requests occur.
+      assert_equal already_received + %w(a3 b3 c3), received_files
+      assert_equal %w(a b c), requested_files.sort
+    end
   end
 end
 
