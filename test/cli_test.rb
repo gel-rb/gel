@@ -5,6 +5,8 @@ require "gel/command"
 
 class CLITest < Minitest::Test
   def setup
+    super
+
     @original_env = ENV.map { |k, v| [k, v.dup] }.to_h
 
     ENV["GEL_GEMFILE"] = nil
@@ -18,6 +20,8 @@ class CLITest < Minitest::Test
     (@original_env.keys | ENV.keys).each do |key|
       ENV[key] = @original_env[key]
     end
+
+    super
   end
 
   def test_basic_help

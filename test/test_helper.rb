@@ -25,6 +25,22 @@ def fixture_file(path)
   File.expand_path("../fixtures/#{path}", __FILE__)
 end
 
+module CacheOverride
+  def setup
+    @cache_override_original = ENV["GEL_CACHE"]
+    ENV["GEL_CACHE"] = @cache_override_cache = Dir.mktmpdir
+    super
+  end
+
+  def teardown
+    super
+    FileUtils.remove_entry @cache_override_cache
+    ENV["GEL_CACHE"] = @cache_override_original
+  end
+end
+
+Minitest::Test.prepend CacheOverride
+
 def with_empty_store(multi: false, &block)
   if multi
     return with_empty_multi_store(&block)

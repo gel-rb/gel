@@ -10,6 +10,8 @@ class TailFileTest < Minitest::Test
   INITIAL_CONTENT = "abcdefghij" * 10_000
 
   def setup
+    super
+
     @pin_root = Dir.mktmpdir("pins")
     @pinboard = Gel::Pinboard.new(@pin_root)
     @uri = URI("https://example.org/content")
@@ -24,6 +26,8 @@ class TailFileTest < Minitest::Test
   def teardown
     @pinboard.instance_variable_get(:@work_pool).stop
     reset_webmock
+
+    super
   end
 
   def reset_webmock
@@ -558,6 +562,8 @@ class NoPartialTailFileTest < Minitest::Test
   INITIAL_CONTENT = "abcdefghij" * 10_000
 
   def setup
+    super
+
     @pin_root = Dir.mktmpdir("pins")
     @pinboard = Gel::Pinboard.new(@pin_root)
     @uri = URI("https://example.org/content")
@@ -572,6 +578,8 @@ class NoPartialTailFileTest < Minitest::Test
   def teardown
     @pinboard.instance_variable_get(:@work_pool).stop
     reset_webmock
+
+    super
   end
 
   def reset_webmock
