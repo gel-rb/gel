@@ -65,7 +65,10 @@ module Gel::PubGrub
 
         when :gemfile
           @gemfile.gems.each do |name, constraints, _|
-            active_platforms_map[name].each do |platform|
+            platforms = active_platforms_map[name]
+            platforms = [nil] if platforms.empty?
+
+            platforms.each do |platform|
               (deps[Package.new(name, platform)] ||= []).concat(constraints.flatten)
             end
           end
