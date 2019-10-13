@@ -13,7 +13,7 @@ WORKDIR /app
 ADD Rakefile /app
 RUN rake fixtures
 
-ENV JRUBY_OPTS="--dev -J-Xmx400M"
+ENV JRUBY_OPTS="--dev -J-Xmx1800M"
 ADD . /app
 
 RUN ./bin/setup
