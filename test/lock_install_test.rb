@@ -18,14 +18,14 @@ DEPENDENCIES
 LOCKFILE
     lockfile.close
 
-    stub_request(:get, "https://rubygems.org/gems/rack-2.0.3.gem").
-      to_return(body: File.open(fixture_file("rack-2.0.3.gem")))
-
-    stub_request(:get, "https://rubygems.org/gems/rack-test-0.6.3.gem").
-      to_return(body: File.open(fixture_file("rack-test-0.6.3.gem")))
-
     with_empty_store do |store|
       output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path)
+        stub_request(:get, "https://rubygems.org/gems/rack-2.0.3.gem").
+          to_return(body: File.open(fixture_file("rack-2.0.3.gem")))
+
+        stub_request(:get, "https://rubygems.org/gems/rack-test-0.6.3.gem").
+          to_return(body: File.open(fixture_file("rack-test-0.6.3.gem")))
+
         loader = Gel::LockLoader.new(Gel::ResolvedGemSet.load(lock_path))
         loader.activate(Gel::Environment, store, install: true)
 
