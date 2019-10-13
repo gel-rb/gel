@@ -35,7 +35,7 @@ module Gel::PubGrub
     end
 
     def constraints
-      ranges = @strict ? self.ranges : @overrides
+      ranges = @strict ? ranges() : @overrides
 
       result = {}
       ranges.each do |package_name, range|
