@@ -50,6 +50,8 @@ class Gel::LockLoader
     platform_gems = {}
     local_platform = Gel::Support::GemPlatform.local
     @gem_set.gems.each do |name, resolved_gems|
+      next if Gel::Environment::IGNORE_LIST.include?(name)
+
       fallback = resolved_gems.find { |rg| rg.platform.nil? }
       best_choice = resolved_gems.find { |rg| local_platform =~ rg.platform } || fallback
 

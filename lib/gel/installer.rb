@@ -62,6 +62,8 @@ class Gel::Installer
   end
 
   def install_gem(catalogs, name, version)
+    raise "Refusing to install incompatible #{name.inspect}" if Gel::Environment::IGNORE_LIST.include?(name)
+
     synchronize do
       raise "catalogs is nil" if catalogs.nil?
       @pending[name] += 1
