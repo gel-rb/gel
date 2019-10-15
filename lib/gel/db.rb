@@ -40,6 +40,9 @@ class Gel::DB
 
   def []=(key, value)
   end
+
+  def delete(key)
+  end
 end
 
 module Gel::DB::AutoTransaction
@@ -133,6 +136,14 @@ module Gel::DB::AutoTransaction
     end
   end
 
+  def delete(key)
+    if write?
+      super
+    else
+      writing { super }
+    end
+  end
+
   private
 
   def marshal_dump
@@ -217,6 +228,19 @@ class Gel::DB::SDBM < Gel::DB
       @sdbm[key.to_s] = dump
     end
   end
+
+  def delete(key)
+    value = @sdbm.delete(key.to_s)
+    return unless value
+
+    if value =~ /\A~(\d+)\z/
+      $1.to_i.times.map do |idx|
+        @sdbm.delete("#{key}~#{idx}")
+      end.join
+    end
+
+    return Marshal.load(value)
+  end
 end
 
 class Gel::DB::PStore < Gel::DB
@@ -248,6 +272,10 @@ class Gel::DB::PStore < Gel::DB
 
   def []=(key, value)
     @pstore[key.to_s] = value
+  end
+
+  def delete(key)
+    @pstore.delete(key.to_s)
   end
 end
 
@@ -290,6 +318,15 @@ class Gel::DB::File < Gel::DB
       child.binwrite Marshal.dump(value)
     elsif child.exist?
       child.unlink
+    end
+  end
+
+  def delete(key)
+    child = @path.join(key)
+    if child.exist?
+      value = Marshal.load(child.binread)
+      child.unlink
+      value
     end
   end
 end

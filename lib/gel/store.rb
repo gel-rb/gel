@@ -64,6 +64,48 @@ class Gel::Store
     end
   end
 
+  def remove_gem(name, version)
+    @primary_db.writing do
+      info = @primary_db["i/#{name}/#{version}"]
+
+      if info[:extensions]
+        yield gem_root(name, version), extension_path(name, version)
+      else
+        yield gem_root(name, version)
+      end
+
+      @lib_db.writing do
+        @rlib_db.writing do |rst|
+          ls = @rlib_db.delete("#{name}-#{version}") || []
+
+          ls.each do |d, sls|
+            sls.each do |file|
+              h = @lib_db[file] || {}
+              d = h[name] || []
+              d.delete_if { |dv| dv == version || (dv.is_a?(Array) && dv.first == version) }
+              h.delete(name) if d.empty?
+              if h.empty?
+                @lib_db.delete(file)
+              else
+                @lib_db[file] = h
+              end
+            end
+          end
+        end
+      end
+
+      @primary_db.delete("i/#{name}/#{version}")
+
+      vs = @primary_db["v/#{name}"] || []
+      vs.delete(version)
+      if vs.empty?
+        @primary_db.delete("v/#{name}")
+      else
+        @primary_db["v/#{name}"] = vs
+      end
+    end
+  end
+
   def add_lib(name, version, files)
     name = normalize_string(name)
     version = version.is_a?(Array) ? version.map { |v| normalize_string(v) } : normalize_string(version)
