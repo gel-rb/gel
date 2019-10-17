@@ -32,6 +32,10 @@ module Gem
       include Enumerable
     end
 
+    def self.load(filename)
+      new(Gel::DirectGem.new(File.dirname(filename), File.basename(filename, ".gemspec")))
+    end
+
     def self.find_by_name(name, *requirements)
       if g = Gel::Environment.find_gem(name, *requirements)
         new(g)
@@ -75,6 +79,14 @@ module Gem
       @store_gem.require_paths.map do |path|
         Pathname.new(path).relative_path_from(base).to_s
       end
+    end
+
+    def platform
+      nil
+    end
+
+    def files
+      []
     end
   end
 

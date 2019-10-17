@@ -20,10 +20,10 @@ class Gel::DirectGem < Gel::StoreGem
     info = {
       bindir: gemspec.bindir || "bin",
       executables: gemspec.executables,
-      require_paths: gemspec.require_paths || [gemspec.require_path].compact,
+      require_paths: gemspec.require_paths || [gemspec.require_path || "lib"].compact,
       dependencies: gemspec.runtime_dependencies,
     }
 
-    super(root, name, version || Gel::Support::GemVersion.new(gemspec.version).to_s, gemspec.extensions, info)
+    super(root, name, version || Gel::Support::GemVersion.new(gemspec.version).to_s, nil, info)
   end
 end
