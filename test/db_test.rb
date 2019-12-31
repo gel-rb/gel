@@ -36,4 +36,37 @@ class DbTest < Minitest::Test
       assert_equal db['test'], hash_string
     end
   end
+
+  def test_previous_multikey_format
+    skip unless defined? ::SDBM
+    Dir.mktmpdir do |dir|
+      db = Gel::DB::SDBM.new(dir, "test-store")
+
+      sdbm = db.instance_variable_get(:@sdbm)
+      sdbm["test"] = "~4"
+      sdbm["test---0"] = "\x04\x08\"\x09a"
+      sdbm["test---1"] = "b"
+      sdbm["test---2"] = "c"
+      sdbm["test---3"] = "d"
+
+      assert_equal "abcd", db["test"]
+
+      assert_equal %w(test test---0 test---1 test---2 test---3), sdbm.keys.sort
+
+      db["test"] = "short"
+
+      assert_equal %w(test), sdbm.keys.sort
+
+      sdbm["test"] = "~4"
+      sdbm["test---0"] = "\x04\x08\"\x09a"
+      sdbm["test---1"] = "b"
+      sdbm["test---2"] = "c"
+      sdbm["test---3"] = "d"
+
+      long_string = "*" * (Gel::DB::SDBM::SDBM_PAIRMAX + 200)
+      db["test"] = long_string
+
+      assert_equal %w(test test~0 test~1), sdbm.keys.sort
+    end
+  end
 end
