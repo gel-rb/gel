@@ -194,11 +194,12 @@ class Gel::DB::SDBM < Gel::DB
 
     if value =~ /\A~(\d+)\z/
       value = $1.to_i.times.map do |idx|
-        @sdbm["#{key}~#{idx}"]
+        @sdbm["#{key}~#{idx}"] || @sdbm["#{key}---#{idx}"] ||
+          raise("missing key: " + "#{key}~#{idx}".inspect)
       end.join
     end
 
-    return Marshal.load(value)
+    Marshal.load(value)
   end
 
 
@@ -211,21 +212,34 @@ class Gel::DB::SDBM < Gel::DB
   # amount of extra values stored to hold the split string. This amount is
   # determined by string size split by the arbitrary limit imposed by SDBM
   def []=(key, value)
-    return unless value && key
+    raise if key.nil?
+
+    if value.nil?
+      delete key
+      return
+    end
+
+    key = key.to_s
 
     dump = Marshal.dump(value)
     slicesize = SDBM_PAIRMAX - key.length - 3 # "#{key}~#{i}" where i <= 99
     slices = dump.length / slicesize + 1
 
+    if (existing_value = @sdbm[key]) && existing_value =~ /\A~(\d+)\z/ && $1.to_i > slices
+      $1.to_i.times do |idx|
+        @sdbm.delete("#{key}~#{idx}") || @sdbm.delete("#{key}---#{idx}")
+      end
+    end
+
     if slices > 1
-      slices.times.map do |idx|
-        slicekey = "#{key.to_s}~#{idx}"
+      slices.times do |idx|
+        slicekey = "#{key}~#{idx}"
         slicedump = dump.slice!(0, slicesize)
         @sdbm[slicekey] = slicedump
       end
-      @sdbm["#{key.to_s}"] = "~#{slices}"
+      @sdbm[key] = "~#{slices}"
     else
-      @sdbm[key.to_s] = dump
+      @sdbm[key] = dump
     end
   end
 
@@ -235,11 +249,11 @@ class Gel::DB::SDBM < Gel::DB
 
     if value =~ /\A~(\d+)\z/
       $1.to_i.times.map do |idx|
-        @sdbm.delete("#{key}~#{idx}")
+        @sdbm.delete("#{key}~#{idx}") || @sdbm.delete("#{key}---#{idx}")
       end.join
     end
 
-    return Marshal.load(value)
+    Marshal.load(value)
   end
 end
 
