@@ -10,8 +10,8 @@ class Gel::Catalog::CompactIndex
   include Gel::Catalog::Common
   CACHE_TYPE = "index"
 
-  def initialize(*)
-    super
+  def initialize(*args, **kwargs)
+    super(*args, **kwargs)
 
     @gem_tokens = Hash.new("NONE")
     @needs_update = true

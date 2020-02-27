@@ -3,13 +3,19 @@
 require "set"
 
 class Gel::ResolvedGemSet
-  class ResolvedGem < Struct.new(:type, :body, :name, :version, :platform, :deps)
-    attr_reader :set
+  class ResolvedGem
+    attr_reader :type, :body, :name, :version, :platform, :deps, :set
 
-    def initialize(*args, set:, catalog: nil)
+    def initialize(type, body, name, version, platform, deps, set:, catalog: nil)
       require_relative "catalog"
 
-      super(*args)
+      @type = type
+      @body = body
+      @name = name
+      @version = version
+      @platform = platform
+      @deps = deps
+
       @set = set
       @catalog = catalog
     end
