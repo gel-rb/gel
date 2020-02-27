@@ -15,8 +15,8 @@ class Gel::Catalog::DependencyIndex
 
   LIST_MAX = 40
 
-  def initialize(catalog, *args)
-    super(*args)
+  def initialize(catalog, *args, **kwargs)
+    super(*args, **kwargs)
 
     @catalog = catalog
 

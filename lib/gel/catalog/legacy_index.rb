@@ -12,7 +12,7 @@ class Gel::Catalog::LegacyIndex
   include Gel::Catalog::Common
   CACHE_TYPE = "quick"
 
-  def initialize(*)
+  def initialize(*args, **kwargs)
     super
 
     @needs_update = true
