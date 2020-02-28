@@ -9,6 +9,17 @@ gel(1) -- a modern gem manager
 
 Gel is a minimal package manager for the Ruby programming language.
 
+## ENVIRONMENT VARIABLES
+
+* `GEL_GEMFILE`
+  The path to the gemfile gel should use
+
+* `GEL_LOCKFILE`
+  The path to the lockfile that gel should use
+
+* `GEL_CACHE`
+  The path to the gel version information cache
+
 ## GEL COMMANDS
 
 * gel-install(1):

@@ -87,6 +87,17 @@ Or add it to your `.bashrc` or `.zshrc` to enable it everywhere:
 
 Use `gel install`, `gel lock`, `gel update`, and `gel exec` as you would the equivalent `bundle` subcommands.
 
+## ENVIRONMENT VARIABLES
+
+* `GEL_GEMFILE`
+  The path to the gemfile gel should use
+
+* `GEL_LOCKFILE`
+  The path to the lockfile that gel should use
+
+* `GEL_CACHE`
+  The path to the gel version information cache
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `bin/rake test` to run the tests.
