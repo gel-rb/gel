@@ -5,7 +5,7 @@ require_relative "resolved_gem_set"
 require_relative "support/gem_platform"
 
 class Gel::LockLoader
-  attr_reader :gemfile
+  attr_reader :gemfile, :gem_set
 
   def initialize(gem_set, gemfile = nil)
     @gem_set = gem_set

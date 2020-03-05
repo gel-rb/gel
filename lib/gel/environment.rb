@@ -364,10 +364,20 @@ class Gel::Environment
     @active_lockfile = true
     loader = Gel::LockLoader.new(Gel::ResolvedGemSet.load(lockfile), gemfile)
 
+    if lock_outdated?(loaded, loader)
+      write_lock(output: $stderr, lockfile: lockfile)
+    end
+
     base_store = Gel::Environment.store
     base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
 
     loader.activate(Gel::Environment, base_store, install: install, output: output)
+  end
+
+  def self.lock_outdated?(gemfile, lockfile)
+    gemfile_gems = gemfile.gems.map { |gem| gem[0] }
+    lockfile_gems = lockfile.gem_set.dependency_names
+    (lockfile.gem_set.dependency_names & gemfile_gems).size < [gemfile_gems.size, lockfile_gems.size].max
   end
 
   def self.activate_for_executable(exes, install: false, output: nil)
