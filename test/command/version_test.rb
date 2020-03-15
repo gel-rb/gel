@@ -2,8 +2,8 @@
 
 require "test_helper"
 
-class HelpTest < Minitest::Test
-  def test_help
+class VersionTest < Minitest::Test
+  def test_version
     output = capture_stdout { Gel::Command::Version.run(["--version"]) }
 
     assert output =~ %r{Gel version}
