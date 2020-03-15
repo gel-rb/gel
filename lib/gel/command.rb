@@ -18,6 +18,8 @@ class Gel::Command
       else
         raise Gel::Error::UnknownCommandError.new(command_name: command_name)
       end
+    elsif flag_constant = flags(command_line).first
+      flag_constant.new.run(command_line)
     else
       puts <<~EOF
       Gel doesn't have a default command; please run `gel install`
@@ -68,12 +70,27 @@ class Gel::Command
     end
   end
 
+  def self.flags(arguments)
+    flag_constants = {
+      "h" => Gel::Command::Help,
+      "help" => Gel::Command::Help,
+      "v" => Gel::Command::Version,
+      "version" => Gel::Command::Version,
+    }
+
+    arguments.map { |word|
+      match = word.match(/-+(?<flag>\w+)/)
+      match && flag_constants[match[:flag]]
+    }.compact
+  end
+
   # If set to true, an error raised from #run will pass straight up to
   # ruby instead of being treated as an internal Gel error
   attr_accessor :reraise
 end
 
 require_relative "command/help"
+require_relative "command/version"
 require_relative "command/install"
 require_relative "command/install_gem"
 require_relative "command/env"

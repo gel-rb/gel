@@ -10,4 +10,12 @@ class HelpTest < Minitest::Test
     assert output =~ %r{Usage}
     assert output =~ %r{https://gel.dev}
   end
+
+  def test_help_flag
+    output = capture_stdout { Gel::Command::Help.run(["--help"]) }
+
+    assert output =~ %r{Gel is a modern gem manager}
+    assert output =~ %r{Usage}
+    assert output =~ %r{https://gel.dev}
+  end
 end

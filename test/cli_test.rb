@@ -30,6 +30,26 @@ class CLITest < Minitest::Test
     Gel::Command.run(%W(help))
   end
 
+  def test_help_flag
+    Gel::Command::Help.expects(:new).returns(mock(run: true))
+
+    Gel::Command.run(%W(--help))
+  end
+
+  def test_version_flag
+    Gel::Command::Version.expects(:new).returns(mock(run: true))
+
+    Gel::Command.run(%W(--version))
+  end
+
+  def test_flag_abriviations
+    Gel::Command::Version.expects(:new).returns(mock(run: true))
+    Gel::Command::Help.expects(:new).returns(mock(run: true))
+
+    Gel::Command.run(%W(-v))
+    Gel::Command.run(%W(-h))
+  end
+
   def test_basic_install
     Gel::Environment.expects(:activate).with(has_entries(install: true, output: $stderr))
 
