@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 module Bundler
+  ORIGINAL_ENV = ::ENV.to_h
+
   def self.setup
     Gel::Environment.activate(output: $stderr)
   end
