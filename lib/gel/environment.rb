@@ -104,10 +104,7 @@ class Gel::Environment
   end
 
   def self.lockfile_name(gemfile = self.gemfile&.filename)
-    ENV["GEL_LOCKFILE"] ||
-      (gemfile && File.exist?(gemfile + ".lock") && gemfile + ".lock") ||
-      search_upwards("Gemfile.lock") ||
-      "Gemfile.lock"
+    ENV["GEL_LOCKFILE"] || (gemfile && gemfile + ".lock") || "Gemfile.lock"
   end
 
   def self.with_root_store
