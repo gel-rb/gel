@@ -63,6 +63,7 @@ class Gel::GemspecParser
 
       pid = spawn({
                     "RUBYLIB" => Gel::Environment.modified_rubylib,
+                    "RUBYOPT" => "",
                     "GEL_GEMFILE" => "",
                     "GEL_LOCKFILE" => "",
                     "GEL_DISABLED" => "1", # https://github.com/jruby/jruby/pull/5907
