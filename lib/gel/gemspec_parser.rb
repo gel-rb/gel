@@ -66,7 +66,6 @@ class Gel::GemspecParser
                     "RUBYOPT" => "",
                     "GEL_GEMFILE" => "",
                     "GEL_LOCKFILE" => "",
-                    "GEL_DISABLED" => "1", # https://github.com/jruby/jruby/pull/5907
                   },
                   RbConfig.ruby,
                   "-r", File.expand_path("compatibility", __dir__),

@@ -27,5 +27,5 @@ steps:
   - <<: *rake
     name: "JRuby"
     env:
-      RUBY_IMAGE: "jruby:9.2.7.0" # https://github.com/jruby/jruby/issues/5863
+      RUBY_IMAGE: "jruby"
     soft_fail: true
