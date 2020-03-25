@@ -327,6 +327,51 @@ EXPECTED_LOCKFILE
     end
   end
 
+  def test_correctly_handles_bang_gemfile
+    env = {
+      "GEL_LOCKFILE" => nil
+    }
+    with_env(env: env) do
+      gemfile = File.new("Gemfile", "w+")
+      gemfile.write(<<GEMFILE)
+source "https://rubygems.org"
+
+gem "my-local-gem", path: './my-local-gem'
+GEMFILE
+      gemfile.close
+
+      lockfile_contents = <<CURRENT_LOCKFILE
+PATH
+  remote: ./my-local-gem
+  specs:
+    my-local-gem (0.1.0)
+
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  my-local-gem!
+CURRENT_LOCKFILE
+
+      lockfile = File.new("Gemfile.lock", "w+")
+      lockfile.write(lockfile_contents)
+      lockfile.close
+
+      with_empty_store do |store|
+        subprocess_output(<<-'END', store: store)
+          Gel::Environment.activate(install: true, output: StringIO.new)
+        END
+      end
+
+      assert_equal lockfile_contents, File.read("#{Dir.pwd}/Gemfile.lock")
+    end
+  end
+
   def with_env(env:)
     prev_env = {}
     prev_dir = Dir.pwd
