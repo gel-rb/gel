@@ -7,6 +7,7 @@ require_relative "work_pool"
 require_relative "git_depot"
 require_relative "package"
 require_relative "package/installer"
+require_relative "git_gems_manager"
 
 class Gel::Installer
   DOWNLOAD_CONCURRENCY = 6
@@ -74,10 +75,14 @@ class Gel::Installer
   end
 
   def load_git_gem(remote, revision, name)
+    revised_name = Gel::GitGemsManager.lookup(name)
+
     synchronize do
-      @pending[name] += 1
-      @download_pool.queue(name) do
-        work_git(remote, revision, name)
+      if !@pending.key?(revised_name)
+        @pending[revised_name] += 1
+        @download_pool.queue(revised_name) do
+          work_git(remote, revision, revised_name)
+        end
       end
     end
   end
@@ -86,7 +91,8 @@ class Gel::Installer
     @git_depot.checkout(remote, revision)
 
     @messages << "Using #{name} (git)\n"
-    @pending[name] -= 1
+    revised_name = Gel::GitGemsManager.lookup(name)
+    @pending[revised_name] -= 1
   end
 
   def download_gem(catalogs, name, version)
