@@ -257,6 +257,76 @@ CURRENT_LOCKFILE
     end
   end
 
+  def test_does_write_lockfile_when_gem_version_changes
+    stub_request(:get, "https://index.rubygems.org/versions").
+      to_return(body: <<VERSIONS)
+created_at: 2017-03-27T04:38:13+00:00
+---
+rack 2.0.3 xxx
+
+VERSIONS
+
+    stub_request(:get, "https://index.rubygems.org/info/rack").
+      to_return(body: <<INFO)
+---
+2.0.3 |checksum:zzz
+INFO
+
+    stub_request(:get, "https://rubygems.org/gems/rack-2.0.3.gem").
+      to_return(body: File.open(fixture_file("rack-2.0.3.gem")))
+
+    env = {
+      "GEL_LOCKFILE" => nil
+    }
+    with_env(env: env) do
+      gemfile = File.new("Gemfile", "w+")
+      gemfile.write(<<GEMFILE)
+source "https://rubygems.org"
+
+gem "rack", "2.0.3"
+GEMFILE
+      gemfile.close
+
+      lockfile_contents = <<CURRENT_LOCKFILE
+GEM
+  remote: https://rubygems.org/
+  specs:
+    rack (2.0.2)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  rack
+CURRENT_LOCKFILE
+
+      lockfile = File.new("Gemfile.lock", "w+")
+      lockfile.write(lockfile_contents)
+      lockfile.close
+
+      expected_lockfile_contents = <<EXPECTED_LOCKFILE
+GEM
+  remote: https://rubygems.org/
+  specs:
+    rack (2.0.3)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  rack (= 2.0.3)
+EXPECTED_LOCKFILE
+
+      with_empty_store do |store|
+        subprocess_output(<<-'END', store: store)
+          Gel::Environment.activate(install: true, output: StringIO.new)
+        END
+      end
+
+      assert_equal expected_lockfile_contents, File.read("#{Dir.pwd}/Gemfile.lock")
+    end
+  end
+
   def with_env(env:)
     prev_env = {}
     prev_dir = Dir.pwd
