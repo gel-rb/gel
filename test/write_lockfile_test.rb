@@ -53,7 +53,7 @@ LOCKFILE
   end
 
   def test_lockfile_updated_when_gem_added
-        stub_request(:get, "https://index.rubygems.org/versions").
+    stub_request(:get, "https://index.rubygems.org/versions").
       to_return(body: <<VERSIONS)
 created_at: 2017-03-27T04:38:13+00:00
 ---
@@ -74,6 +74,8 @@ INFO
 0.6.3 |checksum:zzz
 INFO
 
+    stub_request(:get, "https://rubygems.org/gems/rack-test-0.6.3.gem").
+      to_return(body: File.open(fixture_file("rack-test-0.6.3.gem")))
 
     stub_request(:get, "https://rubygems.org/gems/rack-2.0.3.gem").
       to_return(body: File.open(fixture_file("rack-2.0.3.gem")))
@@ -144,13 +146,6 @@ VERSIONS
 ---
 2.0.3 |checksum:zzz
 INFO
-
-#     stub_request(:get, "https://index.rubygems.org/info/rack-test").
-#       to_return(body: <<INFO)
-# ---
-# 0.6.3 |checksum:zzz
-# INFO
-
 
     stub_request(:get, "https://rubygems.org/gems/rack-2.0.3.gem").
       to_return(body: File.open(fixture_file("rack-2.0.3.gem")))
