@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rbconfig"
+require_relative "support/gem_platform"
 
 class Gel::Environment
   IGNORE_LIST = %w(bundler gel rubygems-update)
@@ -12,7 +13,14 @@ class Gel::Environment
   end
   self.gemfile = nil
   @active_lockfile = false
-  @architectures = [defined?(org.jruby.Ruby) ? "java" : nil, "ruby"].compact.freeze
+  @architectures = [
+    if defined?(org.jruby.Ruby)
+      "java"
+    else
+      Gel::Support::GemPlatform.new(RbConfig::CONFIG["arch"])
+    end,
+    "ruby",
+  ].compact.freeze
 
   GEMFILE_PLATFORMS = begin
     v = RbConfig::CONFIG["ruby_version"].split(".")[0..1].inject(:+)
