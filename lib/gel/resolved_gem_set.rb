@@ -35,6 +35,7 @@ class Gel::ResolvedGemSet
 
   attr_reader :filename
 
+  attr_accessor :catalog_uris
   attr_accessor :server_catalogs
   attr_accessor :gems
   attr_accessor :platforms
@@ -54,16 +55,8 @@ class Gel::ResolvedGemSet
 
   def self.load(filename)
     result = new(filename)
-    catalog_uris = read_lockfile(filename, result)
-    require_relative "work_pool"
-    catalog_pool = Gel::WorkPool.new(8, name: "gel-catalog")
-    result.server_catalogs = catalog_uris.map { |uri| Gel::Catalog.new(uri, work_pool: catalog_pool) }
 
-    result
-  end
-
-  def self.read_lockfile(filename, result)
-    catalog_uris = Set.new
+    result.catalog_uris = Set.new
 
     Gel::LockParser.new.parse(File.read(filename)).each do |(section, body)|
       case section
@@ -84,7 +77,7 @@ class Gel::ResolvedGemSet
 
           if section == "GEM"
             body["remote"]&.each do |remote|
-              catalog_uris << remote
+              result.catalog_uris << remote
             end
           end
 
@@ -108,7 +101,12 @@ class Gel::ResolvedGemSet
         warn "Unknown lockfile section #{section.inspect}"
       end
     end
-    catalog_uris
+
+    result
+  end
+
+  def server_catalogs
+    @server_catalogs ||= catalog_uris.map { |uri| Gel::Catalog.new(uri, work_pool: catalog_pool) }
   end
 
   def gem_names
@@ -207,5 +205,12 @@ class Gel::ResolvedGemSet
     end
 
     lock_content.join("\n")
+  end
+
+  private
+
+  def catalog_pool
+    require_relative "work_pool"
+    @catalog_pool ||= Gel::WorkPool.new(8, name: "gel-catalog")
   end
 end

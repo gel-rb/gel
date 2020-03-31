@@ -843,7 +843,7 @@ INFO
           lockfile: nil,
           catalog_options: { cache: cache_dir },
           **options,
-        )
+        ).dump
 
         assert_match(/\AFetching sources\.\.\.+\nResolving dependencies\.\.\.+\n\z/, output.string)
       end
