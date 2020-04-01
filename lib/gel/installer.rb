@@ -76,27 +76,45 @@ class Gel::Installer
 
   def load_git_gem(remote, revision, name)
     synchronize do
-      if !@pending.key?(name)
-        @pending[name] += 1
+      @pending[name] += 1
+
+      checkout_key = "#{remote}@#{revision}"
+
+      # Has another gem already been pulled from this git repo?
+      if @git_remotes.key?(checkout_key)
+        if waiting_gems = @git_remotes[checkout_key]
+          # The checkout is currently queued or in progress; we'll wait
+          # for it too
+          waiting_gems << name
+        else
+          # The checkout has already finished, so this gem is already
+          # available
+          git_ready(name)
+        end
+      else
+        @git_remotes[checkout_key] = [name]
+
         @download_pool.queue(name) do
-          if not_checked_out?(remote, revision)
-            work_git(remote, revision, name)
-          end
+          work_git(remote, revision, checkout_key)
         end
       end
     end
   end
 
-  def not_checked_out?(remote, revision)
-    key = "#{remote}@#{revision}"
-    return false if @git_remotes.key?(key)
-
-    @git_remotes[key] = 1
-  end
-
-  def work_git(remote, revision, name)
+  def work_git(remote, revision, checkout_key)
     @git_depot.checkout(remote, revision)
 
+    synchronize do
+      gem_names = @git_remotes[checkout_key]
+      @git_remotes[checkout_key] = nil
+
+      gem_names.each do |name|
+        git_ready(name)
+      end
+    end
+  end
+
+  def git_ready(name)
     @messages << "Using #{name} (git)\n"
     @pending[name] -= 1
   end
