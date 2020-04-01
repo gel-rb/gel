@@ -139,6 +139,10 @@ module Gem
     # no-op
   end
 
+  def self.dir
+    Gel::Environment.store.root
+  end
+
   def self.path
     Gel::Environment.store.paths
   end
@@ -214,9 +218,15 @@ def gem(*args)
 end
 private :gem
 
-def require(path)
-  super Gel::Environment.resolve_gem_path(path)
+module Kernel
+  module_function
+
+  alias_method(:require_without_gel, :require)
+
+  def require(path)
+    require_without_gel Gel::Environment.resolve_gem_path(path)
+  end
+  private :require
 end
-private :require
 
 require "rubygems/deprecate"
