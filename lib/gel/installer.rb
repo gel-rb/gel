@@ -7,7 +7,6 @@ require_relative "work_pool"
 require_relative "git_depot"
 require_relative "package"
 require_relative "package/installer"
-require_relative "git_gems_manager"
 
 class Gel::Installer
   DOWNLOAD_CONCURRENCY = 6
@@ -28,6 +27,7 @@ class Gel::Installer
     @dependencies = Hash.new { |h, k| h[k] = [] }
     @weights = Hash.new(1)
     @pending = Hash.new(0)
+    @git_remotes = Hash.new
 
     @download_pool = Gel::WorkPool.new(DOWNLOAD_CONCURRENCY, monitor: self, name: "gel-download", collect_errors: true)
     @compile_pool = Gel::WorkPool.new(COMPILE_CONCURRENCY, monitor: self, name: "gel-compile", collect_errors: true)
@@ -75,24 +75,30 @@ class Gel::Installer
   end
 
   def load_git_gem(remote, revision, name)
-    revised_name = Gel::GitGemsManager.lookup(name)
-
     synchronize do
-      if !@pending.key?(revised_name)
-        @pending[revised_name] += 1
-        @download_pool.queue(revised_name) do
-          work_git(remote, revision, revised_name)
+      if !@pending.key?(name)
+        @pending[name] += 1
+        @download_pool.queue(name) do
+          if not_checked_out?(remote, revision)
+            work_git(remote, revision, name)
+          end
         end
       end
     end
+  end
+
+  def not_checked_out?(remote, revision)
+    key = "#{remote}@#{revision}"
+    return false if @git_remotes.key?(key)
+
+    @git_remotes[key] = 1
   end
 
   def work_git(remote, revision, name)
     @git_depot.checkout(remote, revision)
 
     @messages << "Using #{name} (git)\n"
-    revised_name = Gel::GitGemsManager.lookup(name)
-    @pending[revised_name] -= 1
+    @pending[name] -= 1
   end
 
   def download_gem(catalogs, name, version)
