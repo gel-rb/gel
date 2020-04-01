@@ -297,23 +297,7 @@ class Gel::Environment
           )
         end
     end
-
-    new_resolution.dependencies =
-      gemfile.gems.
-      group_by { |name, _constraints, _options| name }.
-      map do |name, list|
-        constraints = list.flat_map { |_, c, _| c }.compact
-
-        if constraints == []
-          name
-        else
-          r = Gel::Support::GemRequirement.new(constraints)
-          req_strings = r.requirements.sort_by { |(_op, ver)| [ver, ver.segments] }.map { |(op, ver)| "#{op} #{ver}" }
-
-          "#{name} (#{req_strings.join(", ")})"
-        end
-      end.
-      sort
+    new_resolution.dependencies = gemfile_dependencies(gemfile: gemfile)
 
     new_resolution.platforms = target_platforms
     new_resolution.server_catalogs = server_catalogs
@@ -322,14 +306,33 @@ class Gel::Environment
     new_resolution
   end
 
+  def self.gemfile_dependencies(gemfile:)
+    gemfile.gems.
+      group_by { |name, _constraints, _options| name }.
+      map do |name, list|
+
+      constraints = list.flat_map { |_, c, _| c }.compact
+
+      if constraints == []
+        name
+      else
+        r = Gel::Support::GemRequirement.new(constraints)
+        req_strings = r.requirements.sort_by { |(_op, ver)| [ver, ver.segments] }.map { |(op, ver)| "#{op} #{ver}" }
+
+        "#{name} (#{req_strings.join(", ")})"
+      end
+    end.sort
+  end
+
   def self.write_lock(output: nil, lockfile: lockfile_name, **args)
-    lock_body = solve_for_gemfile(output: output, lockfile: lockfile, **args).dump
+    gem_set = solve_for_gemfile(output: output, lockfile: lockfile, **args)
 
     if lockfile
       output.puts "Writing lockfile to #{File.expand_path(lockfile)}" if output
-      File.write(lockfile, lock_body)
+      File.write(lockfile, gem_set.dump)
     end
-    lock_body
+
+    gem_set
   end
 
   def self.install_gem(catalogs, gem_name, requirements = nil, output: nil, solve: true)
@@ -354,12 +357,16 @@ class Gel::Environment
     return if @active_lockfile
 
     lockfile = Gel::Environment.lockfile_name
-    unless File.exist?(lockfile)
-      write_lock(output: $stderr, lockfile: lockfile)
+    if File.exist?(lockfile)
+      resolved_gem_set = Gel::ResolvedGemSet.load(lockfile)
+
+      resolved_gem_set = nil if lock_outdated?(loaded, resolved_gem_set)
     end
 
+    resolved_gem_set ||= write_lock(output: output, lockfile: lockfile)
+
     @active_lockfile = true
-    loader = Gel::LockLoader.new(Gel::ResolvedGemSet.load(lockfile), gemfile)
+    loader = Gel::LockLoader.new(resolved_gem_set, gemfile)
 
     base_store = Gel::Environment.store
     base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
@@ -367,15 +374,23 @@ class Gel::Environment
     loader.activate(Gel::Environment, base_store, install: install, output: output)
   end
 
+  def self.lock_outdated?(gemfile, resolved_gem_set)
+    gemfile_dependencies(gemfile: gemfile) != resolved_gem_set.dependencies
+  end
+
   def self.activate_for_executable(exes, install: false, output: nil)
     loader = nil
-    if Gel::Environment.load_gemfile(error: false)
+    if loaded = Gel::Environment.load_gemfile(error: false)
       lockfile = Gel::Environment.lockfile_name
-      unless File.exist?(lockfile)
-        write_lock(output: $stderr, lockfile: lockfile)
+      if File.exist?(lockfile)
+        resolved_gem_set = Gel::ResolvedGemSet.load(lockfile)
+
+        resolved_gem_set = nil if lock_outdated?(loaded, resolved_gem_set)
       end
 
-      loader = Gel::LockLoader.new(Gel::ResolvedGemSet.load(lockfile), gemfile)
+      resolved_gem_set ||= write_lock(output: output, lockfile: lockfile)
+
+      loader = Gel::LockLoader.new(resolved_gem_set, gemfile)
 
       base_store = Gel::Environment.store
       base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
