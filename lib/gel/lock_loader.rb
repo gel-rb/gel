@@ -98,7 +98,7 @@ class Gel::LockLoader
             revision = resolved_gem.body["revision"].first
 
             dir = git_depot.git_path(remote, revision)
-            if installer && !Dir.exist?(dir)
+            if installer
               installer.load_git_gem(remote, revision, name)
 
               locks[name] = -> { Gel::DirectGem.new(dir, name, resolved_gem.version) }
