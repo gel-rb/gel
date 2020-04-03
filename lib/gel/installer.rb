@@ -27,6 +27,7 @@ class Gel::Installer
     @dependencies = Hash.new { |h, k| h[k] = [] }
     @weights = Hash.new(1)
     @pending = Hash.new(0)
+    @git_remotes = Hash.new
 
     @download_pool = Gel::WorkPool.new(DOWNLOAD_CONCURRENCY, monitor: self, name: "gel-download", collect_errors: true)
     @compile_pool = Gel::WorkPool.new(COMPILE_CONCURRENCY, monitor: self, name: "gel-compile", collect_errors: true)
@@ -76,15 +77,44 @@ class Gel::Installer
   def load_git_gem(remote, revision, name)
     synchronize do
       @pending[name] += 1
-      @download_pool.queue(name) do
-        work_git(remote, revision, name)
+
+      checkout_key = "#{remote}@#{revision}"
+
+      # Has another gem already been pulled from this git repo?
+      if @git_remotes.key?(checkout_key)
+        if waiting_gems = @git_remotes[checkout_key]
+          # The checkout is currently queued or in progress; we'll wait
+          # for it too
+          waiting_gems << name
+        else
+          # The checkout has already finished, so this gem is already
+          # available
+          git_ready(name)
+        end
+      else
+        @git_remotes[checkout_key] = [name]
+
+        @download_pool.queue(name) do
+          work_git(remote, revision, checkout_key)
+        end
       end
     end
   end
 
-  def work_git(remote, revision, name)
+  def work_git(remote, revision, checkout_key)
     @git_depot.checkout(remote, revision)
 
+    synchronize do
+      gem_names = @git_remotes[checkout_key]
+      @git_remotes[checkout_key] = nil
+
+      gem_names.each do |name|
+        git_ready(name)
+      end
+    end
+  end
+
+  def git_ready(name)
     @messages << "Using #{name} (git)\n"
     @pending[name] -= 1
   end
