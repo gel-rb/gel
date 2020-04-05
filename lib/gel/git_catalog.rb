@@ -5,11 +5,12 @@ require_relative "path_catalog"
 class Gel::GitCatalog
   attr_reader :git_depot, :remote, :ref_type, :ref
 
-  def initialize(git_depot, remote, ref_type, ref)
+  def initialize(git_depot, remote, ref_type, ref, revision = nil)
     @git_depot = git_depot
     @remote = remote
     @ref_type = ref_type
     @ref = ref
+    @revision = revision
 
     @monitor = Monitor.new
     @result = nil
@@ -21,7 +22,7 @@ class Gel::GitCatalog
   end
 
   def revision
-    checkout_result[0]
+    @revision || checkout_result[0]
   end
 
   def gem_info(name)
@@ -34,5 +35,9 @@ class Gel::GitCatalog
 
   def prepare
     checkout_result
+  end
+
+  def path
+    git_depot.git_path(remote, revision)
   end
 end

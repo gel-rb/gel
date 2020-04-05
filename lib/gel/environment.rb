@@ -140,6 +140,11 @@ class Gel::Environment
     end
   end
 
+  def self.git_depot
+    require_relative "git_depot"
+    @git_depot ||= Gel::GitDepot.new(store)
+  end
+
   def self.solve_for_gemfile(store: store(), output: nil, gemfile: Gel::Environment.load_gemfile, lockfile: Gel::Environment.lockfile_name, catalog_options: {}, solve: true, preference_strategy: nil, platforms: nil)
     output = nil if $DEBUG
 
@@ -147,7 +152,7 @@ class Gel::Environment
 
     if lockfile && File.exist?(lockfile)
       require_relative "resolved_gem_set"
-      gem_set = Gel::ResolvedGemSet.load(lockfile)
+      gem_set = Gel::ResolvedGemSet.load(lockfile, git_depot: git_depot)
       target_platforms |= gem_set.platforms if gem_set.platforms
     end
 
@@ -177,9 +182,6 @@ class Gel::Environment
     }.compact.uniq
 
     path_sources = gemfile.gems.map { |_, _, o| o[:path] }.compact
-
-    require_relative "git_depot"
-    git_depot = Gel::GitDepot.new(store)
 
     require_relative "path_catalog"
     require_relative "git_catalog"
@@ -246,7 +248,7 @@ class Gel::Environment
 
     catalog_pool.stop
 
-    new_resolution = Gel::ResolvedGemSet.new
+    new_resolution = Gel::ResolvedGemSet.new(lockfile)
 
     packages_by_name = {}
     versions_by_name = {}
@@ -269,21 +271,12 @@ class Gel::Environment
 
           catalog = catalog_set.catalog_for_version(package, version)
 
-          type =
-            case catalog
-            when Gel::GitCatalog; :git
-            when Gel::PathCatalog; :path
-            else; :gem
-            end
-
           deps = catalog_set.dependencies_for(package, version)
-
-          body = nil
 
           resolved_platform = nil if resolved_platform == "ruby"
 
           Gel::ResolvedGemSet::ResolvedGem.new(
-            type, body, package.name, version, resolved_platform,
+            package.name, version, resolved_platform,
             deps.map do |(dep_name, dep_requirements)|
               next [dep_name] if dep_requirements == [">= 0"] || dep_requirements == []
 
@@ -358,7 +351,7 @@ class Gel::Environment
 
     lockfile = Gel::Environment.lockfile_name
     if File.exist?(lockfile)
-      resolved_gem_set = Gel::ResolvedGemSet.load(lockfile)
+      resolved_gem_set = Gel::ResolvedGemSet.load(lockfile, git_depot: git_depot)
 
       resolved_gem_set = nil if lock_outdated?(loaded, resolved_gem_set)
     end
@@ -383,7 +376,7 @@ class Gel::Environment
     if loaded = Gel::Environment.load_gemfile(error: false)
       lockfile = Gel::Environment.lockfile_name
       if File.exist?(lockfile)
-        resolved_gem_set = Gel::ResolvedGemSet.load(lockfile)
+        resolved_gem_set = Gel::ResolvedGemSet.load(lockfile, git_depot: git_depot)
 
         resolved_gem_set = nil if lock_outdated?(loaded, resolved_gem_set)
       end
