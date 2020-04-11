@@ -4,13 +4,11 @@ require "set"
 
 class Gel::ResolvedGemSet
   class ResolvedGem
-    attr_reader :type, :body, :name, :version, :platform, :deps, :set
+    attr_reader :name, :version, :platform, :deps, :set
 
-    def initialize(type, body, name, version, platform, deps, set:, catalog: nil)
+    def initialize(name, version, platform, deps, set:, catalog: nil)
       require_relative "catalog"
 
-      @type = type
-      @body = body
       @name = name
       @version = version
       @platform = platform
@@ -35,8 +33,9 @@ class Gel::ResolvedGemSet
 
   attr_reader :filename
 
+  attr_writer :server_catalogs
+
   attr_accessor :catalog_uris
-  attr_accessor :server_catalogs
   attr_accessor :gems
   attr_accessor :platforms
   attr_accessor :ruby_version
@@ -53,7 +52,7 @@ class Gel::ResolvedGemSet
     # FIXME
   end
 
-  def self.load(filename)
+  def self.load(filename, git_depot: nil)
     result = new(filename)
 
     result.catalog_uris = Set.new
@@ -61,6 +60,22 @@ class Gel::ResolvedGemSet
     Gel::LockParser.new.parse(File.read(filename)).each do |(section, body)|
       case section
       when "GEM", "PATH", "GIT"
+        case section
+        when "GEM"
+          catalog = nil
+
+          body["remote"]&.each do |remote|
+            result.catalog_uris << remote
+          end
+        when "PATH"
+          require_relative "path_catalog"
+          catalog = Gel::PathCatalog.new(body["remote"].first)
+        when "GIT"
+          ref_type = [:branch, :tag, :ref].find { |t| body[t.to_s] } || :ref
+          require_relative "git_catalog"
+          catalog = Gel::GitCatalog.new(git_depot, body["remote"].first, ref_type, body[ref_type]&.first, body["revision"]&.first)
+        end
+
         specs = body["specs"]
         specs.each do |gem_spec, dep_specs|
           gem_spec =~ /\A(.+) \(([^-]+)(?:-(.+))?\)\z/
@@ -75,19 +90,7 @@ class Gel::ResolvedGemSet
             deps = []
           end
 
-          if section == "GEM"
-            body["remote"]&.each do |remote|
-              result.catalog_uris << remote
-            end
-          end
-
-          sym =
-            case section
-            when "GEM"; :gem
-            when "PATH"; :path
-            when "GIT"; :git
-            end
-          (result.gems[name] ||= []) << ResolvedGem.new(sym, body, name, version, platform, deps, set: result)
+          (result.gems[name] ||= []) << ResolvedGem.new(name, version, platform, deps, set: result, catalog: catalog)
         end
       when "PLATFORMS"
         result.platforms = body

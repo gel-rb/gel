@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require_relative "resolved_gem_set"
+require_relative "git_catalog"
+require_relative "path_catalog"
 
 require_relative "support/gem_platform"
 
@@ -75,48 +77,37 @@ class Gel::LockLoader
 
     top_gems.each(&walk)
 
-    require_relative "git_depot"
-    require_relative "work_pool"
+    platform_gems.each do |name, resolved_gem|
+      next unless filtered_gems[name]
 
-    Gel::WorkPool.new(8) do |work_pool|
-      git_depot = Gel::GitDepot.new(base_store)
+      case resolved_gem.catalog
+      when Gel::GitCatalog
+        dir = resolved_gem.catalog.path
 
-      platform_gems.each do |name, resolved_gem|
-        next unless filtered_gems[name]
+        installer&.load_git_gem(resolved_gem.catalog.remote, resolved_gem.catalog.revision, name)
 
-        if resolved_gem.type == :gem
-          if installer && !base_store.gem?(name, resolved_gem.version, resolved_gem.platform)
-            require_relative "catalog"
-            catalogs = @gem_set.server_catalogs || resolved_gem.body["remote"].map { |r| Gel::Catalog.new(r, work_pool: work_pool) }
-            installer.install_gem(catalogs, name, resolved_gem.platform ? "#{resolved_gem.version}-#{resolved_gem.platform}" : resolved_gem.version)
-          end
+        locks[name] = -> { Gel::DirectGem.new(dir, name, resolved_gem.version) }
+      when Gel::PathCatalog
+        path = resolved_gem.catalog.path
 
-          locks[name] = resolved_gem.version.to_s
-        else
-          if resolved_gem.type == :git
-            remote = resolved_gem.body["remote"].first
-            revision = resolved_gem.body["revision"].first
+        dir = File.expand_path(path, File.dirname(@gem_set.filename))
 
-            dir = git_depot.git_path(remote, revision)
-            if installer && !Dir.exist?(dir)
-              installer.load_git_gem(remote, revision, name)
-
-              locks[name] = -> { Gel::DirectGem.new(dir, name, resolved_gem.version) }
-              next
-            end
-          else
-            dir = File.expand_path(resolved_gem.body["remote"].first, File.dirname(@gem_set.filename))
-          end
-
-          locks[name] = Gel::DirectGem.new(dir, name, resolved_gem.version)
+        locks[name] = Gel::DirectGem.new(dir, name, resolved_gem.version)
+      else
+        if installer && !base_store.gem?(name, resolved_gem.version, resolved_gem.platform)
+          require_relative "catalog"
+          catalogs = @gem_set.server_catalogs
+          installer.install_gem(catalogs, name, resolved_gem.platform ? "#{resolved_gem.version}-#{resolved_gem.platform}" : resolved_gem.version)
         end
-      end
 
-      installer.wait(output) if installer
-
-      locks.each do |name, locked|
-        locks[name] = locked.call if locked.is_a?(Proc)
+        locks[name] = resolved_gem.version.to_s
       end
+    end
+
+    installer.wait(output) if installer
+
+    locks.each do |name, locked|
+      locks[name] = locked.call if locked.is_a?(Proc)
     end
 
     locked_store.lock(locks)
