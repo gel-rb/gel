@@ -13,12 +13,14 @@ module Gem
   Requirement = Gel::Support::GemRequirement
   Platform = Gel::Support::GemPlatform
 
+  VERSION = "3.compat"
+
   class Dependency
     attr_reader :name
     attr_reader :requirement
     attr_reader :type
 
-    def initialize(name, requirement, type)
+    def initialize(name, requirement, type = :runtime)
       @name = name
       @requirement = requirement
       @type = type
@@ -45,12 +47,29 @@ module Gem
       end
     end
 
+    def self.find_by_path(path)
+      if g = Gel::Environment.gem_for_path(path)
+        new(g)
+      end
+    end
+
     def self.each(&block)
       Gel::Environment.store.each.map { |g| new(g) }.each(&block)
     end
 
-    def initialize(store_gem)
-      @store_gem = store_gem
+    def initialize(*args, &definition)
+      if definition
+        # Someone's trying to manually execute a gemspec definition
+        # block. That's not something we particularly want to support
+        # (nor need to, for normal use), but it's something that people
+        # do, so...
+
+        @store_gem = Gel::DirectGem.from_block(*args, &definition)
+      elsif store_gem = args.size == 1 && args.first
+        @store_gem = store_gem
+      else
+        raise ArgumentError, "Expected a store_gem"
+      end
     end
 
     def name
@@ -79,6 +98,10 @@ module Gem
       @store_gem.require_paths.map do |path|
         Pathname.new(path).relative_path_from(base).to_s
       end
+    end
+
+    def full_require_paths
+      @store_gem.require_paths.map(&:dup)
     end
 
     def platform
@@ -148,7 +171,7 @@ module Gem
   end
 
   def self.default_dir
-    path.first
+    dir
   end
 
   def self.activate_bin_path(gem_name, bin_name, version = nil)

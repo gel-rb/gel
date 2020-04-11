@@ -549,19 +549,27 @@ class Gel::Environment
     end
   end
 
-  def self.resolve_gem_path(path)
+  def self.scan_for_path(path)
     if @store && !path.start_with?("/")
       results = []
       @store.gems_for_lib(path) do |gem, subdir|
         results << [gem, subdir]
         break if activated_gems[gem.name] == gem
       end
-      result = results.find { |g, _| activated_gems[g.name] == g } || results.first
+      results.find { |g, _| activated_gems[g.name] == g } || results.first
+    end
+  end
 
-      if result
-        activate_gem result[0], why: ["provides #{path.inspect}"]
-        return result[0].path(path, result[1])
-      end
+  def self.gem_for_path(path)
+    if result = scan_for_path(path)
+      result[0]
+    end
+  end
+
+  def self.resolve_gem_path(path)
+    if result = scan_for_path(path)
+      activate_gem result[0], why: ["provides #{path.inspect}"]
+      return result[0].path(path, result[1])
     end
 
     path

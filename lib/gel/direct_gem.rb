@@ -5,9 +5,19 @@ class Gel::DirectGem < Gel::StoreGem
     Gel::GemspecParser.parse(File.read(filename), filename, isolate: false)
   end
 
-  def initialize(root, name, version = nil)
+  def self.from_block(*args, &block)
+    filename, _lineno = block.source_location
+
+    result = Gel::GemspecParser::Context::Gem::Specification.new(*args, &block)
+
+    new(File.dirname(filename), result.name, loaded_gemspec: result)
+  end
+
+  def initialize(root, name, version = nil, loaded_gemspec: nil)
     root = File.expand_path(root)
-    if File.exist?("#{root}/#{name}.gemspec")
+    if loaded_gemspec
+      gemspec = loaded_gemspec
+    elsif File.exist?("#{root}/#{name}.gemspec")
       gemspec = load_gemspec("#{root}/#{name}.gemspec")
     elsif File.exist?("#{root}/#{name}/#{name}.gemspec")
       root = "#{root}/#{name}"
