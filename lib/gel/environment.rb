@@ -107,21 +107,29 @@ class Gel::Environment
     ENV["GEL_LOCKFILE"] || (gemfile && gemfile + ".lock") || "Gemfile.lock"
   end
 
-  def self.with_root_store
+  def self.with_store(store)
+    # Work around the fact Gel::Environment is a singleton: we really
+    # want to treat the environment we're running in separately from the
+    # application's environment we're working on. But for now, we can
+    # just cheat and swap them. (This is clearly not at all thread-safe;
+    # we're relying on this method only being called from the CLI and
+    # our test suite.)
+
+    original_store = @store
+    @store = store
+
+    yield store
+  ensure
+    @store = original_store
+  end
+
+  def self.with_root_store(&block)
     app_store = Gel::Environment.store
 
     base_store = app_store
     base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
 
-    # Work around the fact Gel::Environment is a singleton: we really
-    # want to treat the environment we're running in separately from
-    # the application's environment we're working on. But for now, we
-    # can just cheat and swap them.
-    @store = base_store
-
-    yield base_store
-  ensure
-    @store = app_store
+    with_store(base_store, &block)
   end
 
   def self.auto_install_pub_grub!
