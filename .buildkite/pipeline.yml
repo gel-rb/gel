@@ -25,6 +25,10 @@ steps:
     env:
       RUBY_IMAGE: "ruby:2.6"
   - <<: *rake
+    name: ":ruby: 2.7"
+    env:
+      RUBY_IMAGE: "ruby:2.7"
+  - <<: *rake
     name: "JRuby"
     env:
       RUBY_IMAGE: "jruby"
