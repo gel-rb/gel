@@ -231,7 +231,8 @@ class Gel::Package::Installer
         is_first = true
         spec.require_paths.each do |reqp|
           location = is_first ? spec.version : [spec.version, reqp]
-          store.add_lib(spec.name, location, @files[reqp].map { |s| s.sub(loadable_file_types_re, "") })
+          files = @files[reqp].map { |s| s.sub(loadable_file_types_re, "") if s.match(loadable_file_types_re) }.compact
+          store.add_lib(spec.name, location, files)
           is_first = false
         end
 

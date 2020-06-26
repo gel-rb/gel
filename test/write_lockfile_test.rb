@@ -413,14 +413,13 @@ LOCKFILE
 
   def with_env(env:)
     prev_env = {}
-    prev_dir = Dir.pwd
+
     prev_gemfile = Gel::Environment.instance_variable_get(:@gemfile)
     prev_active_lockfile = Gel::Environment.instance_variable_get(:@active_lockfile)
 
 
     Gel::Environment.instance_variable_set(:@gemfile, nil)
     Gel::Environment.instance_variable_set(:@active_lockfile, nil)
-
 
     env.each do |key, val|
       prev_env[key] = ENV[key]
@@ -432,7 +431,6 @@ LOCKFILE
         yield
       end
     end
-
 
   ensure
     prev_env.each do |key, val|
