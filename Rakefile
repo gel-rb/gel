@@ -29,6 +29,7 @@ FIXTURE_GEMS = [
   ["rainbow", "2.2.2"],
   ["rake", "12.3.2"],
   ["pub_grub", "0.5.0"],
+  ["ruby_parser", "3.8.2"]
 ]
 
 # These gems specify the subset of the entire gemspace that is simulated

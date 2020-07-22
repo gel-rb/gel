@@ -152,4 +152,33 @@ class InstallTest < Minitest::Test
       }, store.gem("rainbow", "2.2.2").info)
     end
   end
+
+  def test_installing_a_problematic_gem
+    Dir.mktmpdir do |dir|
+      store = Gel::Store.new(dir)
+
+      result = Gel::Package::Installer.new(store)
+      g = Gel::Package.extract(fixture_file("ruby_parser-3.8.2.gem"), result)
+      g.compile
+      g.install
+
+      assert File.exist?("#{dir}/gems/ruby_parser-3.8.2/README.txt")
+
+      entries = []
+      store.each do |gem|
+        entries << [gem.name, gem.version]
+      end
+
+      assert_equal [
+        ["ruby_parser", "3.8.2"]
+      ], entries.sort
+
+      assert_equal({
+        bindir: "bin",
+        executables: ["ruby_parse", "ruby_parse_extract_error"],
+        require_paths: ["lib"],
+        dependencies: {"sexp_processor"=>[["~>", "4.1"]]},
+      }, store.gem("ruby_parser", "3.8.2").info)
+    end
+  end
 end
