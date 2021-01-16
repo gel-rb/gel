@@ -52,6 +52,12 @@ def with_empty_store(multi: false, &block)
   end
 end
 
+def with_baseline_store
+  with_empty_multi_store(fallbacks: true) do |store|
+    yield store
+  end
+end
+
 def with_empty_cache
   previous = ENV["GEL_CACHE"]
 
@@ -65,13 +71,20 @@ def with_empty_cache
   end
 end
 
-def with_empty_multi_store
+def with_empty_multi_store(fallbacks: false)
+  original_stores = Gel::Environment.store
+  original_stores = original_stores.inner unless original_stores.is_a?(Gel::MultiStore)
+
   Dir.mktmpdir do |dir|
     stores = {}
     Gel::Environment.store_set.each do |arch|
       subdir = File.join(dir, arch)
       Dir.mkdir subdir
       stores[arch] = Gel::Store.new(subdir)
+
+      if fallbacks
+        stores["#{arch}.fallback"] = original_stores[arch]
+      end
     end
     store = Gel::MultiStore.new(dir, stores)
     yield store

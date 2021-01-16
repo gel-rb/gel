@@ -106,9 +106,11 @@ DEPENDENCIES
 CURRENT_LOCKFILE
       lockfile.close
 
-      with_empty_store do |store|
+      with_baseline_store do |store|
         subprocess_output(<<-'END', store: store)
-          Gel::Environment.activate(install: true, output: StringIO.new)
+          Gel::Environment.with_store(store) do
+            Gel::Environment.activate(install: true, output: StringIO.new)
+          end
         END
       end
 
@@ -177,9 +179,11 @@ DEPENDENCIES
 CURRENT_LOCKFILE
       lockfile.close
 
-      with_empty_store do |store|
+      with_baseline_store do |store|
         subprocess_output(<<-'END', store: store)
-          Gel::Environment.activate(install: true, output: StringIO.new)
+          Gel::Environment.with_store(store) do
+            Gel::Environment.activate(install: true, output: StringIO.new)
+          end
         END
       end
 
@@ -245,9 +249,11 @@ CURRENT_LOCKFILE
       lockfile.write(lockfile_contents)
       lockfile.close
 
-      with_empty_store do |store|
+      with_baseline_store do |store|
         subprocess_output(<<-'END', store: store)
-          Gel::Environment.activate(install: true, output: StringIO.new)
+          Gel::Environment.with_store(store) do
+            Gel::Environment.activate(install: true, output: StringIO.new)
+          end
         END
       end
 
@@ -315,9 +321,11 @@ DEPENDENCIES
   rack (= 2.0.3)
 EXPECTED_LOCKFILE
 
-      with_empty_store do |store|
+      with_baseline_store do |store|
         subprocess_output(<<-'END', store: store)
-          Gel::Environment.activate(install: true, output: StringIO.new)
+          Gel::Environment.with_store(store) do
+            Gel::Environment.activate(install: true, output: StringIO.new)
+          end
         END
       end
 
