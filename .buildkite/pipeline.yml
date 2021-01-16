@@ -9,14 +9,6 @@ _templates:
 
 steps:
   - <<: *rake
-    name: ":ruby: 2.3"
-    env:
-      RUBY_IMAGE: "ruby:2.3"
-  - <<: *rake
-    name: ":ruby: 2.4"
-    env:
-      RUBY_IMAGE: "ruby:2.4"
-  - <<: *rake
     name: ":ruby: 2.5"
     env:
       RUBY_IMAGE: "ruby:2.5"
@@ -28,6 +20,10 @@ steps:
     name: ":ruby: 2.7"
     env:
       RUBY_IMAGE: "ruby:2.7"
+  - <<: *rake
+    name: ":ruby: 3.0"
+    env:
+      RUBY_IMAGE: "ruby:3.0"
   - <<: *rake
     name: "JRuby"
     env:

@@ -567,6 +567,8 @@ class Gel::Environment
   end
 
   def self.resolve_gem_path(path)
+    path = path.to_s # might be e.g. a Pathname
+
     if result = scan_for_path(path)
       activate_gem result[0], why: ["provides #{path.inspect}"]
       return result[0].path(path, result[1])
