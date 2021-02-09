@@ -244,7 +244,8 @@ private :gem
 module Kernel
   module_function
 
-  alias_method(:require_without_gel, :require)
+  alias_method :require_without_gel, :require
+  singleton_class.undef_method :require
 
   def require(path)
     require_without_gel Gel::Environment.resolve_gem_path(path)
