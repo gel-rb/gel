@@ -3,8 +3,14 @@
 module Bundler
   ORIGINAL_ENV = ::ENV.to_h
 
+  VERSION = "3.compat"
+
   def self.setup
     Gel::Environment.activate(output: $stderr)
+  end
+
+  def self.original_env
+    ORIGINAL_ENV.dup
   end
 
   def self.require(*groups)
@@ -49,6 +55,11 @@ module Bundler
   end
 
   def self.with_clean_env
+    # TODO
+    yield
+  end
+
+  def self.with_unbundled_env
     # TODO
     yield
   end
