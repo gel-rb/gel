@@ -704,7 +704,7 @@ PLATFORMS
 DEPENDENCIES
   dotenv
   foreman
-  thunk
+  thunk!
 LOCKFILE
   end
 

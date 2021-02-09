@@ -187,7 +187,7 @@ class Gel::ResolvedGemSet
     end
 
     lock_content << "DEPENDENCIES"
-    non_bang_deps = server_gems&.map(&:name) || []
+    non_bang_deps = server_gems&.select { |rg| rg.catalog == server_catalogs.first }&.map(&:name) || []
     dependencies.each do |dependency|
       dependency_name = dependency.split(" ").first
       bang = "!" unless non_bang_deps.include?(dependency_name)
