@@ -20,7 +20,7 @@ class Gel::LockedStore
   end
 
   def inspect
-    content = @locked_versions.map { |name, version| "#{name}=#{version.is_a?(String) ? version : version.root}" }
+    content = (@locked_versions || []).map { |name, version| "#{name}=#{version.is_a?(String) ? version : version.root}" }
     content = ["(none)"] if content.empty?
     content.sort!
 

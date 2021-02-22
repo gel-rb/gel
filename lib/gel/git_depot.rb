@@ -40,15 +40,30 @@ class Gel::GitDepot
   end
 
   def resolve(remote, ref)
-    mirror = remote(remote) { false } # always update mirror
+    if ref
+      # ref could be an arbitrarily-complex ref (HEAD^3 or whatever), so
+      # update our mirror and then resolve it locally
 
-    r, w = IO.pipe
-    status = git(remote, "rev-parse", ref || "HEAD", chdir: mirror, out: w)
-    raise "git rev-parse failed" unless status.success?
+      mirror = remote(remote) { false } # always update mirror
 
-    w.close
+      r, w = IO.pipe
+      status = git(remote, "rev-parse", ref || "HEAD", chdir: mirror, out: w)
+      raise "git rev-parse failed" unless status.success?
 
-    r.read.chomp
+      w.close
+
+      r.read.chomp
+    else
+      # If we just want to know the remote HEAD, we can ask without even
+      # touching our mirror
+
+      r, w = IO.pipe
+      status = git(remote, "ls-remote", remote, "HEAD", out: w)
+      raise "git ls-remote failed" unless status.success?
+
+      w.close
+      r.read.split.first
+    end
   end
 
   def resolve_and_checkout(remote, ref)

@@ -18,7 +18,14 @@ class Gel::GitCatalog
 
   def checkout_result
     @result ||
-      @monitor.synchronize { @result ||= git_depot.resolve_and_checkout(remote, ref) }
+      @monitor.synchronize do
+        @result ||=
+          if @revision
+            [@revision, git_depot.checkout(remote, @revision)]
+          else
+            git_depot.resolve_and_checkout(remote, ref)
+          end
+      end
   end
 
   def revision

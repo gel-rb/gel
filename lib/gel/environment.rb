@@ -162,6 +162,8 @@ class Gel::Environment
       require_relative "resolved_gem_set"
       gem_set = Gel::ResolvedGemSet.load(lockfile, git_depot: git_depot)
       target_platforms |= gem_set.platforms if gem_set.platforms
+
+      strategy = preference_strategy&.call(gem_set)
     end
 
     # Should we just _always_ include our own architecture, maybe?
@@ -194,9 +196,24 @@ class Gel::Environment
     require_relative "path_catalog"
     require_relative "git_catalog"
 
+    previous_git_catalogs = {}
+    if gem_set
+      gem_set.gems.each do |gem_name, gem_resolutions|
+        next if strategy&.refresh_git?(gem_name)
+
+        gem_resolutions.map(&:catalog).grep(Gel::GitCatalog).uniq.each do |catalog|
+          previous_git_catalogs[[catalog.remote, catalog.ref_type, catalog.ref]] = catalog
+        end
+      end
+    end
+
+    git_catalogs = git_sources.map do |remote, ref_type, ref|
+      previous_git_catalogs[[remote, ref_type, ref]] || Gel::GitCatalog.new(git_depot, remote, ref_type, ref)
+    end
+
     catalogs =
       path_sources.map { |path| Gel::PathCatalog.new(path) } +
-      git_sources.map { |remote, ref_type, ref| Gel::GitCatalog.new(git_depot, remote, ref_type, ref) } +
+      git_catalogs +
       [nil] +
       local_catalogs +
       server_catalogs
@@ -228,7 +245,16 @@ class Gel::Environment
         require_relative "pub_grub/solver"
       end
 
-      strategy = gem_set && preference_strategy && preference_strategy.call(gem_set)
+      if gem_set
+        # If we have any existing resolution, and no strategy has been
+        # provided (i.e. we're doing an auto-resolve for 'gel install'
+        # or similar), then default to "anything is permitted, but
+        # change the least necessary to satisfy our constraints"
+
+        require_relative "pub_grub/preference_strategy"
+        strategy ||= Gel::PubGrub::PreferenceStrategy.new(gem_set, {}, bump: :hold, strict: false)
+      end
+
       solver = Gel::PubGrub::Solver.new(gemfile: gemfile, catalog_set: catalog_set, platforms: target_platforms, strategy: strategy)
     else
       require_relative "null_solver"

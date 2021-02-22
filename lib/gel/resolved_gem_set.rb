@@ -73,7 +73,7 @@ class Gel::ResolvedGemSet
         when "GIT"
           ref_type = [:branch, :tag, :ref].find { |t| body[t.to_s] } || :ref
           require_relative "git_catalog"
-          catalog = Gel::GitCatalog.new(git_depot, body["remote"].first, ref_type, body[ref_type]&.first, body["revision"]&.first)
+          catalog = Gel::GitCatalog.new(git_depot, body["remote"].first, ref_type, body[ref_type.to_s]&.first, body["revision"]&.first)
         end
 
         specs = body["specs"]

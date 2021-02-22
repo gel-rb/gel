@@ -34,6 +34,10 @@ module Gel::PubGrub
       versions.partition { |version| range.satisfied_by?(version) }.inject(:+)
     end
 
+    def refresh_git?(name)
+      @overrides.key?(name) || @bump != :hold
+    end
+
     def constraints
       ranges = @strict ? ranges() : @overrides
 
