@@ -577,6 +577,8 @@ class Gel::Environment
 
   def self.scan_for_path(path)
     if @store && !path.start_with?("/")
+      path = path.sub(/\.rb$/, "") if path.end_with?(".rb")
+
       results = []
       @store.gems_for_lib(path) do |gem, subdir|
         results << [gem, subdir]
