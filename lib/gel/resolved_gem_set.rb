@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "set"
+require_relative "set"
 
 class Gel::ResolvedGemSet
   class ResolvedGem
@@ -55,7 +55,7 @@ class Gel::ResolvedGemSet
   def self.load(filename, git_depot: nil)
     result = new(filename)
 
-    result.catalog_uris = Set.new
+    result.catalog_uris = Gel::Set.new
 
     Gel::LockParser.new.parse(File.read(filename)).each do |(section, body)|
       case section

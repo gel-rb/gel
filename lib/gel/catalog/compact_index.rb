@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
-require "set"
-
+require_relative "../set"
 require_relative "../pinboard"
 
 require_relative "common"
@@ -16,8 +15,8 @@ class Gel::Catalog::CompactIndex
     @gem_tokens = Hash.new("NONE")
     @needs_update = true
     @updating = false
-    @active_gems = Set.new
-    @pending_gems = Set.new
+    @active_gems = Gel::Set.new
+    @pending_gems = Gel::Set.new
   end
 
   def prepare(gems)

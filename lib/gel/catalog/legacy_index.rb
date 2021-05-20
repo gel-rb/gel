@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require "set"
 require "zlib"
 
+require_relative "../set"
 require_relative "../pinboard"
 
 require_relative "common"
@@ -17,8 +17,8 @@ class Gel::Catalog::LegacyIndex
 
     @needs_update = true
     @updating = false
-    @active_gems = Set.new
-    @pending_gems = Set.new
+    @active_gems = Gel::Set.new
+    @pending_gems = Gel::Set.new
 
     @gem_versions = {}
   end
