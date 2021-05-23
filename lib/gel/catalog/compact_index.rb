@@ -101,7 +101,7 @@ class Gel::Catalog::CompactIndex
     end
 
     pinboard.async_file(uri("info", gem_name), token: @gem_tokens[gem_name], only_updated: already_active, error: error) do |f|
-      dependency_names = Set.new
+      dependency_names = Gel::Set.new
       info = {}
 
       started = false

@@ -65,6 +65,7 @@ end
 
 task :mimer do
   require "net/http"
+  require "set"
 
   all_gems = Set.new(MIMED_GEMS)
   pending_gems = MIMED_GEMS.dup
