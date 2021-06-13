@@ -7,6 +7,10 @@ class Gel::Set
     @inner = {}
   end
 
+  def initialize_copy(_original)
+    @inner = @inner.dup
+  end
+
   def each(&block)
     @inner.each_key(&block)
   end
