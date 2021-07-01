@@ -19,11 +19,11 @@ group :doc do
 end
 
 group :test do
-  gem "minitest-bisect"
+  gem "minitest-bisect", group: :development
 
   platforms :mri do
     gem "stackprof"
-    gem "byebug"
+    gem "byebug", platforms: :rbx
   end
 
   gem "benchmark-ips"
@@ -42,10 +42,10 @@ GEMFILE
       ["rake", [">= 11.1"], {}],
       ["mocha", [], require: false],
       ["bcrypt", ["~> 3.1.11"], require: false],
-      ["w3c_validators", [], group: [:doc], require: "w3c_validators/validator"],
-      ["minitest-bisect", [], group: [:test]],
+      ["w3c_validators", [], require: "w3c_validators/validator", group: [:doc]],
+      ["minitest-bisect", [], group: [:test, :development]],
       ["stackprof", [], platforms: [:mri], group: [:test]],
-      ["byebug", [], platforms: [:mri], group: [:test]],
+      ["byebug", [], platforms: [:mri, :rbx], group: [:test]],
       ["benchmark-ips", [], group: [:test]],
       ["rails-assets-bootstrap", [], source: "https://rails-assets.org"],
     ], result.gems
@@ -149,8 +149,8 @@ install_if true do
   gem "activesupport", "2.3.5"
 end
 gem "thin", :install_if => lambda { false }
-install_if lambda { false } do
-  gem "foo"
+install_if true, lambda { nil } do
+  gem "foo", :install_if => true
 end
 gem "bar", :install_if => [true, lambda { 1 }]
 gem "rack"
