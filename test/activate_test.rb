@@ -15,8 +15,8 @@ class ActivateTest < Minitest::Test
         require "rack"
         require "rack/request"
 
-        puts $:.grep(/\brack/).join(":")
-        puts $".grep(/\brack\/request/).join(":")
+        puts $LOAD_PATH.grep(/\brack/).join(":")
+        puts $LOADED_FEATURES.grep(/\brack\/request/).join(":")
       END
 
       assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
@@ -36,8 +36,8 @@ class ActivateTest < Minitest::Test
         require "rack"
         require "rack/request"
 
-        puts $:.grep(/\brack/).join(":")
-        puts $".grep(/\brack\/request/).join(":")
+        puts $LOAD_PATH.grep(/\brack/).join(":")
+        puts $LOADED_FEATURES.grep(/\brack\/request/).join(":")
       END
 
       assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
@@ -55,11 +55,11 @@ class ActivateTest < Minitest::Test
         Gel::Environment.gem "rack", "< 2"
 
         # Avoid requiring "rack" itself, because 0.1.0's rack.rb
-        # directly manipulates $:, which is confusing
+        # directly manipulates $LOAD_PATH, which is confusing
         require "rack/utils"
 
-        puts $:.grep(/\brack/).join(":")
-        puts $".grep(/\brack\/utils/).join(":")
+        puts $LOAD_PATH.grep(/\brack/).join(":")
+        puts $LOADED_FEATURES.grep(/\brack\/utils/).join(":")
       END
 
       assert_equal "#{store.root}/gems/rack-0.1.0/lib", output.shift
@@ -76,8 +76,8 @@ class ActivateTest < Minitest::Test
         Gel::Environment.open(store)
         require Gel::Environment.resolve_gem_path("rack/request")
 
-        puts $:.grep(/\brack/).join(":")
-        puts $".grep(/\brack\/request/).join(":")
+        puts $LOAD_PATH.grep(/\brack/).join(":")
+        puts $LOADED_FEATURES.grep(/\brack\/request/).join(":")
       END
 
       assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
@@ -94,8 +94,8 @@ class ActivateTest < Minitest::Test
         Gel::Environment.open(store)
         require Gel::Environment.resolve_gem_path("rack/request")
 
-        puts $:.grep(/\brack/).join(":")
-        puts $".grep(/\brack\/request/).join(":")
+        puts $LOAD_PATH.grep(/\brack/).join(":")
+        puts $LOADED_FEATURES.grep(/\brack\/request/).join(":")
       END
 
       assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
@@ -111,9 +111,9 @@ class ActivateTest < Minitest::Test
         Gel::Environment.open(store)
         require Gel::Environment.resolve_gem_path("rack/test")
 
-        puts $:.grep(/\brack(?!-test)/).join(":")
-        puts $:.grep(/rack-test/).join(":")
-        puts $".grep(/rack\/test\/ut/).join(":")
+        puts $LOAD_PATH.grep(/\brack(?!-test)/).join(":")
+        puts $LOAD_PATH.grep(/rack-test/).join(":")
+        puts $LOADED_FEATURES.grep(/rack\/test\/ut/).join(":")
       END
 
       assert_equal "#{store.root}/gems/rack-2.0.3/lib", output.shift
@@ -168,7 +168,7 @@ class ActivateTest < Minitest::Test
         Gel::Environment.open(store)
         require Gel::Environment.resolve_gem_path("fast_blank")
 
-        puts $:.grep(/fast_blank/).join(":")
+        puts $LOAD_PATH.grep(/fast_blank/).join(":")
 
         puts ["x", "", " "].map(&:blank?).join(",")
       END
