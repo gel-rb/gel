@@ -1,8 +1,26 @@
 # frozen_string_literal: true
 
+##
+# Reads an optional config file ~/.config/gel/config.
+#
+# Config file format:
+#
+#     # comment:
+#     context-name: # where context-name in [build]
+#       key: val
+#
+#     key: val
+#
+# Example:
+#
+#     build:
+#       nokogiri: --libdir=blah
+#
+#     rails-assets.org: username:password
+
 class Gel::Config
-  def initialize
-    @root = File.expand_path("~/.config/gel")
+  def initialize(root_path = "~/.config/gel")
+    @root = File.expand_path(root_path)
     @path = File.join(@root, "config")
     @config = nil
   end
@@ -12,10 +30,6 @@ class Gel::Config
   end
 
   def [](group = nil, key)
-    if group.nil?
-      group, key = key.split(".", 2)
-    end
-
     (group ? (config[group.to_s] || {}) : config)[key.to_s]
   end
 
