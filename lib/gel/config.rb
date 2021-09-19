@@ -1,7 +1,12 @@
 # frozen_string_literal: true
 
 ##
-# Reads an optional config file ~/.config/gel/config.
+# Reads an optional config file ~/.config/gel/config and injects
+# authorization info from the environment $GEL_AUTH.
+#
+# Environment format:
+#
+#     GEL_AUTH="https://user@pass:host1/ https://user@pass:host2/"
 #
 # Config file format:
 #
@@ -17,6 +22,10 @@
 #       nokogiri: --libdir=blah
 #
 #     rails-assets.org: username:password
+#
+#     ---
+#
+#     GEL_AUTH="https://user@pass:private-gem-server.local"
 
 class Gel::Config
   def initialize(root_path = "~/.config/gel")
@@ -64,6 +73,15 @@ class Gel::Config
         end
       end
     end
+
+    # GEL_AUTH = "http://username:password@host http://username:password@host"
+    if auths = ENV["GEL_AUTH"] then
+      auths.split.each do |auth|
+        auth = URI(auth)
+        result[auth.host] = auth.userinfo
+      end
+    end
+
     result
   end
 
