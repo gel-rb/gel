@@ -398,6 +398,8 @@ class Gel::Environment
     base_store = Gel::Environment.store
     base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
 
+    require_relative "compatibility/bundler"
+
     loader.activate(Gel::Environment, base_store, install: install, output: output)
   end
 
