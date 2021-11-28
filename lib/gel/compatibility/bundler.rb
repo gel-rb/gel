@@ -28,6 +28,10 @@ module Bundler
     Pathname.new(base_store.root)
   end
 
+  def self.root
+    Pathname.new(Gel::Environment.gemfile.filename).dirname
+  end
+
   module Rubygems
     def self.loaded_specs(gem_name)
       Gem::Specification.new(Gel::Environment.activated_gems[gem_name])
