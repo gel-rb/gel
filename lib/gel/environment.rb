@@ -193,6 +193,14 @@ class Gel::Environment
 
     path_sources = gemfile.gems.map { |_, _, o| o[:path] }.compact
 
+    vendor_dir = File.expand_path("../vendor/cache", gemfile.filename)
+    if Dir.exist?(vendor_dir)
+      require_relative "vendor_catalog"
+      vendor_catalogs = [Gel::VendorCatalog.new(vendor_dir)]
+    else
+      vendor_catalogs = []
+    end
+
     require_relative "path_catalog"
     require_relative "git_catalog"
 
@@ -212,6 +220,7 @@ class Gel::Environment
     end
 
     catalogs =
+      vendor_catalogs +
       path_sources.map { |path| Gel::PathCatalog.new(path) } +
       git_catalogs +
       [nil] +

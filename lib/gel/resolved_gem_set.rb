@@ -109,7 +109,19 @@ class Gel::ResolvedGemSet
   end
 
   def server_catalogs
-    @server_catalogs ||= catalog_uris.map { |uri| Gel::Catalog.new(uri, work_pool: catalog_pool) }
+    @server_catalogs ||=
+      begin
+        remote_catalogs = catalog_uris.map { |uri| Gel::Catalog.new(uri, work_pool: catalog_pool) }
+
+        vendor_path = File.expand_path("../vendor/cache", filename)
+        if Dir.exist?(vendor_path)
+          vendor_catalog = Gel::VendorCatalog.new(vendor_path)
+          vendor_catalog.prepare
+          [vendor_catalog] + remote_catalogs
+        else
+          remote_catalogs
+        end
+      end
   end
 
   def gem_names
@@ -140,9 +152,11 @@ class Gel::ResolvedGemSet
       end
     end
 
+    require_relative "vendor_catalog"
+
     grouped_graph = gems.values.flatten(1).sort_by { |rg| [rg.name, "#{rg.full_version}"] }.group_by { |rg|
       catalog = rg.catalog
-      catalog.is_a?(Gel::Catalog) || catalog.is_a?(Gel::StoreCatalog) ? nil : catalog
+      catalog.is_a?(Gel::Catalog) || catalog.is_a?(Gel::StoreCatalog) || catalog.is_a?(Gel::VendorCatalog) ? nil : catalog
     }
     server_gems = grouped_graph.delete(nil)
 

@@ -9,6 +9,9 @@ require_relative "package"
 require_relative "package/installer"
 
 class Gel::Installer
+  class SkipCatalog < Exception
+  end
+
   DOWNLOAD_CONCURRENCY = 6
   COMPILE_CONCURRENCY = 4
 
@@ -99,7 +102,7 @@ class Gel::Installer
     catalogs.each do |catalog|
       begin
         return catalog.download_gem(name, version)
-      rescue Net::HTTPExceptions
+      rescue Net::HTTPExceptions, SkipCatalog
       end
     end
 

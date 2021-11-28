@@ -3,6 +3,7 @@
 require_relative "resolved_gem_set"
 require_relative "git_catalog"
 require_relative "path_catalog"
+require_relative "vendor_catalog"
 
 require_relative "support/gem_platform"
 
