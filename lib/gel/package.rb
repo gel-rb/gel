@@ -74,7 +74,7 @@ module Gel
       end
 
       def initialize
-        super(%w(Symbol Time), [])
+        super(%w(Symbol Time Date), [])
       end
 
       def find(klass)
