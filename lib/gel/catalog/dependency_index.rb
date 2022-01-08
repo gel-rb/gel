@@ -1,16 +1,18 @@
 # frozen_string_literal: true
 
-require "cgi"
 require "zlib"
 
 require_relative "../set"
 require_relative "../pinboard"
+require_relative "../support/cgi_escape"
 
 require_relative "common"
 require_relative "marshal_hacks"
 
 class Gel::Catalog::DependencyIndex
   include Gel::Catalog::Common
+  include Gel::Support::CGIEscape
+
   CACHE_TYPE = "quick"
 
   LIST_MAX = 40
@@ -56,7 +58,7 @@ class Gel::Catalog::DependencyIndex
   end
 
   def refresh_some_gems(gems)
-    gem_list = gems.map { |g| CGI.escape(g) }.sort.join(",")
+    gem_list = gems.map { |g| cgi_escape(g) }.sort.join(",")
     @work_pool.queue(gem_list) do
       response =
         begin
