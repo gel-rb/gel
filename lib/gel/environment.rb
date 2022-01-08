@@ -17,17 +17,15 @@ class Gel::Environment
     begin
       local = Gel::Support::GemPlatform.local
 
-      arches = [
-        local.to_s,
-        "#{local.cpu}-#{local.os}",
-        "#{local.os}-#{local.version}",
-        local.cpu.dup,
-        local.os.dup,
-      ]
-      arches << "java" if defined?(org.jruby.Ruby)
-      arches << "ruby"
+      list = []
+      if local.cpu == "universal" && RUBY_PLATFORM =~ /^universal\.([^-]+)/
+        list << "#$1-#{local.os}"
+      end
+      list << "#{local.cpu}-#{local.os}"
+      list << "java" if defined?(org.jruby.Ruby)
+      list << "ruby"
 
-      arches
+      list
     end.compact.map(&:freeze).freeze
 
   GEMFILE_PLATFORMS = begin
