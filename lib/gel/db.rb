@@ -1,10 +1,6 @@
 # frozen_string_literal: true
 
-begin
-  require "sdbm"
-rescue LoadError
-end
-require "pstore"
+require_relative "vendor/pstore"
 require "pathname"
 
 require "monitor"
@@ -13,11 +9,7 @@ class Gel::DB
   def self.new(root, name)
     return super unless self == Gel::DB
 
-    if defined? ::SDBM
-      SDBM.new(root, name)
-    else
-      PStore.new(root, name)
-    end
+    PStore.new(root, name)
   end
 
   def initialize(root, name)
@@ -155,113 +147,11 @@ module Gel::DB::AutoTransaction
   end
 end
 
-class Gel::DB::SDBM < Gel::DB
-  prepend Gel::DB::AutoTransaction
-  SDBM_PAIRMAX = 1008 # private constant from sdbm.h
-
-  def initialize(root, name)
-    @sdbm = ::SDBM.new("#{root}/#{name}")
-  end
-
-  def writing
-    yield
-  end
-
-  def reading
-    yield
-  end
-
-  def each_key(&block)
-    @sdbm.each_key(&block)
-  end
-
-  def key?(key)
-    !!@sdbm[key.to_s]
-  end
-
-  ##
-  # Retrieve the value from SDBM and handle for when we split
-  # over multiple stores. It is safe to assume that the value
-  # stored will be a marshaled value or a integer implying the
-  # amount of extra stores to retrieve the data string form. A
-  # marshaled store would have special starting delimiter that
-  # is not a decimal. If a number is not found at start of string
-  # then simply load it as a string and you get a value that
-  # is then marshaled.
-  def [](key)
-    value = @sdbm[key.to_s]
-    return nil unless value
-
-    if value =~ /\A~(\d+)\z/
-      value = $1.to_i.times.map do |idx|
-        @sdbm["#{key}~#{idx}"] || @sdbm["#{key}---#{idx}"] ||
-          raise("missing key: " + "#{key}~#{idx}".inspect)
-      end.join
-    end
-
-    Marshal.load(value)
-  end
-
-
-  ##
-  # SDBM has an arbitrary limit on the size of the key and value pair that it
-  # can store (PAIRMAX) so we simply split any string over multiple stores for
-  # the edge case when it reaches this. It's optimised to take advantage of the
-  # common case where this is not needed.
-  # When the edge case is hit, the first value in the storage will be the
-  # amount of extra values stored to hold the split string. This amount is
-  # determined by string size split by the arbitrary limit imposed by SDBM
-  def []=(key, value)
-    raise if key.nil?
-
-    if value.nil?
-      delete key
-      return
-    end
-
-    key = key.to_s
-
-    dump = Marshal.dump(value)
-    slicesize = SDBM_PAIRMAX - key.length - 3 # "#{key}~#{i}" where i <= 99
-    slices = dump.length / slicesize + 1
-
-    if (existing_value = @sdbm[key]) && existing_value =~ /\A~(\d+)\z/ && $1.to_i > slices
-      $1.to_i.times do |idx|
-        @sdbm.delete("#{key}~#{idx}") || @sdbm.delete("#{key}---#{idx}")
-      end
-    end
-
-    if slices > 1
-      slices.times do |idx|
-        slicekey = "#{key}~#{idx}"
-        slicedump = dump.slice!(0, slicesize)
-        @sdbm[slicekey] = slicedump
-      end
-      @sdbm[key] = "~#{slices}"
-    else
-      @sdbm[key] = dump
-    end
-  end
-
-  def delete(key)
-    value = @sdbm.delete(key.to_s)
-    return unless value
-
-    if value =~ /\A~(\d+)\z/
-      $1.to_i.times.map do |idx|
-        @sdbm.delete("#{key}~#{idx}") || @sdbm.delete("#{key}---#{idx}")
-      end.join
-    end
-
-    Marshal.load(value)
-  end
-end
-
 class Gel::DB::PStore < Gel::DB
   prepend Gel::DB::AutoTransaction
 
   def initialize(root, name)
-    @pstore = ::PStore.new("#{root}/#{name}.pstore", true)
+    @pstore = Gel::Vendor::PStore.new("#{root}/#{name}.pstore", true)
   end
 
   def writing(&block)

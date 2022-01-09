@@ -5,8 +5,6 @@
 # Redistributed under the terms of the MIT license.
 #++
 
-require 'digest'
-
 ##
 # Allows writing of tar files
 
@@ -175,6 +173,8 @@ class Gel::Support::Tar::TarWriter
   # Returns the digest.
 
   def add_file_signed name, mode, signer
+    require "digest"
+
     digest_algorithms = [
       signer.digest_algorithm,
       Digest::SHA512,

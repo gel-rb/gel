@@ -14,6 +14,20 @@ Automatiek::RakeTask.new("ruby-digest") do |lib|
   end
 end
 
+Automatiek::RakeTask.new("pstore") do |lib|
+  lib.version = "master"
+  lib.download = { :github => "https://github.com/ruby/pstore" }
+  lib.namespace = "PStore"
+  lib.prefix = "Gel::Vendor"
+  lib.vendor_lib = "vendor/pstore"
+  lib.license_path = "LICENSE.txt"
+  lib.patch = lambda do |_filename, contents|
+    # Use our vendored digest library
+    contents.gsub!(/^require "digest"$/, %(require_relative "../../ruby-digest/lib/ruby_digest"))
+    contents.gsub!(/^(\s*)CHECKSUM_ALGO = (?m:.*?)^\1end$/, "\\1CHECKSUM_ALGO = Gel::Vendor::RubyDigest::SHA256")
+  end
+end
+
 Automatiek::RakeTask.new("pub_grub") do |lib|
   lib.version = "master"
   lib.download = { :github => "https://github.com/jhawthorn/pub_grub" }
