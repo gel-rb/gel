@@ -41,6 +41,7 @@ class Gel::GemspecParser
       self.development_dependencies = []
       self.runtime_dependencies = []
       self.executables = []
+      self.extensions = []
     end
 
     def add_development_dependency(name, *versions)

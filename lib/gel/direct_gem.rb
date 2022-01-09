@@ -27,10 +27,13 @@ class Gel::DirectGem < Gel::StoreGem
       return
     end
 
+    require_paths = gemspec.require_paths&.compact || [gemspec.require_path || "lib"]
+    require_paths.unshift "ext" if gemspec.extensions.any?
+
     info = {
       bindir: gemspec.bindir || "bin",
       executables: gemspec.executables,
-      require_paths: gemspec.require_paths || [gemspec.require_path || "lib"].compact,
+      require_paths: require_paths,
       dependencies: gemspec.runtime_dependencies,
     }
 

@@ -77,6 +77,13 @@ class Gel::Installer
   end
 
   def load_git_gem(remote, revision, name)
+    dir = @git_depot.git_path(remote, revision)
+
+    if Dir.exist?(dir)
+      # already checked out; we assume it's also compiled if necessary
+      return
+    end
+
     synchronize do
       @pending[name] += 1
       @download_pool.queue(name) do
@@ -86,10 +93,27 @@ class Gel::Installer
   end
 
   def work_git(remote, revision, name)
-    @git_depot.checkout(remote, revision)
+    dir = @git_depot.checkout(remote, revision)
 
-    @messages << "Using #{name} (git)\n"
-    @pending[name] -= 1
+    if filename = ["#{dir}/#{name}.gemspec", "#{dir}/#{name}/#{name}.gemspec"].detect { |f| File.exist?(f) }
+      spec = Gel::GemspecParser.parse(File.read(filename), filename)
+      g = Gel::Package::Installer::GitCompiler.new(spec, store, dir)
+
+      known_dependencies g.spec.name => g.spec.runtime_dependencies.map(&:first)
+      if g.needs_compile?
+        synchronize do
+          add_weight name, 1000
+
+          @compile_pool.queue(g.spec.name) do
+            work_compile(g)
+          end
+        end
+      else
+        work_install(g)
+      end
+    else
+      @pending[name] -= 1
+    end
   end
 
   def download_gem(catalogs, name, version)
@@ -141,8 +165,11 @@ class Gel::Installer
   end
 
   def work_install(g)
-    @messages << "Installing #{g.spec.name} (#{g.spec.version})\n"
-    g.install
+    if g.is_a?(Gel::Package::Installer::GemInstaller)
+      @messages << "Installing #{g.spec.name} (#{g.spec.version})\n"
+      g.install
+    end
+
     @pending[g.spec.name] -= 1
 
     synchronize do

@@ -22,7 +22,7 @@ class Gel::Package::Installer
     g
   end
 
-  class GemInstaller
+  class GemCompiler
     attr_reader :spec, :store, :root, :build_path
 
     def initialize(spec, store)
@@ -53,10 +53,6 @@ class Gel::Package::Installer
       else
         @build_path = nil
       end
-
-      @files = {}
-      @installed_files = []
-      spec.require_paths.each { |reqp| @files[reqp] = [] }
     end
 
     def abort!
@@ -220,6 +216,24 @@ class Gel::Package::Installer
           end
         end
       end
+    end
+  end
+
+  class GitCompiler < GemCompiler
+    def initialize(spec, store, path)
+      super(spec, store)
+
+      @root = @build_path = path
+    end
+  end
+
+  class GemInstaller < GemCompiler
+    def initialize(spec, store)
+      super
+
+      @files = {}
+      @installed_files = []
+      spec.require_paths&.each { |reqp| @files[reqp] = [] }
     end
 
     def install
