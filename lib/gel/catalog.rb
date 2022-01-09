@@ -3,10 +3,10 @@
 require "fileutils"
 require "net/http"
 require "uri"
-require "digest"
 
 require_relative "httpool"
 require_relative "support/gem_platform"
+require_relative "vendor/ruby_digest"
 
 class Gel::Catalog
   UPDATE_CONCURRENCY = 8
@@ -117,7 +117,7 @@ class Gel::Catalog
   end
 
   def uri_identifier
-    @uri.host + "-" + Digest(:SHA256).hexdigest(@uri.to_s)[0..10]
+    @uri.host + "-" + Gel::Vendor::RubyDigest::SHA256.hexdigest(@uri.to_s)[0..10]
   end
 
   def cache_dir

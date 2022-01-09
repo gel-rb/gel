@@ -75,6 +75,7 @@ module Automatiek
     attr_accessor :vendor_lib
     attr_accessor :version
     attr_accessor :license_path
+    attr_accessor :patch
 
     def update(version)
       FileUtils.rm_rf vendor_lib
@@ -98,6 +99,14 @@ module Automatiek
       process(files, /(?<!\w|def |:)#{namespace}\b/, "#{prefix}::#{namespace}")
       process(files, /require (["'])#{Regexp.escape require_entrypoint}/, "require \\1#{require_target}/#{require_entrypoint}")
       process(files, %r{(autoload\s+[:\w]+,\s+["'])(#{Regexp.escape require_entrypoint}[\w\/]+["'])}, "\\1#{require_target}/\\2")
+
+      if patch
+        files.each do |file|
+          contents = File.read(file)
+          patch.call(file, contents)
+          File.open(file, "w") {|f| f << contents }
+        end
+      end
     end
 
     def clean

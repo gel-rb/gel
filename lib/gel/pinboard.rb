@@ -4,6 +4,7 @@ require_relative "db"
 require_relative "httpool"
 require_relative "tail_file"
 require_relative "work_pool"
+require_relative "vendor/ruby_digest"
 
 # For each URI, this stores:
 #   * the current etag
@@ -136,6 +137,6 @@ class Gel::Pinboard
   private
 
   def mangle_uri(uri)
-    "#{uri.hostname}--#{uri.path.gsub(/[^A-Za-z0-9]+/, "-")}--#{Digest(:SHA256).hexdigest(uri.to_s)[0, 12]}"
+    "#{uri.hostname}--#{uri.path.gsub(/[^A-Za-z0-9]+/, "-")}--#{Gel::Vendor::RubyDigest::SHA256.hexdigest(uri.to_s)[0, 12]}"
   end
 end

@@ -3,6 +3,9 @@
 module Gel
   module Support
   end
+
+  module Vendor
+  end
 end
 
 require_relative "gel/support/gem_version"

@@ -4,6 +4,7 @@ require "zlib"
 require "yaml"
 
 require_relative "support/tar"
+require_relative "vendor/ruby_digest"
 
 module Gel
   class Package
@@ -114,8 +115,16 @@ module Gel
           stream.rewind
 
           checksums.each do |type, map|
-            next unless %w(SHA1 SHA512).include?(type)
-            calculated = Digest(type).hexdigest(data)
+            calculated =
+              case type
+              when "SHA1"
+                Gel::Vendor::RubyDigest::SHA1.hexdigest(data)
+              when "SHA512"
+                require "digest"
+                Digest(type).hexdigest(data)
+              else
+                next
+              end
             raise "#{type} checksum mismatch on #{filename}" unless calculated == map[filename]
           end
         end
