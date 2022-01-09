@@ -2,9 +2,9 @@
 
 require_relative "source"
 
-class Gel::PubGrub::Solver < PubGrub::VersionSolver
+class Gel::PubGrub::Solver < Gel::Vendor::PubGrub::VersionSolver
   def self.logger
-    ::PubGrub.logger
+    ::Gel::Vendor::PubGrub.logger
   end
 
   def initialize(gemfile:, catalog_set:, platforms:, strategy:)

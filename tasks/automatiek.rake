@@ -94,18 +94,27 @@ module Automatiek
 
     def namespace_files(folder)
       files = Dir.glob("#{folder}/**/*.rb")
-      process(files, /module Kernel/, "module #{prefix}")
-      process(files, /::#{namespace}/, "::#{prefix}::#{namespace}")
-      process(files, /(?<!\w|def |:)#{namespace}\b/, "#{prefix}::#{namespace}")
-      process(files, /require (["'])#{Regexp.escape require_entrypoint}/, "require \\1#{require_target}/#{require_entrypoint}")
-      process(files, %r{(autoload\s+[:\w]+,\s+["'])(#{Regexp.escape require_entrypoint}[\w\/]+["'])}, "\\1#{require_target}/\\2")
 
-      if patch
-        files.each do |file|
-          contents = File.read(file)
+      files.each do |file|
+        contents = File.read(file)
+
+        local_file = file[folder.size + 1..-1]
+        nesting = local_file.count("/") - 1
+        nesting = 0 if nesting < 0
+
+        relative_require_target = "../" * nesting
+
+        contents.gsub!(/module Kernel/, "module #{prefix}")
+        contents.gsub!(/::#{namespace}/, "::#{prefix}::#{namespace}")
+        contents.gsub!(/(?<!\w|def |:)#{namespace}\b/, "#{prefix}::#{namespace}")
+        contents.gsub!(/require (["'])#{Regexp.escape require_entrypoint}/, "require_relative \\1#{relative_require_target}#{require_entrypoint}")
+        contents.gsub!(%r{(autoload\s+[:\w]+,\s+)(["'])(#{Regexp.escape require_entrypoint}[\w\/]+["'])}, "\\1File.expand_path(\\2#{relative_require_target}\\3, __dir__)")
+
+        if patch
           patch.call(file, contents)
-          File.open(file, "w") {|f| f << contents }
         end
+
+        File.open(file, "w") {|f| f << contents }
       end
     end
 

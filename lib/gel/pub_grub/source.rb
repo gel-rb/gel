@@ -1,14 +1,13 @@
 # frozen_string_literal: true
 
-require "pub_grub"
-require "pub_grub/basic_package_source"
-require "pub_grub/rubygems"
+require_relative "../vendor/pub_grub"
+require_relative "../../../vendor/pub_grub/lib/pub_grub/rubygems"
 
 require_relative "package"
 require_relative "../platform"
 
 module Gel::PubGrub
-  class Source < ::PubGrub::BasicPackageSource
+  class Source < Gel::Vendor::PubGrub::BasicPackageSource
     attr_reader :root
 
     def initialize(gemfile, catalog_set, active_platforms, preference_strategy)
@@ -97,7 +96,7 @@ module Gel::PubGrub
     end
 
     def parse_dependency(package, requirement)
-      ::PubGrub::VersionConstraint.new(package, range: to_range(requirement))
+      Gel::Vendor::PubGrub::VersionConstraint.new(package, range: to_range(requirement))
     end
 
     def incompatibilities_for(package, version)
@@ -106,10 +105,10 @@ module Gel::PubGrub
       unless package.is_a?(Package::Pseudo)
         other_platforms = @active_platforms - [package.platform]
 
-        self_constraint = PubGrub::VersionConstraint.new(package, range: PubGrub::VersionRange.new(min: version, max: version, include_min: true, include_max: true))
+        self_constraint = Gel::Vendor::PubGrub::VersionConstraint.new(package, range: Gel::Vendor::PubGrub::VersionRange.new(min: version, max: version, include_min: true, include_max: true))
         result += other_platforms.map do |other_platform|
-          other_constraint = PubGrub::VersionConstraint.new(Package.new(package.name, other_platform), range: PubGrub::VersionUnion.new([PubGrub::VersionRange.new(max: version), PubGrub::VersionRange.new(min: version)]))
-          PubGrub::Incompatibility.new([PubGrub::Term.new(self_constraint, true), PubGrub::Term.new(other_constraint, true)], cause: :dependency)
+          other_constraint = Gel::Vendor::PubGrub::VersionConstraint.new(Package.new(package.name, other_platform), range: Gel::Vendor::PubGrub::VersionUnion.new([Gel::Vendor::PubGrub::VersionRange.new(max: version), Gel::Vendor::PubGrub::VersionRange.new(min: version)]))
+          Gel::Vendor::PubGrub::Incompatibility.new([Gel::Vendor::PubGrub::Term.new(self_constraint, true), Gel::Vendor::PubGrub::Term.new(other_constraint, true)], cause: :dependency)
         end
       end
 
@@ -120,7 +119,7 @@ module Gel::PubGrub
 
     def to_range(constraints)
       requirement = Gel::Support::GemRequirement.new(constraints)
-      ::PubGrub::RubyGems.requirement_to_range(requirement)
+      Gel::Vendor::PubGrub::RubyGems.requirement_to_range(requirement)
     end
   end
 end

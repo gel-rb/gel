@@ -146,22 +146,6 @@ class Gel::Environment
     with_store(base_store, &block)
   end
 
-  def self.auto_install_pub_grub!
-    with_root_store do |base_store|
-      base_store.monitor.synchronize do
-        if base_store.each("pub_grub").none?
-          require_relative "work_pool"
-
-          Gel::WorkPool.new(2) do |work_pool|
-            catalog = Gel::Catalog.new("https://rubygems.org", work_pool: work_pool)
-
-            install_gem([catalog], "pub_grub", [">= 0.5.0"], solve: false)
-          end
-        end
-      end
-    end
-  end
-
   def self.git_depot
     require_relative "git_depot"
     @git_depot ||= Gel::GitDepot.new(store)
@@ -261,11 +245,7 @@ class Gel::Environment
     catalog_set = Gel::CatalogSet.new(catalogs)
 
     if solve
-      auto_install_pub_grub!
-      with_root_store do
-        gem "pub_grub"
-        require_relative "pub_grub/solver"
-      end
+      require_relative "pub_grub/solver"
 
       if gem_set
         # If we have any existing resolution, and no strategy has been
