@@ -180,8 +180,7 @@ class Gel::Environment
       strategy = preference_strategy&.call(gem_set)
     end
 
-    # Should we just _always_ include our own architecture, maybe?
-    target_platforms |= [architectures.first] if target_platforms.empty?
+    target_platforms |= architectures if target_platforms.empty?
 
     require_relative "catalog"
     all_sources = (gemfile.sources | gemfile.gems.flat_map { |_, _, o| o[:source] }).compact
@@ -319,12 +318,16 @@ class Gel::Environment
       end
     end
 
+    active_platforms = []
+
     packages_by_name.each do |package_name, platformed_packages|
       version = versions_by_name[package_name]
 
       new_resolution.gems[package_name] =
         platformed_packages.map do |resolved_platform, packages|
           package = packages.first
+
+          active_platforms << resolved_platform
 
           catalog = catalog_set.catalog_for_version(package, version)
 
@@ -349,7 +352,7 @@ class Gel::Environment
     end
     new_resolution.dependencies = gemfile_dependencies(gemfile: gemfile)
 
-    new_resolution.platforms = target_platforms
+    new_resolution.platforms = target_platforms & active_platforms
     new_resolution.server_catalogs = server_catalogs
     new_resolution.bundler_version = gem_set&.bundler_version
     new_resolution.ruby_version = RUBY_DESCRIPTION.split.first(2).join(" ") if gem_set&.ruby_version
