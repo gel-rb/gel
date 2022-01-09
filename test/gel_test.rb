@@ -12,7 +12,7 @@ class GelTest < Minitest::Test
   end
 
   def test_tests_cannot_see_bundler_runtime
-    assert_nil defined?(::Bundler)
+    assert_nil defined?(::Bundler::FileUtils)
   end
 
   def test_tests_dont_have_rubygems_loaded
