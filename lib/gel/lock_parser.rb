@@ -1,34 +1,27 @@
 # frozen_string_literal: true
 
-require "strscan"
-
 class Gel::LockParser
-  def parse(content)
+  def parse(input)
     sections = []
 
-    scanner = StringScanner.new(content)
-    while section = scanner.scan(/^(\w.+)\n/)
-      section.chomp!
+    input = input.dup
+    while input.sub!(/\A(\w.+)\n/, "")
+      section = $1
+
       case section
       when "GIT", "PATH", "GEM"
         content = {}
-        while scanner.skip(/^  \b/)
-          label = scanner.scan(/[^:]+:/).chop
-          if scanner.skip(/ /)
-            value = scanner.scan(/.*/)
-            scanner.skip(/\n/)
-            (content[label] ||= []) << value
-          else
-            scanner.skip(/\n/)
+        while input.sub!(/\A {2}\b([^:]+):(\s)/, "")
+          label = $1
+          separator = $2
+
+          if separator == "\n"
             value = []
-            while scanner.skip(/^    \b/)
-              entry = scanner.scan(/.*/)
-              scanner.skip(/\n/)
+            while input.sub!(/\A {4}\b(.*)\n/, "")
+              entry = $1
               children = []
-              while scanner.skip(/^      \b/)
-                child = scanner.scan(/.*/)
-                children << child
-                scanner.skip(/\n/)
+              while input.sub!(/\A {6}\b(.*)\n/, "")
+                children << $1
               end
               if children.empty?
                 value << [entry]
@@ -37,31 +30,23 @@ class Gel::LockParser
               end
             end
             content[label] = value
+          else
+            input.sub!(/\A(.*)\n/, "")
+            (content[label] ||= []) << $1
           end
         end
       when "PLATFORMS", "DEPENDENCIES"
         content = []
-        while scanner.skip(/^  \b/)
-          entry = scanner.scan(/.*/)
-          content << entry
-          scanner.skip(/\n/)
+        while input.sub!(/\A {2}\b(.*)\n/, "")
+          content << $1
         end
-      when "BUNDLED WITH"
+      when "BUNDLED WITH", "RUBY VERSION"
         content = []
-        while scanner.skip(/^   \b/)
-          entry = scanner.scan(/.*/)
-          content << entry
-          scanner.skip(/\n/)
-        end
-      when "RUBY VERSION"
-        content = []
-        while scanner.skip(/^   \b/)
-          entry = scanner.scan(/.*/)
-          content << entry
-          scanner.skip(/\n/)
+        while input.sub!(/\A {3}\b(.*)\n/, "")
+          content << $1
         end
       end
-      scanner.skip(/\n+/)
+      input.sub!(/\A\n+/, "")
 
       sections << [section, content]
     end
