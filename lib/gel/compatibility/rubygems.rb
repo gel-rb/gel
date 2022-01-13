@@ -15,6 +15,8 @@ module Gem
 
   VERSION = "3.compat"
 
+  autoload :Deprecate, "rubygems/deprecate"
+
   class Dependency
     attr_reader :name
     attr_reader :requirement
@@ -252,5 +254,3 @@ module Kernel
   end
   private :require
 end
-
-require "rubygems/deprecate"
