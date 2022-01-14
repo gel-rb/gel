@@ -65,7 +65,6 @@ class GelTest < Minitest::Test
     assert_equal %W(
       $rubyarchdir/pathname.#{RbConfig::CONFIG["DLEXT"]}
       $rubylibdir/pathname.rb
-      $rubylibdir/ostruct.rb
     ), additional_loaded_files
   end
 
@@ -83,10 +82,6 @@ class GelTest < Minitest::Test
 
     assert_equal %w(
       Gel
-
-      OpenStruct
-      OpenStruct::InspectKey
-      OpenStruct::VERSION
     ).join("\n"), unique_constants.join("\n")
 
     assert_equal %w(

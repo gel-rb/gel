@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "ostruct"
-
 class Gel::GemspecParser
   module Context
     def self.context
@@ -30,9 +28,10 @@ class Gel::GemspecParser
     end
   end
 
-  class Result < OpenStruct
+  class Result
     def initialize
-      super
+      @values = {}
+
       self.specification_version = nil
       self.metadata = {}
       self.requirements = []
@@ -52,6 +51,18 @@ class Gel::GemspecParser
       runtime_dependencies << [name, versions.flatten]
     end
     alias add_dependency add_runtime_dependency
+
+    def method_missing(name, *args)
+      if name =~ /(.*)=$/
+        @values[$1.to_sym] = args.first
+      else
+        @values[name]
+      end
+    end
+
+    def respond_to_missing?(name, *)
+      name != :marshal_dump && name != :_dump
+    end
   end
 
   def self.parse(content, filename, lineno = 1, root: File.dirname(filename), isolate: true)
