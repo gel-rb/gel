@@ -3,6 +3,8 @@
 require "fileutils"
 require "monitor"
 
+require_relative "../pinboard"
+
 module Gel::Catalog::Common
   def initialize(uri, uri_identifier, httpool:, work_pool:, cache:)
     @uri = uri

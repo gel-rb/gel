@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require_relative "../set"
-require_relative "../pinboard"
 
 require_relative "common"
 

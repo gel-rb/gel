@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "monitor"
-require "net/http"
 
 class Gel::Httpool
   include MonitorMixin
@@ -25,7 +24,11 @@ class Gel::Httpool
     end
   end
 
-  def request(uri, request = Net::HTTP::Get.new(uri))
+  def request(uri, request = nil)
+    require "net/http"
+
+    request ||= Net::HTTP::Get.new(uri)
+
     with_connection(uri) do |http|
       logger.debug { "GET #{uri}" }
 

@@ -7,8 +7,6 @@ class Gel::ResolvedGemSet
     attr_reader :name, :version, :platform, :deps, :set
 
     def initialize(name, version, platform, deps, set:, catalog: nil)
-      require_relative "catalog"
-
       @name = name
       @version = version
       @platform = platform
@@ -111,10 +109,14 @@ class Gel::ResolvedGemSet
   def server_catalogs
     @server_catalogs ||=
       begin
+        require_relative "catalog"
+
         remote_catalogs = catalog_uris.map { |uri| Gel::Catalog.new(uri, work_pool: catalog_pool) }
 
         vendor_path = File.expand_path("../vendor/cache", filename)
         if Dir.exist?(vendor_path)
+          require_relative "vendor_catalog"
+
           vendor_catalog = Gel::VendorCatalog.new(vendor_path)
           vendor_catalog.prepare
           [vendor_catalog] + remote_catalogs
@@ -152,11 +154,9 @@ class Gel::ResolvedGemSet
       end
     end
 
-    require_relative "vendor_catalog"
-
     grouped_graph = gems.values.flatten(1).sort_by { |rg| [rg.name, "#{rg.full_version}"] }.group_by { |rg|
       catalog = rg.catalog
-      catalog.is_a?(Gel::Catalog) || catalog.is_a?(Gel::StoreCatalog) || catalog.is_a?(Gel::VendorCatalog) ? nil : catalog
+      catalog.is_a?(Gel::PathCatalog) || catalog.is_a?(Gel::GitCatalog) ? catalog : nil
     }
     server_gems = grouped_graph.delete(nil)
 

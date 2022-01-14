@@ -3,7 +3,6 @@
 require "zlib"
 
 require_relative "../set"
-require_relative "../pinboard"
 require_relative "../support/cgi_escape"
 
 require_relative "common"

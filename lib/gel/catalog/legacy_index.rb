@@ -3,7 +3,6 @@
 require "zlib"
 
 require_relative "../set"
-require_relative "../pinboard"
 
 require_relative "common"
 require_relative "marshal_hacks"

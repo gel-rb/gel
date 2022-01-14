@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "fileutils"
-require "net/http"
 require "uri"
 
 require_relative "httpool"
@@ -25,10 +24,10 @@ class Gel::Catalog
     ]
   end
 
-  def prepare
-    index.prepare(@initial_gems)
-  rescue Net::HTTPExceptions
-    if @indexes.size > 1
+  def attempting_each_index
+    yield send(@indexes.first)
+  rescue => ex
+    if recoverable?(ex) && @indexes.size > 1
       @indexes.shift
       retry
     else
@@ -36,31 +35,31 @@ class Gel::Catalog
     end
   end
 
+  def recoverable?(exception)
+    defined?(Net::HTTPExceptions) && Net::HTTPExceptions === exception
+  end
+
+  def prepare
+    attempting_each_index { |index| index.prepare(@initial_gems) }
+  end
+
+  def gem_info(name)
+    attempting_each_index { |index| index.gem_info(name) }
+  end
+
   def compact_index
+    require_relative "catalog/compact_index"
     @compact_index ||= Gel::Catalog::CompactIndex.new(@uri, uri_identifier, httpool: @httpool, work_pool: @work_pool, cache: @cache)
   end
 
   def dependency_index
+    require_relative "catalog/dependency_index"
     @dependency_index ||= Gel::Catalog::DependencyIndex.new(self, @uri, uri_identifier, httpool: @httpool, work_pool: @work_pool, cache: @cache)
   end
 
   def legacy_index
+    require_relative "catalog/legacy_index"
     @legacy_index ||= Gel::Catalog::LegacyIndex.new(@uri, uri_identifier, httpool: @httpool, work_pool: @work_pool, cache: @cache)
-  end
-
-  def index
-    send(@indexes.first)
-  end
-
-  def gem_info(name)
-    index.gem_info(name)
-  rescue Net::HTTPExceptions
-    if @indexes.size > 1
-      @indexes.shift
-      retry
-    else
-      raise
-    end
   end
 
   def cached_gem(name, version)
@@ -129,6 +128,8 @@ class Gel::Catalog
   end
 
   def http_get(path)
+    require "net/http"
+
     original_uri = uri = URI(File.join(@uri.to_s, path))
 
     5.times do
@@ -147,7 +148,3 @@ class Gel::Catalog
     raise Gel::Error::TooManyRedirectsError.new(original_uri: original_uri)
   end
 end
-
-require_relative "catalog/compact_index"
-require_relative "catalog/dependency_index"
-require_relative "catalog/legacy_index"

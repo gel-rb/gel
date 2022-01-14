@@ -166,6 +166,7 @@ class Gel::Environment
 
     target_platforms |= architectures if target_platforms.empty?
 
+    require_relative "work_pool"
     require_relative "catalog"
     all_sources = (gemfile.sources | gemfile.gems.flat_map { |_, _, o| o[:source] }).compact
     local_source = all_sources.delete(:local)
