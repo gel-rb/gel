@@ -32,7 +32,7 @@ module Bundler
     Pathname.new(Gel::Environment.gemfile.filename).dirname
   end
 
-  module Rubygems
+  module RubygemsIntegration
     def self.loaded_specs(gem_name)
       Gem::Specification.new(Gel::Environment.activated_gems[gem_name])
     end
@@ -50,7 +50,7 @@ module Bundler
   end
 
   def self.rubygems
-    Rubygems
+    RubygemsIntegration
   end
 
   def self.with_original_env

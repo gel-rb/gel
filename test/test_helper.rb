@@ -234,6 +234,45 @@ else
   end
 end
 
+def pure_subprocess_output(code, command_line: nil, gel: true, variables: {})
+  source = caller_locations.first
+
+  wrapped_code = variables.map { |name, value| "#{name} = Marshal.load(#{Marshal.dump(value).inspect})\n" }.join +
+    "eval(#{code.inspect}, binding, #{source.path.inspect}, #{source.lineno + 1})"
+
+  r, w = IO.pipe
+
+  args = gel ? ["-r", File.expand_path("../lib/gel/compatibility", __dir__)] : []
+  args += command_line if command_line
+
+  env =
+    if gel
+      {
+        "RUBYLIB" => File.expand_path("../lib/gel/compatibility", __dir__),
+        "GEL_STORE" => nil,
+        "GEL_LOCKFILE" => nil,
+      }
+    else
+      {
+        "RUBYLIB" => nil,
+      }
+    end
+
+  pid = spawn(
+    env,
+    RbConfig.ruby,
+    *args,
+    "-e", wrapped_code,
+    in: IO::NULL,
+    out: w,
+  )
+
+  w.close
+
+  Process.waitpid2(pid)
+  r.read.lines.map(&:chomp)
+end
+
 def jruby?
   RUBY_ENGINE == "jruby"
 end

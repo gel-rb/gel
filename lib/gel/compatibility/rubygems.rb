@@ -115,19 +115,6 @@ module Gem
     end
   end
 
-  class DependencyInstaller
-    def install(name, requirement = nil)
-      require_relative "../catalog"
-      require_relative "../work_pool"
-
-      Gel::WorkPool.new(2) do |work_pool|
-        catalog = Gel::Catalog.new("https://rubygems.org", work_pool: work_pool)
-
-        return Gel::Environment.install_gem([catalog], name, requirement)
-      end
-    end
-  end
-
   def self.try_activate(file)
     Gel::Environment.resolve_gem_path(file) != file
   rescue LoadError
