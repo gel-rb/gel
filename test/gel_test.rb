@@ -42,30 +42,24 @@ class GelTest < Minitest::Test
     base_ruby_only = files_required_at_boot(gel: false, command_line: ["--disable=gems"])
     with_gel = files_required_at_boot(gel: true, command_line: ["--disable=#{GEM_DEPENDENT_FEATURES}"])
 
-    additional_loaded_files = (with_gel - base_ruby_only).reject { |path| path.start_with?(File.expand_path("..", __dir__)) }
+    loaded_files = with_gel - base_ruby_only
 
-    additional_loaded_files.map do |name|
-      ["rubyarchdir", "rubylibdir"].each do |special|
-        if name.start_with?(RbConfig::CONFIG[special])
-          name[0, RbConfig::CONFIG[special].size] = "$#{special}"
-          break
-        end
-      end
-    end
+    # Loading our own files is fine
+    loaded_files.delete_if { |path| path.start_with?(File.expand_path("..", __dir__)) }
 
-    additional_loaded_files = additional_loaded_files.grep_v(
+    # SAFE_STDLIB is.. safe
+    loaded_files = loaded_files.grep_v(
       /^
-        \$ruby(arch|lib)dir\/
+        #{Regexp.union(RbConfig::CONFIG["rubyarchdir"], RbConfig::CONFIG["rubylibdir"])}
+        \/
         #{Regexp.union(SAFE_STDLIB)}
         \.
         #{Regexp.union(*["rb", RbConfig::CONFIG["DLEXT"], RbConfig::CONFIG["DLEXT2"]].compact)}
       $/x
     )
 
-    assert_equal %W(
-      $rubyarchdir/pathname.#{RbConfig::CONFIG["DLEXT"]}
-      $rubylibdir/pathname.rb
-    ), additional_loaded_files
+    # That's it.. there shouldn't be anything else
+    assert_empty loaded_files
   end
 
   def test_only_expected_constants_are_defined
@@ -110,25 +104,6 @@ class GelTest < Minitest::Test
       Gem::Version
       Gem::Version::ANCHORED_VERSION_PATTERN
       Gem::Version::VERSION_PATTERN
-
-      Pathname
-      Pathname::FileUtils
-      Pathname::FileUtils::DryRun
-      Pathname::FileUtils::Entry_
-      Pathname::FileUtils::Entry_::DIRECTORY_TERM
-      Pathname::FileUtils::Entry_::S_IF_DOOR
-      Pathname::FileUtils::LOW_METHODS
-      Pathname::FileUtils::LowMethods
-      Pathname::FileUtils::METHODS
-      Pathname::FileUtils::NoWrite
-      Pathname::FileUtils::OPT_TABLE
-      Pathname::FileUtils::StreamUtils_
-      Pathname::FileUtils::VERSION
-      Pathname::FileUtils::Verbose
-      Pathname::SAME_PATHS
-      Pathname::SEPARATOR_LIST
-      Pathname::SEPARATOR_PAT
-      Pathname::TO_PATH
     ).join("\n"), compatible_constants.join("\n")
   end
 

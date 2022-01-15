@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require_relative "vendor/pstore"
-require "pathname"
 
 require "monitor"
 
@@ -187,11 +186,11 @@ class Gel::DB::File < Gel::DB
   prepend Gel::DB::AutoTransaction
 
   def initialize(root, name)
-    @path = Pathname.new("#{root}/#{name}")
+    @base = "#{root}/#{name}"
   end
 
   def writing
-    @path.mkdir unless @path.exist?
+    Dir.mkdir(@base) unless Dir.exist?(@base)
     yield
   end
 
@@ -200,37 +199,43 @@ class Gel::DB::File < Gel::DB
   end
 
   def each_key
-    @path.each_child(false) do |child|
-      yield child.to_s
+    Dir.each_child(@base) do |child|
+      yield child
     end
   end
 
   def key?(key)
-    @path.join(key).exist?
+    ::File.exist?(path(key))
   end
 
   def [](key)
-    child = @path.join(key)
-    if child.exist?
-      Marshal.load(child.binread)
+    child = path(key)
+    if ::File.exist?(child)
+      Marshal.load(IO.binread(child))
     end
   end
 
   def []=(key, value)
-    child = @path.join(key)
+    child = path(key)
     if value
-      child.binwrite Marshal.dump(value)
-    elsif child.exist?
-      child.unlink
+      IO.binwrite child, Marshal.dump(value)
+    elsif ::File.exist?(child)
+      ::File.unlink(child)
     end
   end
 
   def delete(key)
-    child = @path.join(key)
-    if child.exist?
-      value = Marshal.load(child.binread)
-      child.unlink
+    child = path(key)
+    if ::File.exist?(child)
+      value = Marshal.load(IO.binread(child))
+      ::File.unlink(child)
       value
     end
+  end
+
+  private
+
+  def path(key)
+    ::File.join(@base, key)
   end
 end

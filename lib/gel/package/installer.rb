@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "fileutils"
-require "pathname"
 require "rbconfig"
 require "tempfile"
 require "shellwords"
@@ -74,7 +73,7 @@ class Gel::Package::Installer
       work_dir = File.expand_path(File.dirname(ext), root)
 
       FileUtils.mkdir_p(install_dir)
-      short_install_dir = Pathname.new(install_dir).relative_path_from(Pathname.new(work_dir)).to_s
+      short_install_dir = relative_path(work_dir, install_dir)
 
       local_config = Tempfile.new(["config", ".rb"])
       local_config.write(<<-RUBY)
@@ -92,6 +91,31 @@ class Gel::Package::Installer
       end
     ensure
       local_config.unlink if local_config
+    end
+
+    def relative_path(from, to)
+      from_parts = path_parts(from)
+      to_parts = path_parts(to)
+
+      while from_parts.first && from_parts.first == to_parts.first
+        from_parts.shift
+        to_parts.shift
+      end
+
+      until from_parts.empty?
+        from_parts.shift
+        to_parts.unshift ".."
+      end
+
+      to_parts.join(File::SEPARATOR)
+    end
+
+    def path_parts(path)
+      if File::ALT_SEPARATOR
+        path.split(Regexp.union(File::SEPARATOR, File::ALT_SEPARATOR))
+      else
+        path.split(File::SEPARATOR)
+      end
     end
 
     def gemfile_and_lockfile(rake: false)

@@ -32,6 +32,37 @@ class Gel::StoreGem
     paths
   end
 
+  def relative_require_paths
+    paths = _require_paths.dup
+    paths << relative_extensions if extensions
+    paths
+  end
+
+  def relative_extensions
+    root_parts = path_parts(root)
+    ext_parts = path_parts(extensions)
+
+    while root_parts.first && root_parts.first == ext_parts.first
+      root_parts.shift
+      ext_parts.shift
+    end
+
+    until root_parts.empty?
+      root_parts.shift
+      ext_parts.unshift ".."
+    end
+
+    ext_parts.join(File::SEPARATOR)
+  end
+
+  def path_parts(path)
+    if File::ALT_SEPARATOR
+      path.split(Regexp.union(File::SEPARATOR, File::ALT_SEPARATOR))
+    else
+      path.split(File::SEPARATOR)
+    end
+  end
+
   def bindir
     @info[:bindir] || "bin"
   end

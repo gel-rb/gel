@@ -95,11 +95,7 @@ module Gem
     alias full_gem_path gem_dir
 
     def require_paths
-      base = Pathname.new(gem_dir)
-
-      @store_gem.require_paths.map do |path|
-        Pathname.new(path).relative_path_from(base).to_s
-      end
+      @store_gem.relative_require_paths.map(&:dup)
     end
 
     def full_require_paths

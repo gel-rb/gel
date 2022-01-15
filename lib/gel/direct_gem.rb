@@ -28,7 +28,6 @@ class Gel::DirectGem < Gel::StoreGem
     end
 
     require_paths = gemspec.require_paths&.compact || [gemspec.require_path || "lib"]
-    require_paths.unshift "ext" if gemspec.extensions.any?
 
     info = {
       bindir: gemspec.bindir || "bin",
@@ -37,6 +36,6 @@ class Gel::DirectGem < Gel::StoreGem
       dependencies: gemspec.runtime_dependencies,
     }
 
-    super(root, name, version || Gel::Support::GemVersion.new(gemspec.version).to_s, nil, info)
+    super(root, name, version || Gel::Support::GemVersion.new(gemspec.version).to_s, ("#{root}/ext" if gemspec.extensions.any?), info)
   end
 end

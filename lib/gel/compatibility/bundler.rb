@@ -18,18 +18,21 @@ module Bundler
   end
 
   def self.default_lockfile
-    Pathname.new(Gel::Environment.lockfile_name)
+    Kernel.require "pathname"
+    ::Pathname.new(Gel::Environment.lockfile_name)
   end
 
   def self.bundle_path
     base_store = Gel::Environment.store
     base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
 
-    Pathname.new(base_store.root)
+    Kernel.require "pathname"
+    ::Pathname.new(base_store.root)
   end
 
   def self.root
-    Pathname.new(Gel::Environment.gemfile.filename).dirname
+    Kernel.require "pathname"
+    ::Pathname.new(Gel::Environment.gemfile.filename).dirname
   end
 
   module RubygemsIntegration
