@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require "fileutils"
 require "uri"
 
 require_relative "httpool"
+require_relative "util"
 require_relative "support/gem_platform"
 require_relative "vendor/ruby_digest"
 
@@ -74,7 +74,7 @@ class Gel::Catalog
     name, version = guess_version(name, version)
 
     response = http_get("/gems/#{name}-#{version}.gem")
-    FileUtils.mkdir_p(cache_dir) unless Dir.exist?(cache_dir)
+    Gel::Util.mkdir_p(cache_dir)
     File.open(path, "wb") do |f|
       f.write(response.body)
     end

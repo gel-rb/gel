@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rbconfig"
+require_relative "util"
 require_relative "support/gem_platform"
 
 class Gel::Environment
@@ -78,15 +79,6 @@ class Gel::Environment
     lib.join(File::PATH_SEPARATOR)
   end
 
-  def self.search_upwards(name, dir = Dir.pwd)
-    until (file = File.join(dir, name)) && File.exist?(file)
-      next_dir = File.dirname(dir)
-      return nil if next_dir == dir
-      dir = next_dir
-    end
-    file
-  end
-
   def self.find_gemfile(path = nil, error: true)
     if path && @gemfile && @gemfile.filename != File.expand_path(path)
       raise Gel::Error::CannotActivateError.new(path: path, gemfile: @gemfile.filename)
@@ -94,7 +86,7 @@ class Gel::Environment
     return @gemfile.filename if @gemfile
 
     path ||= ENV["GEL_GEMFILE"]
-    path ||= search_upwards("Gemfile")
+    path ||= Gel::Util.search_upwards("Gemfile")
     path ||= "Gemfile"
 
     if File.exist?(path)

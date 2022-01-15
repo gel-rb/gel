@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "monitor"
+require_relative "../util"
 
 module Gel::Catalog::Common
   def initialize(uri, uri_identifier, httpool:, work_pool:, cache:)
@@ -65,14 +66,13 @@ module Gel::Catalog::Common
   end
 
   def pinboard
-    require "fileutils"
     require_relative "../pinboard"
 
     @pinboard || @monitor.synchronize do
       @pinboard ||=
         begin
           pinboard_dir = File.expand_path("#{@cache}/#{self.class::CACHE_TYPE}/#{@uri_identifier}")
-          FileUtils.mkdir_p(pinboard_dir) unless Dir.exist?(pinboard_dir)
+          Gel::Util.mkdir_p(pinboard_dir)
           Gel::Pinboard.new(pinboard_dir, httpool: @httpool, work_pool: @work_pool)
         end
     end

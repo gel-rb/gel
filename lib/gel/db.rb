@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative "util"
 require_relative "vendor/pstore"
 
 require "monitor"
@@ -150,27 +151,30 @@ class Gel::DB::PStore < Gel::DB
   prepend Gel::DB::AutoTransaction
 
   def initialize(root, name)
-    @pstore = Gel::Vendor::PStore.new("#{root}/#{name}.pstore", true)
+    @filename = "#{root}/#{name}.pstore"
+    @pstore = store if ::File.exist?(@filename)
   end
 
   def writing(&block)
+    @pstore ||= store
     @pstore.transaction(false, &block)
   end
 
   def reading(&block)
-    @pstore.transaction(true, &block)
+    @pstore = store if @pstore.nil? && ::File.exist?(@filename)
+    @pstore&.transaction(true, &block)
   end
 
   def each_key(&block)
-    @pstore.roots.each(&block)
+    @pstore.roots.each(&block) if @pstore
   end
 
   def key?(key)
-    @pstore.key?(key.to_s)
+    @pstore&.key?(key.to_s)
   end
 
   def [](key)
-    @pstore[key.to_s]
+    @pstore && @pstore[key.to_s]
   end
 
   def []=(key, value)
@@ -179,6 +183,13 @@ class Gel::DB::PStore < Gel::DB
 
   def delete(key)
     @pstore.delete(key.to_s)
+  end
+
+  private
+
+  def store
+    Gel::Util.mkdir_p(::File.dirname(@filename))
+    Gel::Vendor::PStore.new(@filename, true)
   end
 end
 
@@ -190,7 +201,7 @@ class Gel::DB::File < Gel::DB
   end
 
   def writing
-    Dir.mkdir(@base) unless Dir.exist?(@base)
+    Gel::Util.mkdir_p(@base)
     yield
   end
 
@@ -199,6 +210,7 @@ class Gel::DB::File < Gel::DB
   end
 
   def each_key
+    return unless Dir.exist?(@base)
     Dir.each_child(@base) do |child|
       yield child
     end

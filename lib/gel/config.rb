@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "util"
+
 class Gel::Config
   def initialize
     @root = File.expand_path("~/.config/gel")
@@ -54,7 +56,7 @@ class Gel::Config
   end
 
   def write(data)
-    Dir.mkdir(@root) unless Dir.exist?(@root)
+    Gel::Util.mkdir_p(@root)
 
     tempfile = File.join(@root, ".config.#{Process.pid}")
     File.open(tempfile, "w", 0644) do |f|

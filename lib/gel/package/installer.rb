@@ -1,9 +1,10 @@
 # frozen_string_literal: true
 
-require "fileutils"
 require "rbconfig"
 require "tempfile"
 require "shellwords"
+
+require_relative "../util"
 
 class Gel::Package::Installer
   def initialize(store)
@@ -44,21 +45,21 @@ class Gel::Package::Installer
       @config = Gel::Environment.config
 
       @root = store.gem_root(spec.name, spec.version)
-      FileUtils.rm_rf(@root) if @root && Dir.exist?(@root)
+      Gel::Util.rm_rf(@root) if @root && Dir.exist?(@root)
 
       if spec.extensions.any?
         @build_path = store.extension_path(spec.name, spec.version)
-        FileUtils.rm_rf(@build_path) if @build_path && Dir.exist?(@build_path)
+        Gel::Util.rm_rf(@build_path) if @build_path && Dir.exist?(@build_path)
       else
         @build_path = nil
       end
     end
 
     def abort!
-      $stderr.puts "FileUtils.rm_rf(#{root.inspect})" if root
-      $stderr.puts "FileUtils.rm_rf(#{build_path.inspect})" if build_path
-      #FileUtils.rm_rf(root) if root
-      #FileUtils.rm_rf(build_path) if build_path
+      $stderr.puts "Gel::Util.rm_rf(#{root.inspect})" if root
+      $stderr.puts "Gel::Util.rm_rf(#{build_path.inspect})" if build_path
+      #Gel::Util.rm_rf(root) if root
+      #Gel::Util.rm_rf(build_path) if build_path
     end
 
     def needs_compile?
@@ -72,8 +73,8 @@ class Gel::Package::Installer
     def with_build_environment(ext, install_dir)
       work_dir = File.expand_path(File.dirname(ext), root)
 
-      FileUtils.mkdir_p(install_dir)
-      short_install_dir = relative_path(work_dir, install_dir)
+      Gel::Util.mkdir_p(install_dir)
+      short_install_dir = Gel::Util.relative_path(work_dir, install_dir)
 
       local_config = Tempfile.new(["config", ".rb"])
       local_config.write(<<-RUBY)
@@ -91,31 +92,6 @@ class Gel::Package::Installer
       end
     ensure
       local_config.unlink if local_config
-    end
-
-    def relative_path(from, to)
-      from_parts = path_parts(from)
-      to_parts = path_parts(to)
-
-      while from_parts.first && from_parts.first == to_parts.first
-        from_parts.shift
-        to_parts.shift
-      end
-
-      until from_parts.empty?
-        from_parts.shift
-        to_parts.unshift ".."
-      end
-
-      to_parts.join(File::SEPARATOR)
-    end
-
-    def path_parts(path)
-      if File::ALT_SEPARATOR
-        path.split(Regexp.union(File::SEPARATOR, File::ALT_SEPARATOR))
-      else
-        path.split(File::SEPARATOR)
-      end
     end
 
     def gemfile_and_lockfile(rake: false)
@@ -298,7 +274,7 @@ class Gel::Package::Installer
         end
       end
       raise "won't overwrite #{target}" if File.exist?(target)
-      FileUtils.mkdir_p(File.dirname(target))
+      Gel::Util.mkdir_p(File.dirname(target))
       mode = 0444
       mode |= source_mode & 0200
       mode |= 0111 if source_mode & 0111 != 0

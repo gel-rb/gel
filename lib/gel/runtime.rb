@@ -6,8 +6,8 @@ dir = ENV["GEL_STORE"] || "~/.local/gel"
 dir = File.expand_path(dir)
 
 unless Dir.exist?(dir)
-  require "fileutils"
-  FileUtils.mkdir_p(dir)
+  require_relative "util"
+  Gel::Util.mkdir_p(dir)
 end
 
 dir = File.realpath(dir)

@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "util"
+
 class Gel::StoreGem
   EXTENSION_SUBDIR_TOKEN = ".."
 
@@ -39,28 +41,7 @@ class Gel::StoreGem
   end
 
   def relative_extensions
-    root_parts = path_parts(root)
-    ext_parts = path_parts(extensions)
-
-    while root_parts.first && root_parts.first == ext_parts.first
-      root_parts.shift
-      ext_parts.shift
-    end
-
-    until root_parts.empty?
-      root_parts.shift
-      ext_parts.unshift ".."
-    end
-
-    ext_parts.join(File::SEPARATOR)
-  end
-
-  def path_parts(path)
-    if File::ALT_SEPARATOR
-      path.split(Regexp.union(File::SEPARATOR, File::ALT_SEPARATOR))
-    else
-      path.split(File::SEPARATOR)
-    end
+    Gel::Util.relative_path(root, extensions)
   end
 
   def bindir
