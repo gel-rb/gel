@@ -11,7 +11,7 @@ class Gel::Command::ShellSetup < Gel::Command
       puts export("PATH", "\"#{Shellwords.shellescape bin_dir}#{File::PATH_SEPARATOR}$PATH\"", shell: shell)
     end
 
-    lib_dir = File.expand_path("../compatibility", __dir__)
+    lib_dir = File.expand_path("../../slib", __dir__)
     unless ENV.fetch("RUBYLIB", "").split(File::PATH_SEPARATOR).include?(lib_dir)
       puts export("RUBYLIB", "\"#{Shellwords.shellescape lib_dir}:$RUBYLIB\"", shell: shell)
     end

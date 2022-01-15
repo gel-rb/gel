@@ -23,7 +23,19 @@ class GelTest < Minitest::Test
   end
 
   def test_tests_dont_have_rubygems_loaded
-    assert_empty $".grep(/(?<!compatibility\/|pub_grub\/)rubygems\.rb$/i)
+    assert_empty $".grep(/(?<!slib\/|compatibility\/|pub_grub\/)rubygems\.rb$/i)
+  end
+
+  def test_slib_load_path_loads_gel
+    assert_equal ["constant"], pure_subprocess_output(<<-RUBY, gel: true)
+      puts defined?(::Gel)
+    RUBY
+  end
+
+  def test_deprecated_compatibility_load_path_loads_gel
+    assert_equal ["constant"], pure_subprocess_output(<<-RUBY, gel: File.expand_path("../lib/gel/compatibility", __dir__))
+      puts defined?(::Gel)
+    RUBY
   end
 
   def test_subprocess_helper_sees_real_bundler

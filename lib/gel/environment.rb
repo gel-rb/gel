@@ -66,18 +66,15 @@ class Gel::Environment
 
   def self.original_rubylib
     lib = (ENV["RUBYLIB"] || "").split(File::PATH_SEPARATOR)
-    lib.delete File.expand_path("compatibility", __dir__)
-    #lib.delete File.expand_path("..", __dir__)
+    lib.delete File.expand_path("../../slib", __dir__)
     return nil if lib.empty?
     lib.join(File::PATH_SEPARATOR)
   end
 
   def self.modified_rubylib
     lib = (ENV["RUBYLIB"] || "").split(File::PATH_SEPARATOR)
-    dir = File.expand_path("compatibility", __dir__)
+    dir = File.expand_path("../../slib", __dir__)
     lib.unshift dir unless lib.include?(dir)
-    #dir = File.expand_path("..", __dir__)
-    #lib.unshift dir unless lib.include?(dir)
     lib.join(File::PATH_SEPARATOR)
   end
 
@@ -405,7 +402,7 @@ class Gel::Environment
     base_store = Gel::Environment.store
     base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
 
-    require_relative "compatibility/bundler"
+    require_relative "../../slib/bundler"
 
     loader.activate(Gel::Environment, base_store, install: install, output: output)
   end

@@ -37,6 +37,9 @@ LOCKFILE
     assert_equal ["gel"], result.dependencies
     assert_equal "ruby 2.4.0p0", result.ruby_version
     assert_equal "1.17.3", result.bundler_version
-    assert_kind_of Gel::Catalog, result.server_catalogs.first
+
+    # Call it first, because Gel::Catalog might not be defined yet
+    first_catalog = result.server_catalogs.first
+    assert_kind_of Gel::Catalog, first_catalog
   end
 end

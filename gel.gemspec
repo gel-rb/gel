@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.homepage      = "https://gel.dev"
   spec.license       = "MIT"
 
-  spec.files         = `git ls-files -z exe lib vendor *.md *.txt`.split("\x0") +
+  spec.files         = `git ls-files -z exe lib slib vendor *.md *.txt`.split("\x0") +
     Dir["man/man?/*.?"]
   spec.bindir        = "exe"
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }

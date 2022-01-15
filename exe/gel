@@ -3,7 +3,7 @@
 
 if defined?(::Gem) && !defined?(::Gel)
   exec ::Gem.ruby,
-    "-I", File.expand_path("../lib/gel/compatibility", __dir__),
+    "-I", File.expand_path("../slib", __dir__),
     "--",
     __FILE__,
     *ARGV

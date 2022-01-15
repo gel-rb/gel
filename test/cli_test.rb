@@ -76,7 +76,7 @@ class CLITest < Minitest::Test
         assert_equal "#{dir}/Gemfile", ENV["GEL_GEMFILE"]
         assert_equal "#{dir}/Gemfile.lock", ENV["GEL_LOCKFILE"]
         assert_nil ENV["RUBYOPT"]
-        assert_equal File.expand_path("../lib/gel/compatibility", __dir__), ENV["RUBYLIB"]
+        assert_equal File.expand_path("../slib", __dir__), ENV["RUBYLIB"]
 
         assert_equal "ruby-executable", $0
         assert_equal ["some", "args"], ARGV
@@ -105,7 +105,7 @@ class CLITest < Minitest::Test
         assert_equal "#{dir}/Gemfile", ENV["GEL_GEMFILE"]
         assert_equal "#{dir}/Gemfile.lock", ENV["GEL_LOCKFILE"]
         assert_nil ENV["RUBYOPT"]
-        assert_equal File.expand_path("../lib/gel/compatibility", __dir__), ENV["RUBYLIB"]
+        assert_equal File.expand_path("../slib", __dir__), ENV["RUBYLIB"]
       end.throws(:exit)
 
       Dir.chdir(dir) do

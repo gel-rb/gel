@@ -194,7 +194,7 @@ elsif defined?(org.jruby.Ruby)
     config.input = StringIO.new.tap(&:close_write).to_input_stream
     config.output = java.io.PrintStream.new(io.to_output_stream)
 
-    config.load_paths << File.expand_path("../lib/gel/compatibility", __dir__)
+    config.load_paths << File.expand_path("../slib", __dir__)
     config.required_libraries << __FILE__
 
     wrapped_code = kwargs.map { |name, value| "#{name} = Marshal.load(#{Marshal.dump(value).inspect})\n" }.join +
@@ -216,7 +216,7 @@ else
 
     pid = spawn(
       {
-        "RUBYLIB" => File.expand_path("../lib/gel/compatibility", __dir__),
+        "RUBYLIB" => File.expand_path("../slib", __dir__),
         "GEL_STORE" => nil,
         "GEL_LOCKFILE" => nil,
       },
@@ -242,13 +242,13 @@ def pure_subprocess_output(code, command_line: nil, gel: true, variables: {})
 
   r, w = IO.pipe
 
-  args = gel ? ["-r", File.expand_path("../lib/gel/compatibility", __dir__)] : []
+  args = []
   args += command_line if command_line
 
   env =
     if gel
       {
-        "RUBYLIB" => File.expand_path("../lib/gel/compatibility", __dir__),
+        "RUBYLIB" => gel.is_a?(String) ? gel : File.expand_path("../slib", __dir__),
         "GEL_STORE" => nil,
         "GEL_LOCKFILE" => nil,
       }
@@ -265,6 +265,7 @@ def pure_subprocess_output(code, command_line: nil, gel: true, variables: {})
     "-e", wrapped_code,
     in: IO::NULL,
     out: w,
+    err: w,
   )
 
   w.close
