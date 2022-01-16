@@ -5,10 +5,6 @@ require_relative "vendor/ruby_digest"
 class Gel::GitDepot
   attr_reader :mirror_root
 
-  require "logger"
-  Logger = ::Logger.new($stderr)
-  Logger.level = $DEBUG ? ::Logger::DEBUG : ::Logger::WARN
-
   def initialize(store, mirror_root = (ENV["GEL_CACHE"] || "~/.cache/gel") + "/git")
     @store = store
     @mirror_root = File.expand_path(mirror_root)
@@ -101,10 +97,10 @@ class Gel::GitDepot
 
     t = Time.now
     pid = spawn("git", *arguments, **kwargs)
-    logger.debug { "#{remote} [#{pid}] #{command_for_log("git", *arguments)}" }
+    logger&.debug { "#{remote} [#{pid}] #{command_for_log("git", *arguments)}" }
 
     _, status = Process.waitpid2(pid)
-    logger.debug { "#{remote} [#{pid}]   process exited #{status.exitstatus} (#{status.success? ? "success" : "failure"}) after #{Time.now - t}s" }
+    logger&.debug { "#{remote} [#{pid}]   process exited #{status.exitstatus} (#{status.success? ? "success" : "failure"}) after #{Time.now - t}s" }
 
     status
   end
@@ -115,22 +111,31 @@ class Gel::GitDepot
     "#{short}-#{digest}"
   end
 
-  require "shellwords"
-  def shellword(word)
-    if word =~ /\A[A-Za-z0-9=+\/,.-]+\z/
-      word
-    elsif word =~ /'/
-      "\"#{Shellwords.shellescape(word).gsub(/\\\s/, "\\1")}\""
-    else
-      "'#{word}'"
+  if $DEBUG
+    require "shellwords"
+    def shellword(word)
+      if word =~ /\A[A-Za-z0-9=+\/,.-]+\z/
+        word
+      elsif word =~ /'/
+        "\"#{Shellwords.shellescape(word).gsub(/\\\s/, "\\1")}\""
+      else
+        "'#{word}'"
+      end
     end
-  end
 
-  def command_for_log(*parts)
-    parts.map { |part| shellword(part) }.join(" ")
-  end
+    def command_for_log(*parts)
+      parts.map { |part| shellword(part) }.join(" ")
+    end
 
-  def logger
-    Logger
+    require "logger"
+    Logger = ::Logger.new($stderr)
+    Logger.level = ::Logger::DEBUG
+
+    def logger
+      Logger
+    end
+  else
+    def logger
+    end
   end
 end
