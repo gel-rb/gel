@@ -2,6 +2,7 @@
 
 class Gel::LockedStore
   attr_reader :inner
+  attr_reader :locked_versions
 
   def initialize(inner)
     @inner = inner

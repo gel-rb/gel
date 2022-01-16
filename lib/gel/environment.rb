@@ -63,6 +63,7 @@ class Gel::Environment
 
   def self.open(store)
     @store = store
+    gems_from_lock(store.locked_versions) if store.respond_to?(:locked_versions) && store.locked_versions
   end
 
   def self.original_rubylib
@@ -371,7 +372,8 @@ class Gel::Environment
     gem_set = solve_for_gemfile(output: output, solve: solve, gemfile: gemfile)
 
     loader = Gel::LockLoader.new(gem_set)
-    loader.activate(self, base_store, install: true, output: output)
+    locked_store = loader.activate(self, base_store, install: true, output: output)
+    open(locked_store)
   end
 
   def self.activate(install: false, output: nil, error: true)
@@ -396,7 +398,8 @@ class Gel::Environment
 
     require_relative "../../slib/bundler"
 
-    loader.activate(Gel::Environment, base_store, install: install, output: output)
+    locked_store = loader.activate(Gel::Environment, base_store, install: install, output: output)
+    open(locked_store)
   end
 
   def self.lock_outdated?(gemfile, resolved_gem_set)
@@ -420,11 +423,11 @@ class Gel::Environment
       base_store = Gel::Environment.store
       base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
 
-      locked_store = loader.activate(nil, base_store, install: install, output: output)
+      locked_store = loader.activate(self, base_store, install: install, output: output)
 
       exes.each do |exe|
         if locked_store.each.any? { |g| g.executables.include?(exe) }
-          activate(install: install, output: output)
+          open(locked_store)
           return :lock
         end
       end

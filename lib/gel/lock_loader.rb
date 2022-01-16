@@ -112,12 +112,6 @@ class Gel::LockLoader
 
     locked_store.lock(locks)
 
-    if env
-      env.open(locked_store)
-
-      env.gems_from_lock(locks)
-    end
-
     locked_store
   end
 end
