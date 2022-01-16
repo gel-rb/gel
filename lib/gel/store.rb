@@ -146,9 +146,11 @@ class Gel::Store
   def gems(name_version_pairs)
     result = {}
 
-    name_version_pairs.each do |name, version|
-      if info = gem_info(name, version)
-        result[name] = _gem(name, version, info)
+    @primary_db.reading do
+      name_version_pairs.each do |name, version|
+        if info = gem_info(name, version)
+          result[name] = _gem(name, version, info)
+        end
       end
     end
 
@@ -167,6 +169,12 @@ class Gel::Store
   end
 
   def libs_for_gems(versions)
+    @primary_db.reading do
+      versions = versions.select do |name, version|
+        @primary_db.key?("i/#{name}/#{version}")
+      end
+    end
+
     @rlib_db.reading do
       versions.each do |name, version|
         if libs = @rlib_db["#{name}-#{version}"]
@@ -194,23 +202,21 @@ class Gel::Store
   def each(gem_name = nil, &block)
     return enum_for(__callee__, gem_name) unless block_given?
 
-    if gem_name
-      @primary_db.reading do
-        return unless vs = @primary_db["v/#{gem_name}"]
-        vs.each do |version|
-          if info = @primary_db["i/#{gem_name}/#{version}"]
-            yield _gem(gem_name, version, info)
-          end
+    iterate_for_gem = lambda do |gem_name|
+      @primary_db["v/#{gem_name}"]&.each do |version|
+        if info = @primary_db["i/#{gem_name}/#{version}"]
+          yield _gem(gem_name, version, info)
         end
       end
-    else
-      gem_names = []
-      @primary_db.each_key do |k|
-        gem_names << $1 if k =~ /\Av\/(.*)\z/
-      end
+    end
 
-      gem_names.each do |n|
-        each(n, &block)
+    @primary_db.reading do
+      if gem_name
+        iterate_for_gem.call(gem_name)
+      else
+        @primary_db.each_key do |k|
+          iterate_for_gem.call($1) if k =~ /\Av\/(.*)\z/
+        end
       end
     end
   end

@@ -170,7 +170,7 @@ class Gel::DB::PStore < Gel::DB
   end
 
   def key?(key)
-    @pstore&.key?(key.to_s)
+    @pstore&.root?(key.to_s)
   end
 
   def [](key)
