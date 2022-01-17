@@ -289,21 +289,41 @@ class Gel::Package::Installer
       raise "invalid filename #{target.inspect} outside #{(root + "/").inspect}" unless target.start_with?("#{root}/")
       return if @installed_files.include?(target)
       @installed_files << target
+      requirable = false
       spec.require_paths.each do |reqp|
         prefix = "#{root}/#{reqp}/"
         if target.start_with?(prefix)
           @files[reqp] << target[prefix.size..-1]
+          requirable = true
         end
       end
-      raise "won't overwrite #{target}" if File.exist?(target)
+      exe = spec.executables.find { |e| filename == "#{spec.bindir}/#{e}" }
+
+      if File.exist?(target)
+        real = File.realpath(target)
+
+        if real && real.downcase == target.downcase && real != target && @installed_files.include?(real)
+          if requirable || exe
+            raise "Can't extract #{filename} because it conflicts with #{Gel::Util.relative_path(root, real)} (case-sensitive archive extracting on case-insensitive filesytem?)"
+          else
+            # Test or something? We'll skip it, and just hope it wasn't
+            # important.
+            return
+          end
+        end
+
+        raise "won't overwrite #{target}"
+      end
+
       Gel::Util.mkdir_p(File.dirname(target))
       mode = 0444
       mode |= source_mode & 0200
       mode |= 0111 if source_mode & 0111 != 0
-      if exe = spec.executables.find { |e| filename == "#{spec.bindir}/#{e}" }
+      if exe
         mode |= 0111
         @root_store.stub_set.add(File.basename(@store.root), [exe])
       end
+
       File.open(target, "wb", mode) do |f|
         f.write io.read
       end
