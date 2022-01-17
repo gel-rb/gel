@@ -143,12 +143,22 @@ module Gel::Error
   end
 
   class ExtensionBuildError < Gel::UserError
-    def initialize(program_name:, exitstatus:)
+    def initialize(program_name:, exitstatus:, log:, abort: nil)
       super
     end
 
     def message
-      "#{self[:program_name].inspect} exited with #{self[:exitstatus].inspect}"
+      if self[:exitstatus] == 1 && self[:abort]
+        abort_message = self[:abort]
+
+        if abort_message.include?("\n") || abort_message.size > 100
+          "#{self[:program_name].inspect} aborted:\n#{abort_message.gsub(/^/, "  ")}"
+        else
+          "#{self[:program_name].inspect} aborted: #{abort_message.sub(/\A[\[({]?(?:error|err|abort|fatal)[\])}]?:?\s+/i, "")}"
+        end
+      else
+        "#{self[:program_name].inspect} exited with #{self[:exitstatus].inspect}"
+      end + "\n\nBuild log: #{self[:log]}"
     end
   end
 

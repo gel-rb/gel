@@ -135,71 +135,93 @@ class Gel::Package::Installer
       }
     end
 
-    def build_command(work_dir, log, *command, rake: false, **options)
+    def build_command(work_dir, log, *command, rake: false, abortable: false, **options)
       env = build_environment(rake: rake)
       env.merge!(command.shift) if command.first.is_a?(Hash)
+
+      options.update(chdir: work_dir, in: IO::NULL, [:out, :err] => log)
+
+      if abortable
+        abort_r, abort_w = IO.pipe
+        options.update(3 => abort_w)
+      end
 
       pid = spawn(
         env,
         *command,
-        chdir: work_dir,
-        in: IO::NULL,
-        [:out, :err] => log,
-        **options,
+        options,
       )
 
+      if abortable
+        abort_w.close
+
+        abort_message = abort_r.read
+        abort_message = nil if abort_message.strip.empty?
+      end
+
       _, status = Process.waitpid2(pid)
-      status
+
+      if abortable
+        [status, abort_message]
+      else
+        status
+      end
     end
 
     def compile_extconf(ext, install_dir)
       with_build_environment(ext, install_dir) do |work_dir, short_install_dir, local_config_path, log|
-        status = build_command(
+        status, abort = build_command(
           work_dir, log,
           { "MAKEFLAGS" => "-j3" },
           RbConfig.ruby,
+          "-r", File.expand_path("abortable", __dir__),
           "-r", local_config_path,
           File.basename(ext),
           *Shellwords.shellsplit(@config[:build, @spec.name] || ""),
+          abortable: true
         )
-        raise "extconf exited with #{status.exitstatus}" unless status.success?
+        raise Gel::Error::ExtensionBuildError.new(program_name: "extconf", exitstatus: status.exitstatus, abort: abort, log: log.path) unless status.success?
 
         _status = build_command(work_dir, log, "make", "clean", "DESTDIR=")
         # Ignore exit status
 
         status = build_command(work_dir, log, "make", "-j3", "DESTDIR=")
-        raise "make exited with #{status.exitstatus}" unless status.success?
+        raise Gel::Error::ExtensionBuildError.new(program_name: "make", exitstatus: status.exitstatus, log: log.path) unless status.success?
 
         status = build_command(work_dir, log, "make", "install", "DESTDIR=")
-        raise "make install exited with #{status.exitstatus}" unless status.success?
+        raise Gel::Error::ExtensionBuildError.new(program_name: "make install", exitstatus: status.exitstatus, log: log.path) unless status.success?
       end
     end
 
     def compile_rakefile(ext, install_dir)
       with_build_environment(ext, install_dir) do |work_dir, short_install_dir, local_config_path, log|
         if File.basename(ext) =~ /mkrf_conf/i
-          status = build_command(
+          status, abort = build_command(
             work_dir, log,
             RbConfig.ruby,
+            "-r", File.expand_path("abortable", __dir__),
             "-r", local_config_path,
             File.basename(ext),
             rake: true,
+            abortable: true
           )
-          raise Gel::Error::ExtensionBuildError.new(program_name: "mkrf_conf", exitstatus: status.exitstatus) unless status.success?
+          raise Gel::Error::ExtensionBuildError.new(program_name: "mkrf_conf", exitstatus: status.exitstatus, abort: abort, log: log.path) unless status.success?
         end
 
-        status = build_command(
+        status, abort = build_command(
           work_dir, log,
           { "RUBYARCHDIR" => short_install_dir, "RUBYLIBDIR" => short_install_dir },
           RbConfig.ruby,
+          "-r", File.expand_path("abortable", __dir__),
           "-r", File.expand_path("../command", __dir__),
           "-e", "Gel::Command.run(ARGV)",
           "--",
           "exec",
           "rake",
           rake: true,
+          abortable: true
         )
-        raise Gel::Error::ExtensionBuildError.new(program_name: "rake", exitstatus: status.exitstatus) unless status.success?
+        raise Gel::Error::ExtensionBuildError.new(program_name: "rake", exitstatus: status.exitstatus, abort: abort, log: log.path) unless status.success?
       end
     end
 

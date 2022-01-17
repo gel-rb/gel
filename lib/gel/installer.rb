@@ -244,7 +244,7 @@ class Gel::Installer
       if output
         output.write "Installed #{@download_pool.count - errors.size} of #{@download_pool.count} gems\n\nErrors encountered with #{errors.size} gems:\n\n"
         errors.each do |(_, name), exception|
-          output.write "#{name}\n  #{exception}\n\n"
+          output.write "#{name}\n#{exception.to_s.gsub(/^(?=.)/, "  ")}\n\n"
         end
       end
 
