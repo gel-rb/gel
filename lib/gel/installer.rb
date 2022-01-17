@@ -112,7 +112,7 @@ class Gel::Installer
         work_install(g)
       end
     else
-      @pending[name] -= 1
+      clear_pending(name)
     end
   end
 
@@ -160,8 +160,14 @@ class Gel::Installer
       end
     end
 
-    g.compile
-    work_install(g)
+    begin
+      g.compile
+    rescue
+      clear_pending(g.spec.name)
+      raise
+    else
+      work_install(g)
+    end
   end
 
   def work_install(g)
@@ -170,7 +176,11 @@ class Gel::Installer
       g.install
     end
 
-    @pending[g.spec.name] -= 1
+    clear_pending(g.spec.name)
+  end
+
+  def clear_pending(name)
+    @pending[name] -= 1
 
     synchronize do
       compile_recheck, @compile_waiting = @compile_waiting, []
@@ -250,12 +260,12 @@ class Gel::Installer
 
   def compile_ready?(name)
     @dependencies[name].all? do |dep|
-      if @pending[dep] == 0
-        compile_ready?(dep)
-      elsif @download_pool.errors.any? { |(_, failed_name), ex| failed_name == dep }
+      if @download_pool.errors.any? { |(_, failed_name), ex| failed_name == dep }
         raise "Depends on #{dep.inspect}, which failed to download"
       elsif @compile_pool.errors.any? { |(_, failed_name), ex| failed_name == dep }
         raise "Depends on #{dep.inspect}, which failed to compile"
+      elsif @pending[dep] == 0
+        compile_ready?(dep)
       else
         false
       end
