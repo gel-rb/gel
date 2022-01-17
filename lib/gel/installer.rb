@@ -261,9 +261,9 @@ class Gel::Installer
   def compile_ready?(name)
     @dependencies[name].all? do |dep|
       if @download_pool.errors.any? { |(_, failed_name), ex| failed_name == dep }
-        raise "Depends on #{dep.inspect}, which failed to download"
+        raise Gel::Error::ExtensionDependencyError.new(dependency: dep, failure: "download")
       elsif @compile_pool.errors.any? { |(_, failed_name), ex| failed_name == dep }
-        raise "Depends on #{dep.inspect}, which failed to compile"
+        raise Gel::Error::ExtensionDependencyError.new(dependency: dep, failure: "compile")
       elsif @pending[dep] == 0
         compile_ready?(dep)
       else

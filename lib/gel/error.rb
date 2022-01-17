@@ -152,6 +152,16 @@ module Gel::Error
     end
   end
 
+  class ExtensionDependencyError < Gel::UserError
+    def initialize(dependency:, failure:)
+      super
+    end
+
+    def message
+      "Depends on #{self[:dependency].inspect}, which failed to #{self[:failure]}"
+    end
+  end
+
   class NoGemfile < Gel::UserError
     def initialize(path:)
       super
