@@ -23,7 +23,7 @@ class Gel::VendorCatalog
     @cache[spec.name] ||= {}
     @cache[spec.name][Gel::Support::GemVersion.new(spec.version).to_s] = {
       local_path: @filename,
-      dependencies: spec.runtime_dependencies.to_a,
+      dependencies: spec.runtime_dependencies.to_a.map { |n, pairs| [n, pairs.to_a.map { |pr| pr.join(" ") }] },
       #ruby: spec.required_ruby_version,
     }
   end
