@@ -82,7 +82,7 @@ class Gel::MultiStore
     result = {}
 
     @stores.each do |_, store|
-      result.update(store.gems(name_version_pairs)) do |l, r|
+      result.update(store.gems(name_version_pairs)) do |_, l, r|
         l
       end
     end
