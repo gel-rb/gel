@@ -55,6 +55,12 @@ module Gem
       end
     end
 
+    def self.latest_specs(prerelease = false)
+      # In a locked environment this is fine. To work properly with an
+      # unlocked store, we should be more selective.
+      Gel::Environment.store.each.map { |g| new(g) }
+    end
+
     def self.each(&block)
       Gel::Environment.store.each.map { |g| new(g) }.each(&block)
     end
