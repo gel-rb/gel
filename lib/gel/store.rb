@@ -78,7 +78,7 @@ class Gel::Store
         @rlib_db.writing do |rst|
           ls = @rlib_db.delete("#{name}-#{version}") || []
 
-          ls.each do |d, sls|
+          ls.each do |_, sls|
             sls.each do |file|
               h = @lib_db[file] || {}
               d = h[name] || []
@@ -122,10 +122,11 @@ class Gel::Store
           @lib_db[file] = h
         end
 
-        v, d = version
+        v, d, e = version
+        k = e ? [d, e] : d
         ls = @rlib_db["#{name}-#{v}"] || []
-        unless sls = ls.assoc(d)
-          sls = [d, []]
+        unless sls = ls.assoc(k)
+          sls = [k, []]
           ls << sls
         end
         sls.last.concat files
@@ -189,8 +190,8 @@ class Gel::Store
       h.each do |name, versions|
         versions.each do |version|
           if version.is_a?(Array)
-            version, subdir = version
-            yield gem(name, version), subdir
+            version, subdir, ext = version
+            yield gem(name, version), subdir, ext
           else
             yield gem(name, version)
           end

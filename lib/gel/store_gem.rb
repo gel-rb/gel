@@ -65,13 +65,20 @@ class Gel::StoreGem
     end
   end
 
+  def entries_for_lib(name)
+    dual_require_paths do |path, subdir|
+      Gel::Util.loadable_files(path, name).each do |match_file|
+        _match_name, match_ext = Gel::Util.split_filename_for_require(match_file)
+        yield subdir, match_ext
+      end
+    end
+  end
+
   def libs
-    _require_paths.each do |subdir|
-      prefix = "#{root}/#{subdir}/"
-      Dir["#{prefix}**/*.rb"].each do |path|
-        next unless path.start_with?(prefix)
-        file = path[prefix.size..-1].sub(/\.rb$/, "")
-        yield file, subdir
+    dual_require_paths do |path, subdir|
+      Gel::Util.loadable_files(path).each do |file|
+        basename, ext = Gel::Util.split_filename_for_require(file)
+        yield basename, subdir, ext
       end
     end
   end
@@ -84,6 +91,17 @@ class Gel::StoreGem
 
   def _require_paths
     @info[:require_paths]
+  end
+
+  def dual_require_paths
+    is_first = true
+    _require_paths.each do |reqp|
+      yield "#{root}/#{reqp}", is_first ? nil : reqp
+      is_first = false
+    end
+    if extensions
+      yield extensions, EXTENSION_SUBDIR_TOKEN
+    end
   end
 
   def _default_require_path

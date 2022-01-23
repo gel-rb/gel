@@ -66,7 +66,7 @@ class GelTest < Minitest::Test
         \/
         #{Regexp.union(SAFE_STDLIB)}
         \.
-        #{Regexp.union(*["rb", RbConfig::CONFIG["DLEXT"], RbConfig::CONFIG["DLEXT2"]].compact)}
+        #{Regexp.union(*["rb", "so", RbConfig::CONFIG["DLEXT"], RbConfig::CONFIG["DLEXT2"]].compact)}
       $/x
     )
 

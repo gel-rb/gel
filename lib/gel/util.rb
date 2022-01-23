@@ -1,7 +1,33 @@
 # frozen_string_literal: true
 
+require "rbconfig"
+
 module Gel::Util
   extend self
+
+  LOADABLE_FILE_TYPES = ["rb", "so", RbConfig::CONFIG["DLEXT"], RbConfig::CONFIG["DLEXT2"]].compact.reject(&:empty?)
+  LOADABLE_FILE_TYPES_RE = /(?=\.#{Regexp.union LOADABLE_FILE_TYPES}\z)/
+  LOADABLE_FILE_TYPES_PATTERN = "{#{LOADABLE_FILE_TYPES.join(",")}}"
+
+  def loadable_files(dir, name = "**/*")
+    range_without_prefix = (dir.size + 1)..-1
+    Dir["#{dir}/#{name}.#{LOADABLE_FILE_TYPES_PATTERN}"].map do |absolute|
+      absolute[range_without_prefix]
+    end
+  end
+
+  def ext_matches_requested?(actual_ext, requested_ext)
+    # * requested_ext.nil? => no preference (the common case)
+    # * actual_ext.nil? is shorthand for '.rb'
+    # * All non-.rb (i.e., compiled) extensions are treated as equivalent
+
+    !requested_ext ||
+      (!actual_ext || actual_ext == ".rb") == (requested_ext == ".rb")
+  end
+
+  def split_filename_for_require(name)
+    name.split(LOADABLE_FILE_TYPES_RE, 2)
+  end
 
   def search_upwards(name, dir = Dir.pwd)
     until (file = File.join(dir, name)) && File.exist?(file)

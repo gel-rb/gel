@@ -559,7 +559,11 @@ class Gel::Environment
   end
 
   def self.gem_has_file?(gem_name, path)
-    @store.gems_for_lib(path) do |gem, subdir|
+    search_name, search_ext = Gel::Util.split_filename_for_require(path)
+
+    @store.gems_for_lib(search_name) do |gem, subdir, ext|
+      next unless Gel::Util.ext_matches_requested?(ext, search_ext)
+
       if gem.name == gem_name && gem == activated_gems[gem_name]
         return gem.path(path, subdir)
       end
@@ -578,10 +582,12 @@ class Gel::Environment
 
   def self.scan_for_path(path)
     if @store && !path.start_with?("/")
-      path = path.sub(/\.rb$/, "") if path.end_with?(".rb")
+      search_name, search_ext = Gel::Util.split_filename_for_require(path)
 
       results = []
-      @store.gems_for_lib(path) do |gem, subdir|
+      @store.gems_for_lib(search_name) do |gem, subdir, ext|
+        next unless Gel::Util.ext_matches_requested?(ext, search_ext)
+
         results << [gem, subdir]
         break if activated_gems[gem.name] == gem
       end

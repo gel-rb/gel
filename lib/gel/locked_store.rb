@@ -34,8 +34,8 @@ class Gel::LockedStore
     inner_versions = {}
     locks.each do |name, version|
       if version.is_a?(Gel::StoreGem)
-        version.libs do |file, subdir|
-          @lib_cache[file] << [version, subdir]
+        version.libs do |file, subdir, ext|
+          @lib_cache[file] << [version, subdir, ext]
         end
       else
         inner_versions[name] = version
@@ -44,8 +44,8 @@ class Gel::LockedStore
 
     g = @inner.gems(inner_versions)
     @inner.libs_for_gems(inner_versions) do |name, version, subs|
-      subs.each do |subdir, files|
-        v = [g[name], subdir]
+      subs.each do |(subdir, ext), files|
+        v = [g[name], subdir, ext]
         files.each do |file|
           @lib_cache[file] << v
         end
@@ -84,29 +84,33 @@ class Gel::LockedStore
   end
 
   def gems_for_lib(file)
-    if c = @lib_cache.fetch(file, nil)
-      c.each { |gem, subdir| yield gem, subdir }
-      return
-    end
+    search_name, search_ext = Gel::Util.split_filename_for_require(file)
 
-    hits = []
-    unless @full_cache
-      @inner.gems_for_lib(file) do |gem, subdir|
-        if locked?(gem)
-          hits << [gem, subdir]
-          yield gem, subdir
+    unless hits = @lib_cache.fetch(search_name, nil)
+      hits = []
+
+      unless @full_cache
+        @inner.gems_for_lib(search_name) do |gem, subdir, ext|
+          if locked?(gem)
+            hits << [gem, subdir, ext]
+          end
         end
       end
+
+      locked_gems.each do |gem|
+        gem.entries_for_lib(search_name) do |subdir, ext|
+          hits << [gem, subdir, ext]
+        end
+      end
+
+      @lib_cache[file] = hits
     end
 
-    locked_gems.each do |gem|
-      if File.exist?(gem.path(file) + ".rb")
-        hits << [gem, nil]
-        yield gem, nil
+    hits.each do |gem, subdir, ext|
+      if Gel::Util.ext_matches_requested?(ext, search_ext)
+        yield gem, subdir, ext
       end
     end
-
-    @lib_cache[file] = hits
   end
 
   def each(gem_name = nil)

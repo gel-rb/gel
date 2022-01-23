@@ -259,28 +259,40 @@ class Gel::Package::Installer
     end
 
     def install
-      loadable_file_types = ["rb", RbConfig::CONFIG["DLEXT"], RbConfig::CONFIG["DLEXT2"]].compact.reject(&:empty?)
-      loadable_file_types_re = /\.#{Regexp.union loadable_file_types}\z/
-      loadable_file_types_pattern = "*.{#{loadable_file_types.join(",")}}"
-
       store.add_gem(spec.name, spec.version, spec.bindir, spec.executables, spec.require_paths, spec.runtime_dependencies, spec.extensions.any?) do
-        is_first = true
+        first_require_path = true
         spec.require_paths.each do |reqp|
-          location = is_first ? spec.version : [spec.version, reqp]
-          files = @files[reqp].map { |s| s.sub(loadable_file_types_re, "") if s.match(loadable_file_types_re) }.compact
-          store.add_lib(spec.name, location, files)
-          is_first = false
+          add_libs(spec, reqp, @files[reqp], first_subdir: first_require_path)
+          first_require_path = false
         end
 
         if build_path
-          files = Dir["#{build_path}/**/#{loadable_file_types_pattern}"].map do |file|
-            file[build_path.size + 1..-1]
-          end.map do |file|
-            file.sub(loadable_file_types_re, "")
+          files = Gel::Util.loadable_files(build_path)
+          add_libs(spec, Gel::StoreGem::EXTENSION_SUBDIR_TOKEN, files, first_subdir: false)
+        end
+      end
+    end
+
+    def add_libs(spec, subdir, files, first_subdir:)
+      hash = {}
+
+      files.each do |s|
+        basename, ext = Gel::Util.split_filename_for_require(s)
+        next if ext.nil?
+        (hash[ext] ||= []) << basename
+      end
+
+      hash.each do |ext, basenames|
+        location =
+          if ext != ".rb"
+            [spec.version, subdir, ext]
+          elsif !first_subdir
+            [spec.version, subdir]
+          else
+            spec.version
           end
 
-          store.add_lib(spec.name, [spec.version, Gel::StoreGem::EXTENSION_SUBDIR_TOKEN], files)
-        end
+        store.add_lib(spec.name, location, basenames)
       end
     end
 

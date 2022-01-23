@@ -56,8 +56,8 @@ class Gel::MultiStore
 
   def gems_for_lib(file)
     @stores.each do |_, store|
-      store.gems_for_lib(file) do |gem, subdir|
-        yield gem, subdir
+      store.gems_for_lib(file) do |gem, subdir, ext|
+        yield gem, subdir, ext
       end
     end
   end
