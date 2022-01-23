@@ -232,8 +232,35 @@ module Kernel
   alias_method :require_without_gel, :require
   singleton_class.undef_method :require
 
-  def require(path)
-    require_without_gel Gel::Environment.resolve_gem_path(path)
+  if ENV["GEL_DEBUG"]
+    def require(path)
+      before = $".last
+      resolved = Gel::Environment.resolve_gem_path(path)
+      require_without_gel resolved
+    ensure
+      last_loaded = $".last
+      if last_loaded == before
+        # Nothing new got loaded
+      elsif path.start_with?("/")
+        # It was already absolute; we don't care
+      elsif resolved != path
+        # We resolved it
+      elsif last_loaded.start_with?(RbConfig::CONFIG["prefix"])
+        # stdlib -- we should probably index these one day, but for
+        # now, it's fine
+        $stderr.puts "Gel: ruby stdlib found #{path.inspect} at #{last_loaded.inspect}"
+      elsif Gel::Environment.store.paths.any? { |path| last_loaded.start_with?(path) }
+        # Inside one of our managed gems... ideally, that's never
+        # supposed to happen
+        $stderr.puts "Gel: ruby found #{path.inspect} at #{last_loaded.inspect}"
+      else
+        # Application path, presumably?
+      end
+    end
+  else
+    def require(path)
+      require_without_gel Gel::Environment.resolve_gem_path(path)
+    end
   end
   private :require
 end
