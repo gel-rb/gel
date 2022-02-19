@@ -153,6 +153,10 @@ module Gem
     # no-op
   end
 
+  def self.use_gemdeps
+    # no-op: we always do
+  end
+
   def self.dir
     Gel::Environment.store.root
   end
