@@ -2,6 +2,7 @@
 
 require "rbconfig"
 require_relative "util"
+require_relative "stdlib"
 require_relative "support/gem_platform"
 
 class Gel::Environment
@@ -658,16 +659,18 @@ class Gel::Environment
     end
   end
 
-  # Search gems for how we should load the given +path+
+  # Search gems and stdlib for how we should load the given +path+
   #
   # Returns nil when the path is unrecognised (caller should fall back to
   # scanning $LOAD_PATH). Otherwise, returns an array tuple:
   #
   # [
-  #   gem,        #
+  #   gem,        # nil == stdlib
   #   file,       # full path to require, or nil if gem is conflicted
-  #   resolved,   # array of gems to activate, or nil if empty
+  #   resolved,   # if gem: array of gems to activate, or nil if empty
   #               # if conflicted: string describing conflict
+  #               # if stdlib: boolean whether the file is known to already
+  #               # be loaded (may return false negative)
   # ]
   def self.scan_for_path(path)
     if @store && !path.start_with?("/")
@@ -697,6 +700,19 @@ class Gel::Environment
       # Okay, no already-loaded gems supply the file we're looking for.
       # +results+ contains a list of gems that we could load.
 
+      # Before we start gaming out dependency trees for gems we could load,
+      # it's time to check whether we've already loaded this file from
+      # stdlib.
+      stdlib = Gel::Stdlib.instance
+
+      stdlib_path = stdlib.resolve(search_name, search_ext)
+      stdlib_path += search_ext if stdlib_path && search_ext
+
+      if stdlib_path && stdlib.active?(path)
+        # Yep, we don't need to do anything
+        return [nil, stdlib_path, true]
+      end
+
       # We're going to have to activate a gem if we can. Recursively plan
       # out the set of dependencies we need to activate... or alternatively,
       # identify the conflict that prevents it.
@@ -708,10 +724,16 @@ class Gel::Environment
           # file.
           return [gem, gem.path(path, subdir), a]
         else
-          # If we don't find a better answer later in this loop, then this
-          # will be the failure we report.
+          # If we don't find a better answer later in this loop (or in
+          # +stdlib_path+), then this will be the failure we report.
           first_activation_error ||= [gem, nil, a]
         end
+      end
+
+      # We didn't find any viable gems to activate, so now we consider
+      # whether we previously found a not-yet-loaded stdlib file.
+      if stdlib_path
+        return [nil, stdlib_path, false]
       end
 
       # Still no luck: this file cannot be resolved. If we found a gem that
@@ -735,6 +757,12 @@ class Gel::Environment
     if file
       if gem && resolved
         activate_gems resolved
+      else
+        unless resolved
+          # This is a cheat: we're assuming the caller is about to require
+          # the file
+          Gel::Stdlib.instance.activate(path)
+        end
       end
 
       return file
