@@ -10,6 +10,11 @@ require_relative "vendor/ruby_digest"
 class Gel::Catalog
   UPDATE_CONCURRENCY = 8
 
+  autoload :Common, File.expand_path("catalog/common", __dir__)
+  autoload :CompactIndex, File.expand_path("catalog/compact_index", __dir__)
+  autoload :DependencyIndex, File.expand_path("catalog/dependency_index", __dir__)
+  autoload :LegacyIndex, File.expand_path("catalog/legacy_index", __dir__)
+
   def initialize(uri, httpool: Gel::Httpool.new, work_pool:, cache: ENV["GEL_CACHE"] || "~/.cache/gel", initial_gems: [])
     @uri = normalize_uri(uri)
     @httpool = httpool
@@ -48,17 +53,14 @@ class Gel::Catalog
   end
 
   def compact_index
-    require_relative "catalog/compact_index"
     @compact_index ||= Gel::Catalog::CompactIndex.new(@uri, uri_identifier, httpool: @httpool, work_pool: @work_pool, cache: @cache)
   end
 
   def dependency_index
-    require_relative "catalog/dependency_index"
     @dependency_index ||= Gel::Catalog::DependencyIndex.new(self, @uri, uri_identifier, httpool: @httpool, work_pool: @work_pool, cache: @cache)
   end
 
   def legacy_index
-    require_relative "catalog/legacy_index"
     @legacy_index ||= Gel::Catalog::LegacyIndex.new(@uri, uri_identifier, httpool: @httpool, work_pool: @work_pool, cache: @cache)
   end
 

@@ -2,8 +2,6 @@
 
 require_relative "../set"
 
-require_relative "common"
-
 class Gel::Catalog::CompactIndex
   include Gel::Catalog::Common
   CACHE_TYPE = "index"
