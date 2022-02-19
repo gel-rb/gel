@@ -6,6 +6,7 @@ module Gel::Util
   extend self
 
   LOADABLE_FILE_TYPES = ["rb", "so", RbConfig::CONFIG["DLEXT"], RbConfig::CONFIG["DLEXT2"]].compact.reject(&:empty?)
+  LOADABLE_FILE_TYPES_EXT = LOADABLE_FILE_TYPES.map { |s| -".#{s}" }
   LOADABLE_FILE_TYPES_RE = /(?=\.#{Regexp.union LOADABLE_FILE_TYPES}\z)/
   LOADABLE_FILE_TYPES_PATTERN = "{#{LOADABLE_FILE_TYPES.join(",")}}"
 
@@ -26,7 +27,12 @@ module Gel::Util
   end
 
   def split_filename_for_require(name)
-    name.split(LOADABLE_FILE_TYPES_RE, 2)
+    LOADABLE_FILE_TYPES_EXT.each do |ext|
+      next unless name.end_with?(ext)
+
+      return [name[0, name.size - ext.size], ext]
+    end
+    [name]
   end
 
   def search_upwards(name, dir = Dir.pwd)
