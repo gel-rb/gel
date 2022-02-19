@@ -147,7 +147,53 @@ module Gel::DB::AutoTransaction
   end
 end
 
+module Gel::DB::Cache
+  def writing(&block)
+    @cache = nil
+    super
+  end
+
+  def reading(&block)
+    if @cache.nil?
+      super do
+        cache = {}
+        each_key do |k|
+          cache[k] = self[k]
+        end
+        @cache = cache
+      end
+    end
+
+    yield
+  end
+
+  def each_key(&block)
+    if @cache
+      @cache.each_key(&block)
+    else
+      super
+    end
+  end
+
+  def key?(key)
+    if @cache
+      @cache.key?(key)
+    else
+      super
+    end
+  end
+
+  def [](key)
+    if @cache
+      @cache[key]
+    else
+      super
+    end
+  end
+end
+
 class Gel::DB::PStore < Gel::DB
+  prepend Gel::DB::Cache
   prepend Gel::DB::AutoTransaction
 
   def initialize(root, name)
