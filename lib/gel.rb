@@ -6,6 +6,11 @@ module Gel
 
   module Vendor
   end
+
+  def self.stub(name)
+    require_relative "gel/command"
+    Gel::Command.run(["stub", name, nil, *ARGV])
+  end
 end
 
 require_relative "gel/support/gem_version"

@@ -39,8 +39,9 @@ class Gel::StubSet
 
     File.open(bin(exe), "w", 0755) do |f|
       f.write(<<STUB)
-#!/usr/bin/env gel stub #{exe}
+#!/usr/bin/env gel stub ruby #{exe}
 # This file is generated and managed by Gel.
+Gel.stub(#{exe.inspect})
 STUB
     end
   end
