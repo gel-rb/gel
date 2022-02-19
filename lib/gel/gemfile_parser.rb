@@ -131,6 +131,13 @@ module Gel::GemfileParser
       @stack.pop
     end
 
+    def path(*names)
+      @stack << { path: names }
+      yield
+    ensure
+      @stack.pop
+    end
+
     def platforms(*names)
       @stack << { platforms: names }
       yield
