@@ -8,13 +8,20 @@ class Gel::Command
     command_line = command_line.dup
     if command_name = extract_word(command_line)
       const = command_name.downcase.sub(/^./, &:upcase).gsub(/[-_]./) { |s| s[1].upcase }
-      if Gel::Command.const_defined?(const, false)
-        command = Gel::Command.const_get(const, false).new
-        command.run(command_line)
-      elsif Gel::Environment.activate_for_executable(["gel-#{command_name}", command_name])
-        command_name = "gel-#{command_name}" if Gel::Environment.find_executable("gel-#{command_name}")
-        command = Gel::Command::Exec.new
-        command.run([command_name, *command_line])
+      if const =~ /\A[a-z]+\z/i
+        if Gel::Command.const_defined?(const, false)
+          command = Gel::Command.const_get(const, false).new
+          command.run(command_line)
+        elsif Gel::Environment.activate_for_executable(["gel-#{command_name}", command_name])
+          command_name = "gel-#{command_name}" if Gel::Environment.find_executable("gel-#{command_name}")
+          command = Gel::Command::Exec.new
+          command.run([command_name, *command_line])
+        else
+          raise Gel::Error::UnknownCommandError.new(command_name: command_name)
+        end
+      elsif stub_name = own_stub_file?(command_name) || other_stub_file?(command_name)
+        command = Gel::Command::Stub.new
+        command.run([stub_name, *command_line])
       else
         raise Gel::Error::UnknownCommandError.new(command_name: command_name)
       end
@@ -67,6 +74,23 @@ class Gel::Command
   def self.extract_word(arguments)
     if idx = arguments.index { |w| w =~ /^[^-]/ }
       arguments.delete_at(idx)
+    end
+  end
+
+  def self.own_stub_file?(path)
+    if path.start_with?(Gel::Environment.store.stub_set.dir)
+      File.basename(path)
+    end
+  end
+
+  def self.other_stub_file?(path)
+    return unless File.exist?(path)
+
+    File.open(path, "r") do |f|
+      # Stub prefix is ~128 bytes
+      if f.read(500) =~ /^Gel\.stub (.*)$/
+        $1.undump
+      end
     end
   end
 

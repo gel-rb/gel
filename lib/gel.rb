@@ -9,7 +9,7 @@ module Gel
 
   def self.stub(name)
     require_relative "gel/command"
-    Gel::Command.run(["stub", name, nil, *ARGV])
+    Gel::Command.run(["stub", name, *ARGV])
   end
 end
 

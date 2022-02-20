@@ -12,6 +12,10 @@ class Gel::LockedStore
     @full_cache = false
   end
 
+  def stub_set
+    @inner.stub_set
+  end
+
   def paths
     @inner.paths
   end

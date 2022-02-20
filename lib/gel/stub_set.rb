@@ -4,6 +4,7 @@ require_relative "db"
 
 class Gel::StubSet
   attr_reader :root
+  attr_reader :dir
 
   def initialize(root)
     @root = File.realpath(File.expand_path(root))
@@ -34,14 +35,23 @@ class Gel::StubSet
     end
   end
 
+  def rebuild!
+    @db.reading do
+      @db.each_key do |exe|
+        create_stub(exe)
+      end
+    end
+  end
+
   def create_stub(exe)
     Dir.mkdir(@dir) unless Dir.exist?(@dir)
 
     File.open(bin(exe), "w", 0755) do |f|
       f.write(<<STUB)
-#!/usr/bin/env gel stub ruby #{exe}
-# This file is generated and managed by Gel.
-Gel.stub(#{exe.inspect})
+#!/usr/bin/env gel
+#! This ruby binstub is generated and managed by Gel
+require "gel/stub" unless defined? Gel.stub
+Gel.stub #{exe.dump}
 STUB
     end
   end
