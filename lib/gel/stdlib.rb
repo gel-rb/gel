@@ -39,7 +39,7 @@ class Gel::Stdlib
       end
     end
 
-    @builtins = $LOADED_FEATURES.select { |s| !File.absolute_path?(s) }
+    @builtins = $LOADED_FEATURES.grep(/\A[^\/\\]+\z/)
     @builtins += @builtins.map { |s| Gel::Util.split_filename_for_require(s).first }
 
     $LOADED_FEATURES.each do |feat|
