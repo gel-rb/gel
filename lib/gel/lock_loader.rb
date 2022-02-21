@@ -45,45 +45,28 @@ class Gel::LockLoader
       end
     end
 
-    # For each gem name, we now decide which of the known variants we
-    # will attempt to use *if* we end up trying to load this gem. This
-    # *will* encounter gems that have no supported variant, but we
-    # assume those will never be requested.
-    platform_gems = {}
     local_platform = Gel::Support::GemPlatform.local
-    @gem_set.gems.each do |name, resolved_gems|
-      next if Gel::Environment::IGNORE_LIST.include?(name)
-
-      fallback = resolved_gems.find { |rg| rg.platform.nil? }
-      best_choice = resolved_gems.find { |rg| local_platform =~ rg.platform } || fallback
-
-      if best_choice
-        platform_gems[name] = best_choice
-        installer.known_dependencies name => best_choice.deps.map(&:first) if installer
-      end
-    end
+    all_gems = @gem_set.gems
 
     walk = lambda do |name|
-      if resolved_gem = platform_gems[name]
-        next if env && !env.platform?(resolved_gem.platform)
+      filtered_gems[name] = true
 
-        filtered_gems[name] = true
+      next if Gel::Environment::IGNORE_LIST.include?(name)
 
-        resolved_gem.deps.map(&:first).each do |dep_name|
-          walk[dep_name] unless filtered_gems[dep_name]
-        end
-      end
-    end
+      resolved_gems = all_gems[name].select do |rg|
+        local_platform =~ rg.platform || rg.platform.nil?
+      end.sort_by { |rg| rg.platform&.size || 0 }.reverse
 
-    top_gems.each(&walk)
+      next if resolved_gems.empty?
 
-    platform_gems.each do |name, resolved_gem|
-      next unless filtered_gems[name]
+      resolved_gem = resolved_gems.first
+
 
       case resolved_gem.catalog
       when Gel::GitCatalog
         dir = resolved_gem.catalog.path
 
+        installer.known_dependencies name => resolved_gem.deps.map(&:first) if installer
         installer&.load_git_gem(resolved_gem.catalog.remote, resolved_gem.catalog.revision, name)
 
         locks[name] = -> { Gel::DirectGem.new(dir, name, resolved_gem.version) }
@@ -92,17 +75,59 @@ class Gel::LockLoader
 
         dir = File.expand_path(path, File.dirname(@gem_set.filename))
 
+        installer.known_dependencies name => resolved_gem.deps.map(&:first) if installer
         locks[name] = Gel::DirectGem.new(dir, name, resolved_gem.version)
       else
-        if installer && !base_store.gem?(name, resolved_gem.version, resolved_gem.platform)
-          require_relative "catalog"
-          catalogs = @gem_set.server_catalogs
-          installer.install_gem(catalogs, name, resolved_gem.platform ? "#{resolved_gem.version}-#{resolved_gem.platform}" : resolved_gem.version)
+        unless resolved_gem = resolved_gems.find { |rg| base_store.gem?(name, rg.version, rg.platform) }
+          if installer
+            require_relative "catalog"
+
+            catalogs = @gem_set.server_catalogs
+
+            if resolved_gems.size > 1
+              skipped_matches = []
+
+              catalog_infos = catalogs.map { |c| c.gem_info(name) }
+              resolved_gems.each do |rg|
+                catalog_infos.each do |info|
+                  s = rg.platform ? "#{rg.version}-#{rg.platform}" : rg.version
+                  if i = info[s]
+                    if i[:ruby] && !Gel::Support::GemRequirement.new(i[:ruby].split("&")).satisfied_by?(Gel::Support::GemVersion.new(RUBY_VERSION))
+                      skipped_matches << s
+                    else
+                      resolved_gem = rg
+                      break
+                    end
+                  end
+                end
+
+                break if resolved_gem
+              end
+
+              if resolved_gem.nil?
+                raise UnsatisfiableRubyVersionError.new(name: name, running: RUBY_VERSION, attempted_platforms: skipped_matches)
+              end
+            else
+              resolved_gem = resolved_gems.first
+            end
+
+            installer.known_dependencies name => resolved_gem.deps.map(&:first)
+            installer.install_gem(catalogs, name, resolved_gem.platform ? "#{resolved_gem.version}-#{resolved_gem.platform}" : resolved_gem.version)
+          else
+            raise Gel::Error::MissingGemError.new(name: name)
+          end
         end
 
         locks[name] = resolved_gem.version.to_s
       end
+
+
+      resolved_gem.deps.map(&:first).each do |dep_name|
+        walk[dep_name] unless filtered_gems[dep_name]
+      end
     end
+
+    top_gems.each(&walk)
 
     installer.wait(output) if installer
 

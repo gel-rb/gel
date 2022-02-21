@@ -259,7 +259,7 @@ class Gel::Package::Installer
     end
 
     def install
-      store.add_gem(spec.name, spec.version, spec.bindir, spec.executables, spec.require_paths, spec.runtime_dependencies, spec.extensions.any?) do
+      store.add_gem(spec.name, spec.version, spec.bindir, spec.executables, spec.require_paths, spec.runtime_dependencies, spec.required_ruby_version, spec.extensions.any?) do
         first_require_path = true
         spec.require_paths.each do |reqp|
           add_libs(spec, reqp, @files[reqp], first_subdir: first_require_path)

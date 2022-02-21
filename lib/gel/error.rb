@@ -222,6 +222,26 @@ module Gel::Error
     end
   end
 
+  class UnsatisfiableRubyVersionError < Gel::UserError
+    def initialize(name:, running:, attempted_platforms:)
+      super
+    end
+
+    def message
+      "None of the available #{self[:name].inspect} packages are compatible with Ruby version #{self[:running].inspect}. Found: #{self[:attempted_platforms].inspect}"
+    end
+  end
+
+  class MissingGemError < Gel::UserError
+    def initialize(name:)
+      super
+    end
+
+    def message
+      "Missing gem #{self[:name].inspect}. Do you need to 'gel install'?"
+    end
+  end
+
   class ParsedGemspecError < Gel::UserError
     def message
       "Gemspec parse failed"

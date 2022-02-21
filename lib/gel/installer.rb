@@ -118,15 +118,11 @@ class Gel::Installer
 
   def download_gem(catalogs, name, version)
     catalogs.each do |catalog|
-      if fpath = catalog.cached_gem(name, version)
-        return fpath
-      end
-    end
-
-    catalogs.each do |catalog|
       begin
-        return catalog.download_gem(name, version)
-      rescue Net::HTTPExceptions, SkipCatalog
+        if fpath = catalog.download_gem(name, version)
+          return fpath
+        end
+      rescue Net::HTTPExceptions
       end
     end
 

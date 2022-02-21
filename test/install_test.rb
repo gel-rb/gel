@@ -41,6 +41,7 @@ class InstallTest < Minitest::Test
         bindir: "bin",
         executables: ["rackup"],
         require_paths: ["lib"],
+        ruby: ["> 0.0.0"],
         dependencies: {},
       }, store.gem("rack", "0.1.0").info)
     end
@@ -146,6 +147,7 @@ class InstallTest < Minitest::Test
         executables: [],
         extensions: true,
         require_paths: ["lib"],
+        ruby: [">= 1.9.2"],
         dependencies: {
           "rake" => [%w(>= 0)],
         },

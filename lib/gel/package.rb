@@ -45,6 +45,10 @@ module Gel
         @inner.extensions
       end
 
+      def required_ruby_version
+        @inner.required_ruby_version&.requirements&.map { |pair| pair.map(&:to_s) }
+      end
+
       def runtime_dependencies
         h = {}
         @inner.dependencies.each do |dep|
@@ -96,7 +100,7 @@ module Gel
       end
 
       class Gem_Specification
-        attr_accessor :architecture, :bindir, :executables, :name, :platform, :require_paths, :specification_version, :version, :dependencies, :extensions
+        attr_accessor :architecture, :bindir, :executables, :name, :platform, :require_paths, :specification_version, :version, :dependencies, :extensions, :required_ruby_version
       end
       class Gem_Dependency
         attr_accessor :name, :requirement, :type, :version_requirements

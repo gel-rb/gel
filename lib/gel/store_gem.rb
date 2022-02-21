@@ -3,6 +3,14 @@
 require_relative "util"
 
 class Gel::StoreGem
+  @compatibility = Hash.new do |h, k|
+    Gel::Support::GemRequirement.new(k).satisfied_by?(Gel::Support::GemVersion.new(RUBY_VERSION))
+  end
+
+  def self.compatible_ruby?(requirements)
+    @compatibility[requirements]
+  end
+
   EXTENSION_SUBDIR_TOKEN = ".."
 
   attr_reader :root, :name, :version, :extensions, :info
@@ -25,6 +33,16 @@ class Gel::StoreGem
 
   def satisfies?(requirements)
     requirements.satisfied_by?(gem_version)
+  end
+
+  def compatible_ruby?
+    # This will recalculate when false, but that's fine: the calculation
+    # is itself cached, and we only really care about keeping the true
+    # case fast.
+
+    @compatible_ruby ||=
+      !@info[:ruby] ||
+        self.class.compatible_ruby?(@info[:ruby])
   end
 
   def require_paths

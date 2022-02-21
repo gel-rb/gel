@@ -28,12 +28,8 @@ class Gel::VendorCatalog
     }
   end
 
-  def cached_gem(name, version)
-    @cache.dig(name, version, :local_path)
-  end
-
   def download_gem(name, version)
-    raise Gel::Installer::SkipCatalog
+    @cache.dig(name, version, :local_path)
   end
 
   def gem_info(name)

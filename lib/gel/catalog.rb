@@ -64,36 +64,18 @@ class Gel::Catalog
     @legacy_index ||= Gel::Catalog::LegacyIndex.new(@uri, uri_identifier, httpool: @httpool, work_pool: @work_pool, cache: @cache)
   end
 
-  def cached_gem(name, version)
-    path = cache_path(name, version)
-    return path if File.exist?(path)
-  end
-
   def download_gem(name, version)
     path = cache_path(name, version)
     return path if File.exist?(path)
 
-    name, version = guess_version(name, version)
-
-    response = http_get("/gems/#{name}-#{version}.gem")
-    Gel::Util.mkdir_p(cache_dir)
-    File.open(path, "wb") do |f|
-      f.write(response.body)
+    if gem_info(name)
+      response = http_get("/gems/#{name}-#{version}.gem")
+      Gel::Util.mkdir_p(cache_dir)
+      File.open(path, "wb") do |f|
+        f.write(response.body)
+      end
+      path
     end
-    path
-  end
-
-  VARIANT_GEMS = %w(libv8)
-  def guess_version(name, version)
-    if VARIANT_GEMS.include?(name)
-      [name, "#{version}-#{platform_specific_version}"]
-    else
-      [name, version]
-    end
-  end
-
-  def platform_specific_version
-    Gel::Support::GemPlatform.new(RbConfig::CONFIG["arch"])
   end
 
   def inspect

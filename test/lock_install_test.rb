@@ -20,6 +20,26 @@ LOCKFILE
 
     with_empty_store do |store|
       output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path)
+        stub_request(:get, "https://index.rubygems.org/versions").
+          to_return(body: <<VERSIONS)
+created_at: 2017-03-27T04:38:13+00:00
+---
+rack 2.0.3 xxx
+rack-test 0.6.3 xxx
+VERSIONS
+
+        stub_request(:get, "https://index.rubygems.org/info/rack").
+          to_return(body: <<INFO)
+---
+2.0.3 |checksum:zzz
+INFO
+
+        stub_request(:get, "https://index.rubygems.org/info/rack-test").
+          to_return(body: <<INFO)
+---
+0.6.3 |checksum:zzz
+INFO
+
         stub_request(:get, "https://rubygems.org/gems/rack-2.0.3.gem").
           to_return(body: File.open(fixture_file("rack-2.0.3.gem")))
 
@@ -72,6 +92,34 @@ LOCKFILE
 
     with_empty_multi_store do |store|
       output = subprocess_output(<<-'END', store: store, lock_path: lockfile.path)
+        stub_request(:get, "https://index.rubygems.org/versions").
+          to_return(body: <<VERSIONS)
+created_at: 2017-03-27T04:38:13+00:00
+---
+atomic 1.1.16,1.1.16-java xxx
+rack 2.0.3 xxx
+rack-test 0.6.3 xxx
+VERSIONS
+
+        stub_request(:get, "https://index.rubygems.org/info/atomic").
+          to_return(body: <<INFO)
+---
+1.1.16 |checksum:zzz
+1.1.16-java |checksum:zzz
+INFO
+
+        stub_request(:get, "https://index.rubygems.org/info/rack").
+          to_return(body: <<INFO)
+---
+2.0.3 |checksum:zzz
+INFO
+
+        stub_request(:get, "https://index.rubygems.org/info/rack-test").
+          to_return(body: <<INFO)
+---
+0.6.3 |checksum:zzz
+INFO
+
         if jruby?
           stub_request(:get, "https://rubygems.org/gems/atomic-1.1.16-java.gem").
             to_return(body: File.open(fixture_file("atomic-1.1.16-java.gem")))

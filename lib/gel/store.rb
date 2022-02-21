@@ -31,7 +31,7 @@ class Gel::Store
     [@root.dup]
   end
 
-  def add_gem(name, version, bindir, executables, require_paths, dependencies, extensions)
+  def add_gem(name, version, bindir, executables, require_paths, dependencies, required_ruby, extensions)
     name = normalize_string(name)
     version = normalize_string(version)
     bindir = normalize_string(bindir)
@@ -41,6 +41,8 @@ class Gel::Store
     dependencies.each do |key, dep|
       _dependencies[normalize_string(key)] = dep.map { |pair| pair.map { |v| normalize_string(v) } }
     end
+    required_ruby = required_ruby&.map { |pair| normalize_string(pair.join(" ")) }
+    required_ruby = nil if required_ruby == [">= 0"]
     dependencies = _dependencies
     extensions = !!extensions
 
@@ -58,6 +60,7 @@ class Gel::Store
       d[:require_paths] = require_paths unless require_paths == ["lib"]
       d[:dependencies] = dependencies unless dependencies.empty?
       d[:extensions] = extensions if extensions
+      d[:ruby] = required_ruby if required_ruby && !required_ruby.empty?
       @primary_db["i/#{name}/#{version}"] = d
 
       yield if block_given?
@@ -136,7 +139,7 @@ class Gel::Store
   end
 
   def gem?(name, version, _platform = nil)
-    !!gem_info(name, version)
+    !!gem(name, version)
   end
 
   def gem(name, version)
@@ -150,7 +153,9 @@ class Gel::Store
     @primary_db.reading do
       name_version_pairs.each do |name, version|
         if info = gem_info(name, version)
-          result[name] = _gem(name, version, info)
+          if g = _gem(name, version, info)
+            result[name] = g
+          end
         end
       end
     end
@@ -191,9 +196,13 @@ class Gel::Store
         versions.each do |version|
           if version.is_a?(Array)
             version, subdir, ext = version
-            yield gem(name, version), subdir, ext
+            if g = gem(name, version)
+              yield g, subdir, ext
+            end
           else
-            yield gem(name, version)
+            if g = gem(name, version)
+              yield g
+            end
           end
         end
       end
@@ -206,7 +215,9 @@ class Gel::Store
     iterate_for_gem = lambda do |gem_name|
       @primary_db["v/#{gem_name}"]&.each do |version|
         if info = @primary_db["i/#{gem_name}/#{version}"]
-          yield _gem(gem_name, version, info)
+          if g = _gem(gem_name, version, info)
+            yield g
+          end
         end
       end
     end
@@ -235,7 +246,8 @@ class Gel::Store
   def _gem(name, version, info)
     info = inflate_info(info)
     extensions = extension_path(name, version) if info[:extensions]
-    Gel::StoreGem.new(gem_root(name, version), name, version, extensions, info)
+    g = Gel::StoreGem.new(gem_root(name, version), name, version, extensions, info)
+    g if g.compatible_ruby?
   end
 
   def gem_info(name, version)
