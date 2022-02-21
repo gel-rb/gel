@@ -11,6 +11,12 @@ module Gel
     require_relative "gel/command"
     Gel::Command.run(["stub", name, *ARGV])
   end
+
+  # This can be used to e.g. identify $LOADED_FEATURES or source_locations
+  # entries that belong to the running Gel instance
+  def self.self_location
+    File.expand_path("..", __dir__)
+  end
 end
 
 require_relative "gel/support/gem_version"

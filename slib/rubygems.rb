@@ -219,7 +219,9 @@ module Gem
   end
 
   def self.bin_path(gem_name, bin_name, version = nil)
-    if g = Gel::Environment.activated_gems[gem_name]
+    if gem_name == "gel" && bin_name == "gel"
+      return File.expand_path("../exe/gel", __dir__)
+    elsif g = Gel::Environment.activated_gems[gem_name]
       Gel::Environment.gem g.name, version if version
 
       Gel::Environment.find_executable(bin_name, g.name, g.version)
