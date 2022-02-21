@@ -240,7 +240,7 @@ private :gem
 
 module Kernel
   alias_method :require_without_gel, :require
-  singleton_class.undef_method :require
+  singleton_class.alias_method :require, :require
 
   module_eval <<'RUBY', "<internal:#{__FILE__}>", __LINE__ + 1
   module_function
@@ -275,6 +275,10 @@ module Kernel
       require_without_gel Gel::Environment.resolve_gem_path(path)
     end
   end
+
+  alias_method :require, :require
+  singleton_class.alias_method :require, :require
+
   private :require
 RUBY
 end
