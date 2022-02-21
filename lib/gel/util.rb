@@ -36,7 +36,7 @@ module Gel::Util
   end
 
   def search_upwards(name, dir = Dir.pwd)
-    until (file = File.join(dir, name)) && File.exist?(file)
+    until (file = join(dir, name)) && File.exist?(file)
       next_dir = File.dirname(dir)
       return nil if next_dir == dir
       dir = next_dir
@@ -84,6 +84,16 @@ module Gel::Util
     end
 
     to_parts.join(File::SEPARATOR)
+  end
+
+  if File::SEPARATOR == "/"
+    def join(left, right)
+      "#{left}/#{right}"
+    end
+  else
+    def join(left, right)
+      "#{left}#{File::SEPARATOR}#{right}"
+    end
   end
 
   private

@@ -146,7 +146,7 @@ module Gem
   def self.find_files(pattern)
     Gel::Environment.store.each.
       flat_map(&:require_paths).
-      flat_map { |dir| Dir[File.join(dir, pattern)] }
+      flat_map { |dir| Dir[Gel::Util.join(dir, pattern)] }
   end
 
   def self.refresh

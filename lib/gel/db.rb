@@ -294,6 +294,6 @@ class Gel::DB::File < Gel::DB
   private
 
   def path(key)
-    ::File.join(@base, key)
+    ::Gel::Util.join(@base, key)
   end
 end

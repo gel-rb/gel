@@ -14,10 +14,10 @@ class Gel::Stdlib
     @active = {}
 
     PATHS.each do |path|
-      path_prefix = File.join(path, "")
+      path_prefix = Gel::Util.join(path, "")
       exclusions = PATHS.
         select { |nested| nested.start_with?(path_prefix) }.
-        map { |x| File.join(x, "")[path_prefix.size..-1] }
+        map { |x| Gel::Util.join(x, "")[path_prefix.size..-1] }
       exclusions << "rubygems" << "bundler" unless path == File.expand_path("../../slib", __dir__)
 
       entry_for_ext = Hash.new { |h, k| h[k] = [k, path].freeze }
@@ -46,7 +46,7 @@ class Gel::Stdlib
       @files.each do |basename, pairs|
         next unless feat.include?(basename)
         pairs.each do |ext, path|
-          if feat == File.join(path, basename + ext)
+          if feat == Gel::Util.join(path, basename + ext)
             @active[basename] = @active[-(basename + ext)] = true
           end
         end
@@ -75,7 +75,7 @@ class Gel::Stdlib
     end
 
     @files[search_name]&.each do |ext, path|
-      return File.join(path, search_name) if Gel::Util.ext_matches_requested?(ext, search_ext)
+      return Gel::Util.join(path, search_name) if Gel::Util.ext_matches_requested?(ext, search_ext)
     end
 
     nil
