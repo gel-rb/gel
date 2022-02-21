@@ -239,10 +239,11 @@ end
 private :gem
 
 module Kernel
-  module_function
-
   alias_method :require_without_gel, :require
   singleton_class.undef_method :require
+
+  module_eval <<'RUBY', "<internal:#{__FILE__}>", __LINE__ + 1
+  module_function
 
   if ENV["GEL_DEBUG"]
     def require(path)
@@ -275,4 +276,5 @@ module Kernel
     end
   end
   private :require
+RUBY
 end
