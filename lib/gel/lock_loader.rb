@@ -48,12 +48,16 @@ class Gel::LockLoader
     local_platform = Gel::Support::GemPlatform.local
     all_gems = @gem_set.gems
 
-    walk = lambda do |name|
+    gems_to_process = top_gems.dup
+
+    while name = gems_to_process.shift
       filtered_gems[name] = true
 
       next if Gel::Environment::IGNORE_LIST.include?(name)
 
-      resolved_gems = all_gems[name].select do |rg|
+      next unless all_versions = all_gems[name]
+
+      resolved_gems = all_versions.select do |rg|
         local_platform =~ rg.platform || rg.platform.nil?
       end.sort_by { |rg| rg.platform&.size || 0 }.reverse
 
@@ -123,11 +127,9 @@ class Gel::LockLoader
 
 
       resolved_gem.deps.map(&:first).each do |dep_name|
-        walk[dep_name] unless filtered_gems[dep_name]
+        gems_to_process << dep_name unless filtered_gems[dep_name]
       end
     end
-
-    top_gems.each(&walk)
 
     installer.wait(output) if installer
 
