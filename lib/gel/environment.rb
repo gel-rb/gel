@@ -170,6 +170,7 @@ class Gel::Environment
     server_catalogs = all_sources.map { |s| Gel::Catalog.new(s, initial_gems: server_gems, work_pool: catalog_pool, **catalog_options) }
 
     require_relative "store_catalog"
+    store = store.inner if store.is_a?(Gel::LockedStore)
     local_catalogs = local_source ? [Gel::StoreCatalog.new(store)] : []
 
     git_sources = gemfile.gems.map { |_, _, o|
