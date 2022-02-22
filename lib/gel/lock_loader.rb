@@ -28,30 +28,22 @@ class Gel::LockLoader
       installer = Gel::Installer.new(base_store)
     end
 
-    filtered_gems = Hash.new(nil)
-    top_gems = []
+    gems_to_process = []
     if gemfile && env
-      gemfile.gems.each do |name, *|
-        filtered_gems[name] = false
-      end
       env.filtered_gems(gemfile.gems).each do |name, *|
-        top_gems << name
-        filtered_gems[name] = true
+        gems_to_process << name
       end
     elsif list = @gem_set.dependency_names
-      top_gems = list
-      top_gems.each do |name|
-        filtered_gems[name] = true
-      end
+      gems_to_process = list
     end
 
     local_platform = Gel::Support::GemPlatform.local
     all_gems = @gem_set.gems
 
-    gems_to_process = top_gems.dup
-
+    processed_gems = {}
     while name = gems_to_process.shift
-      filtered_gems[name] = true
+      next if processed_gems[name]
+      processed_gems[name] = true
 
       next if Gel::Environment::IGNORE_LIST.include?(name)
 
@@ -127,7 +119,7 @@ class Gel::LockLoader
 
 
       resolved_gem.deps.map(&:first).each do |dep_name|
-        gems_to_process << dep_name unless filtered_gems[dep_name]
+        gems_to_process.unshift dep_name
       end
     end
 
