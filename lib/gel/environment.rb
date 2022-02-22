@@ -382,7 +382,7 @@ class Gel::Environment
     open(locked_store)
   end
 
-  def self.activate(install: false, output: nil, error: true)
+  def self.activate(fast: false, install: false, output: nil, error: true)
     loaded = Gel::Environment.load_gemfile
     return if loaded.nil?
     return if @active_lockfile
@@ -391,8 +391,10 @@ class Gel::Environment
     if File.exist?(lockfile)
       resolved_gem_set = Gel::ResolvedGemSet.load(lockfile, git_depot: git_depot)
 
-      resolved_gem_set = nil if lock_outdated?(loaded, resolved_gem_set)
+      resolved_gem_set = nil if !fast && lock_outdated?(loaded, resolved_gem_set)
     end
+
+    return if fast && !resolved_gem_set
 
     resolved_gem_set ||= write_lock(output: output, lockfile: lockfile)
 
