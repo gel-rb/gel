@@ -37,7 +37,7 @@ module Gel::PubGrub
 
     def all_versions_for(package)
       if package.is_a?(Package::Pseudo)
-        return [Gem::Version.new("0")]
+        return [Gel::Support::GemVersion.new("0")]
       end
 
       @catalog_set.entries_for(package).map(&:gem_version)
