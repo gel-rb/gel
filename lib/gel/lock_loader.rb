@@ -40,6 +40,10 @@ class Gel::LockLoader
     local_platform = Gel::Support::GemPlatform.local
     all_gems = @gem_set.gems
 
+    deferred_direct_gem = lambda do |dir, name, version|
+      -> { Gel::DirectGem.new(dir, name, version) }
+    end
+
     processed_gems = {}
     while name = gems_to_process.shift
       next if processed_gems[name]
@@ -65,7 +69,7 @@ class Gel::LockLoader
         installer.known_dependencies name => resolved_gem.deps.map(&:first) if installer
         installer&.load_git_gem(resolved_gem.catalog.remote, resolved_gem.catalog.revision, name)
 
-        locks[name] = -> { Gel::DirectGem.new(dir, name, resolved_gem.version) }
+        locks[name] = deferred_direct_gem.call(dir, name, resolved_gem.version)
       when Gel::PathCatalog
         path = resolved_gem.catalog.path
 
