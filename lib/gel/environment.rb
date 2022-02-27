@@ -286,6 +286,8 @@ class Gel::Environment
     packages_by_name = {}
     versions_by_name = {}
     solver.each_resolved_package do |package, version|
+      next if package.platform.nil?
+
       ((packages_by_name[package.name] ||= {})[catalog_set.platform_for(package, version)] ||= []) << package
 
       if versions_by_name[package.name]

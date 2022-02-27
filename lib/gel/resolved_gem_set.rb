@@ -201,10 +201,11 @@ class Gel::ResolvedGemSet
     end
 
     lock_content << "DEPENDENCIES"
-    non_bang_deps = server_gems&.select { |rg| rg.catalog == server_catalogs.first }&.map(&:name) || []
+    bang_deps = (server_gems&.select { |rg| rg.catalog != server_catalogs.first }&.map(&:name) || []) +
+      grouped_graph.values.flatten(1).map(&:name)
     dependencies.each do |dependency|
       dependency_name = dependency.split(" ").first
-      bang = "!" unless non_bang_deps.include?(dependency_name)
+      bang = "!" if bang_deps.include?(dependency_name)
       lock_content << "  #{dependency}#{bang}"
     end
     lock_content << ""
