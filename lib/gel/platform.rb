@@ -2,7 +2,7 @@
 
 module Gel::Platform
   SYNONYMS = [
-    ["ruby", "mri"],
+    ["ruby", "mri", "rbx"],
     ["java", "jruby"],
     ["x64-mingw32", "mswin64", "x64_mingw"],
     ["x86-mingw32", "mswin", "mingw"],
