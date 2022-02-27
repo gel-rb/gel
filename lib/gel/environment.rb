@@ -318,7 +318,7 @@ class Gel::Environment
               next [dep_name] if dep_requirements == [">= 0"] || dep_requirements == []
 
               req = Gel::Support::GemRequirement.new(dep_requirements)
-              req_strings = req.requirements.sort_by { |(_op, ver)| [ver, ver.segments] }.map { |(op, ver)| "#{op} #{ver}" }
+              req_strings = req.requirements.map { |(op, ver)| "#{op} #{ver}" }.sort.reverse
 
               [dep_name, req_strings.join(", ")]
             end,
