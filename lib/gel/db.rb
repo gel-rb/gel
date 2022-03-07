@@ -148,6 +148,11 @@ module Gel::DB::AutoTransaction
 end
 
 module Gel::DB::Cache
+  def initialize(*)
+    @cache = nil
+    super
+  end
+
   def writing(&block)
     @cache = nil
     super
@@ -198,7 +203,7 @@ class Gel::DB::PStore < Gel::DB
 
   def initialize(root, name)
     @filename = "#{root}/#{name}.pstore"
-    @pstore = store if ::File.exist?(@filename)
+    @pstore = (store if ::File.exist?(@filename))
   end
 
   def writing(&block)
