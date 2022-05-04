@@ -3,7 +3,6 @@
 require "fileutils"
 require "net/http"
 require "uri"
-require "digest"
 
 require_relative "httpool"
 require_relative "support/gem_platform"
@@ -117,6 +116,7 @@ class Gel::Catalog
   end
 
   def uri_identifier
+    require "digest"
     @uri.host + "-" + Digest(:SHA256).hexdigest(@uri.to_s)[0..10]
   end
 
