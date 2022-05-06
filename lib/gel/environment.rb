@@ -417,7 +417,9 @@ class Gel::Environment
   end
 
   def self.activate_for_executable(exes, install: false, output: nil)
-    loader = nil
+    resolved_gem_set = nil
+    load_error = nil
+
     if loaded = Gel::Environment.load_gemfile(error: false)
       lockfile = Gel::Environment.lockfile_name
       if File.exist?(lockfile)
@@ -433,39 +435,87 @@ class Gel::Environment
       base_store = Gel::Environment.store
       base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
 
-      locked_store = loader.activate(self, base_store, install: install, output: output)
+      begin
+        locked_store = loader.activate(self, base_store, install: install, output: output)
 
-      exes.each do |exe|
-        if locked_store.each.any? { |g| g.executables.include?(exe) }
-          open(locked_store)
-          return :lock
+        exes.each do |exe|
+          if locked_store.each.any? { |g| g.executables.include?(exe) }
+            open(locked_store)
+            return :lock
+          end
         end
+      rescue Gel::Error::MissingGemError => ex
+        load_error = ex
       end
     end
 
-    locked_gems = loader ? loader.gem_names : []
+    locked_gems = resolved_gem_set&.gem_names || []
 
     @gemfile = nil
     exes.each do |exe|
-      candidates = @store.each.select do |g|
-        !locked_gems.include?(g.name) && g.executables.include?(exe)
-      end.group_by(&:name)
+      candidates = @store.each.select { |g| g.executables.include?(exe) }
+
+      locked_candidates, unlocked_candidates =
+        candidates.partition { |g| locked_gems.include?(g.name) }
+
+      # If we failed to load the lockfile, but we've now found a candidate
+      # supplied by a locked gem, it's time to fail: we have to run locked
+      # gems in a locked environment, and we can't do that right now.
+      # The user probably needs to run `gel install`, which is what this
+      # error will tell them to do.
+      if load_error && !locked_candidates.empty?
+        raise load_error
+      end
+
+      # Specific situation, but plausible enough to warrant a more
+      # helpful error: there's no ambiguity about who owns the
+      # executable name, but the one gem that supplies it is locked to a
+      # version that doesn't have it.
+      if unlocked_candidates.empty? && locked_candidates.map(&:name).uniq.size == 1
+        # We're going to describe the set of versions (that we know
+        # about) that would have supplied the executable.
+        valid_versions = locked_candidates.map(&:version).uniq.map { |v| Gel::Support::Version.new(v) }.sort
+        locked_version = Gel::Support::Version.new(resolved_gem_set.gems[locked_candidates.first.name].version)
+
+        # Most likely, our not-executable-having version is outside some
+        # contiguous range of executable-having versions, so let's check
+        # for that, because it'll give us a shorter error message.
+        #
+        # (Note we assume but don't prove that every version we know
+        # about within the range does have the executable. If that
+        # assumption is wrong, the user will get the full list after
+        # they retry with a bad in-range version.)
+        if valid_versions.first > locked_version || valid_versions.last < locked_version
+          valid_versions = valid_versions.first.to_s..valid_versions.last.to_s
+        elsif valid_versions.size == 1
+          valid_versions = valid_versions.first.to_s
+        else
+          valid_versions = valid_versions.map(&:to_s)
+        end
+
+        raise Gel::Error::MissingExecutableError.new(
+          executable: exe,
+          gem_name: locked_candidates.first.name,
+          gem_versions: valid_versions,
+          locked_gem_version: locked_version.to_s,
+        )
+      end
 
       case candidates.size
       when 0
         nil
       when 1
-        gem(candidates.keys.first)
+        gem(candidates.first.name)
         return :gem
       else
         # Multiple gems can supply this executable; do we have any
         # useful way of deciding which one should win? One obvious
         # tie-breaker: if a gem's name matches the executable, it wins.
 
-        if candidates.keys.include?(exe)
+        if candidates.map(&:name).include?(exe)
           gem(exe)
         else
-          gem(candidates.keys.first)
+          gem(candidates.first.name)
         end
 
         return :gem

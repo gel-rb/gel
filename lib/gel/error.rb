@@ -242,6 +242,16 @@ module Gel::Error
     end
   end
 
+  class MissingExecutableError < Gel::UserError
+    def initialize(executable:, gem_name:, gem_versions:, locked_gem_version:)
+      super
+    end
+
+    def message
+      "Locked gem #{self[:gem_name].inspect} #{self[:locked_gem_version].inspect} does not supply executable #{self[:executable].inspect}. Found in other installed versions: #{self[:gem_versions].inspect}"
+    end
+  end
+
   class ParsedGemspecError < Gel::UserError
     def message
       "Gemspec parse failed"
