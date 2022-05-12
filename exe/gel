@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby --disable=gems
 # frozen_string_literal: true
 
+ENV["GEL_PROGRAM_NAME"] = $PROGRAM_NAME
 if defined?(::Gem) && !defined?(::Gel)
   exec ::Gem.ruby,
     "-I", File.expand_path("../lib/gel/compatibility", __dir__),
