@@ -4,7 +4,6 @@ require_relative "db"
 
 class Gel::StubSet
   attr_reader :root
-  attr_reader :dir
 
   def initialize(root)
     @root = File.realpath(File.expand_path(root))
@@ -53,6 +52,26 @@ class Gel::StubSet
 require "gel/stub" unless defined? Gel.stub
 Gel.stub #{exe.dump}
 STUB
+    end
+  end
+
+  def own_stub?(path)
+    File.realpath(path).start_with?(@dir)
+  end
+
+  def parse_stub(path)
+    return unless File.exist?(path)
+
+    File.open(path, "r") do |f|
+      # Stub prefix is ~128 bytes
+      content = f.read(500)
+
+      if content =~ /^Gel\.stub (.*)$/
+        $1.undump
+      elsif content =~ /\A#!.* gel stub (.*)$/
+        # Legacy stub
+        $1
+      end
     end
   end
 

@@ -20,8 +20,8 @@ class Gel::Command
           raise Gel::Error::UnknownCommandError.new(command_name: command_name)
         end
       elsif stub_name = own_stub_file?(command_name) || other_stub_file?(command_name)
-        command = Gel::Command::Stub.new
-        command.run([stub_name, *command_line])
+        command = Gel::Command::Exec.new
+        command.run([stub_name, *command_line], from_stub: true)
       else
         raise Gel::Error::UnknownCommandError.new(command_name: command_name)
       end
@@ -78,20 +78,15 @@ class Gel::Command
   end
 
   def self.own_stub_file?(path)
-    if path.start_with?(Gel::Environment.store.stub_set.dir)
+    # If it's our own stub file, we can skip reading and parsing it, and
+    # just trust that the basename is correct.
+    if Gel::Environment.store.stub_set.own_stub?(path)
       File.basename(path)
     end
   end
 
   def self.other_stub_file?(path)
-    return unless File.exist?(path)
-
-    File.open(path, "r") do |f|
-      # Stub prefix is ~128 bytes
-      if f.read(500) =~ /^Gel\.stub (.*)$/
-        $1.undump
-      end
-    end
+    Gel::Environment.store.stub_set.parse_stub(path)
   end
 
   def self.flags(arguments)

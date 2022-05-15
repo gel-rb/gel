@@ -9,7 +9,7 @@ module Gel
 
   def self.stub(name)
     require_relative "gel/command"
-    Gel::Command.run(["stub", name, *ARGV])
+    Gel::Command.run(["stub", name, :stub, *ARGV])
   end
 
   # This can be used to e.g. identify $LOADED_FEATURES or source_locations
