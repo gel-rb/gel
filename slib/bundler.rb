@@ -17,6 +17,15 @@ module Bundler
     Gel::Environment.require_groups(*groups)
   end
 
+  def self.ruby_scope
+    ""
+  end
+
+  def self.default_gemfile
+    Kernel.require "pathname"
+    ::Pathname.new(Gel::Environment.find_gemfile(error: false) || "Gemfile")
+  end
+
   def self.default_lockfile
     Kernel.require "pathname"
     ::Pathname.new(Gel::Environment.lockfile_name)

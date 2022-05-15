@@ -31,7 +31,12 @@ module Gem
 
   LoadError = Class.new(::LoadError)
 
+  module StubSpecification
+  end
+
   class Specification
+    include StubSpecification
+
     class << self
       include Enumerable
     end
@@ -53,6 +58,10 @@ module Gem
       if g = Gel::Environment.gem_for_path(path)
         new(g)
       end
+    end
+
+    def self.stubs
+      to_a
     end
 
     def self.latest_specs(prerelease = false)
@@ -78,6 +87,10 @@ module Gem
       else
         raise ArgumentError, "Expected a store_gem"
       end
+    end
+
+    def stubbed?
+      true
     end
 
     def name
@@ -254,7 +267,7 @@ module Kernel
       last_loaded = $".last
       if last_loaded == before
         # Nothing new got loaded
-      elsif path.start_with?("/")
+      elsif path.to_s.start_with?("/")
         # It was already absolute; we don't care
       elsif resolved != path
         # We resolved it

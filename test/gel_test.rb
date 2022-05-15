@@ -112,6 +112,7 @@ class GelTest < Minitest::Test
       Gem::Requirement::PATTERN_RAW
       Gem::Requirement::SOURCE_SET_REQUIREMENT
       Gem::Specification
+      Gem::StubSpecification
       Gem::VERSION
       Gem::Version
       Gem::Version::ANCHORED_VERSION_PATTERN
