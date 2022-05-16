@@ -10,8 +10,8 @@ RUN which git >/dev/null || ( \
 RUN mkdir -p /app/test/fixtures
 WORKDIR /app
 
-ADD Rakefile /app
-RUN rake fixtures
+ADD tasks/fixtures.rake /app/tasks/fixtures.rake
+RUN rake -f tasks/fixtures.rake fixtures
 
 ENV JRUBY_OPTS="--dev -J-Xmx1800M"
 ADD . /app
