@@ -417,39 +417,51 @@ class Gel::Environment
   end
 
   def self.activate_for_executable(exes, install: false, output: nil)
+    loaded_gemfile = nil
     resolved_gem_set = nil
+    outdated_gem_set = nil
     load_error = nil
 
-    if loaded = Gel::Environment.load_gemfile(error: false)
+    if loaded_gemfile = Gel::Environment.load_gemfile(error: false)
       lockfile = Gel::Environment.lockfile_name
       if File.exist?(lockfile)
         resolved_gem_set = Gel::ResolvedGemSet.load(lockfile, git_depot: git_depot)
 
-        resolved_gem_set = nil if lock_outdated?(loaded, resolved_gem_set)
+        if lock_outdated?(loaded_gemfile, resolved_gem_set)
+          outdated_gem_set = resolved_gem_set
+          resolved_gem_set = nil
+        end
       end
 
-      resolved_gem_set ||= write_lock(output: output, lockfile: lockfile)
+      if resolved_gem_set
+        loader = Gel::LockLoader.new(resolved_gem_set, gemfile)
 
-      loader = Gel::LockLoader.new(resolved_gem_set, gemfile)
+        base_store = Gel::Environment.store
+        base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
 
-      base_store = Gel::Environment.store
-      base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
+        begin
+          locked_store = loader.activate(self, base_store, install: install, output: output)
 
-      begin
-        locked_store = loader.activate(self, base_store, install: install, output: output)
-
-        exes.each do |exe|
-          if locked_store.each.any? { |g| g.executables.include?(exe) }
-            open(locked_store)
-            return :lock
+          exes.each do |exe|
+            if locked_store.each.any? { |g| g.executables.include?(exe) }
+              open(locked_store)
+              return :lock
+            end
           end
+        rescue Gel::Error::MissingGemError => ex
+          load_error = ex
         end
-      rescue Gel::Error::MissingGemError => ex
-        load_error = ex
       end
     end
 
-    locked_gems = resolved_gem_set&.gem_names || []
+    locked_gems =
+      if resolved_gem_set
+        resolved_gem_set.gem_names
+      elsif loaded_gemfile
+        loaded_gemfile.gem_names | (outdated_gem_set&.gem_names || [])
+      else
+        []
+      end
 
     @gemfile = nil
     exes.each do |exe|
@@ -463,8 +475,19 @@ class Gel::Environment
       # gems in a locked environment, and we can't do that right now.
       # The user probably needs to run `gel install`, which is what this
       # error will tell them to do.
-      if load_error && !locked_candidates.empty?
-        raise load_error
+      if locked_candidates.any?
+        if load_error
+          raise load_error
+        elsif outdated_gem_set
+          raise Gel::Error::OutdatedLockfileError
+        elsif resolved_gem_set.nil?
+          raise Gel::Error::NoLockfileError
+        else
+          # The lockfile was up-to-date and fully processed; we can
+          # continue and ignore the locked candidates. This could happen
+          # if non-locked versions of locked gems supply the executable.
+          # We could still succeed if an unlocked_candidate can fill in.
+        end
       end
 
       # Specific situation, but plausible enough to warrant a more

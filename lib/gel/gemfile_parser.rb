@@ -216,5 +216,9 @@ module Gel::GemfileParser
         end
       end
     end
+
+    def gem_names
+      @gems.map(&:first).flatten.map(&:to_s)
+    end
   end
 end

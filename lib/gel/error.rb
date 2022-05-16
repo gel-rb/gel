@@ -122,6 +122,18 @@ module Gel::Error
     end
   end
 
+  class OutdatedLockfileError < Gel::UserError
+    def message
+      "Lockfile out of date; use 'gel lock' or 'gel install' to re-resolve"
+    end
+  end
+
+  class NoLockfileError < OutdatedLockfileError
+    def message
+      "Gemfile has not been resolved; use 'gel lock' or 'gel install' to resolve"
+    end
+  end
+
   class UnexpectedConfigError < Gel::UserError
     def initialize(line:)
       super
