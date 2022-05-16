@@ -53,7 +53,7 @@ class LockedActivateTest < Minitest::Test
         end
       END
 
-      assert_equal "unable to satisfy requirements for gem rack: >= 0", output.shift
+      assert_equal "Gem \"rack\" is not present in Gemfile; unable to satisfy requirements: >= 0", output.shift
     end
   end
 end

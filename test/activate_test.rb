@@ -136,7 +136,7 @@ class ActivateTest < Minitest::Test
         end
       END
 
-      assert_equal "already loaded gem rack 0.1.0, which is incompatible with: >= 1.0 (required by rack-test 0.6.3; provides \"rack/test\")", output.shift
+      assert_equal "Already activated \"rack\" 0.1.0, which is incompatible with: >= 1.0 (required by rack-test 0.6.3; provides \"rack/test\")", output.shift
     end
   end
 
@@ -153,7 +153,7 @@ class ActivateTest < Minitest::Test
         end
       END
 
-      assert_equal "unable to satisfy requirements for gem rack: < 1.0", output.shift
+      assert_equal "No available version of gem \"rack\" satisfies requirements: < 1.0", output.shift
     end
   end
 

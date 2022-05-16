@@ -41,39 +41,60 @@ end
 # Define all UserError subclasses in this file. (Non-reportable errors,
 # which describe errors in interaction between internal components, can
 # and should be defined whereever they're used.)
+#
+# To support special cases where external API dictates a different
+# superclass (e.g. an UnsatisfiedDependencyError must be a ::LoadError),
+# while retaining most of the conveniences, it's also possible to
+# include the Gel::UserError::Impl module directly.
 class Gel::UserError < StandardError
-  include Gel::ReportableError
+  module Impl
+    include Gel::ReportableError
+
+    def set_context(context)
+      @context = context
+    end
+
+    def [](key)
+      @context.fetch(key)
+    end
+
+    def message
+      self.class.name
+    end
+
+    def inner_backtrace
+      return [] unless cause
+
+      bt = cause.backtrace_locations
+      ignored_bt = backtrace_locations
+
+      while bt.last.to_s == ignored_bt.last.to_s
+        bt.pop
+        ignored_bt.pop
+      end
+
+      while bt.last.path == ignored_bt.last.path
+        bt.pop
+      end
+
+      bt
+    end
+  end
+
+  include Impl
 
   def initialize(**context)
-    @context = context
-
+    set_context context
     super message
   end
+end
 
-  def [](key)
-    @context.fetch(key)
-  end
+class Gel::LoadError < ::LoadError
+  include Gel::UserError::Impl
 
-  def message
-    self.class.name
-  end
-
-  def inner_backtrace
-    return [] unless cause
-
-    bt = cause.backtrace_locations
-    ignored_bt = backtrace_locations
-
-    while bt.last.to_s == ignored_bt.last.to_s
-      bt.pop
-      ignored_bt.pop
-    end
-
-    while bt.last.path == ignored_bt.last.path
-      bt.pop
-    end
-
-    bt
+  def initialize(**context)
+    set_context context
+    super message
   end
 end
 
@@ -251,6 +272,45 @@ module Gel::Error
 
     def message
       "Missing gem #{self[:name].inspect}. Do you need to 'gel install'?"
+    end
+  end
+
+  class AlreadyActivatedError < Gel::LoadError
+    def initialize(name:, existing:, requirements: nil, requested: nil, why:)
+      raise ArgumentError, "exactly one of :requirements and :requested must be supplied" unless requirements.nil? != requested.nil?
+      super
+    end
+
+    def message
+      "Already activated #{self[:name].inspect} #{self[:existing]}" +
+        if self[:requirements]
+          ", which is incompatible with: #{self[:requirements]}"
+        else
+          "; cannot also activate #{self[:requested]}"
+        end +
+        (self[:why] ? " (#{self[:why].join("; ")})" : "")
+    end
+  end
+
+  class UnsatisfiedDependencyError < Gel::LoadError
+    def initialize(name:, was_locked:, found_any:, requirements:, why:)
+      super
+    end
+
+    def message
+      if self[:was_locked]
+        if self[:found_any]
+          "Locked version of gem #{self[:name].inspect} does not satisfy requirements: #{self[:requirements]}"
+        else
+          "Gem #{self[:name].inspect} is not present in Gemfile; unable to satisfy requirements: #{self[:requirements]}"
+        end
+      else
+        if self[:found_any]
+          "No available version of gem #{self[:name].inspect} satisfies requirements: #{self[:requirements]}"
+        else
+          "No version of gem #{self[:name].inspect} is installed; unable to satisfy requirements: #{self[:requirements]}"
+        end
+      end + (self[:why] ? " (#{self[:why].join("; ")})" : "")
     end
   end
 

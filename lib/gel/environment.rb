@@ -592,20 +592,31 @@ class Gel::Environment
       if existing.satisfies?(requirements)
         return
       else
-        why = " (#{why.join("; ")})" if why && why.first
-        raise LoadError, "already loaded gem #{name} #{existing.version}, which is incompatible with: #{requirements}#{why}"
+        raise Gel::Error::AlreadyActivatedError.new(
+          name: name,
+          existing: existing.version,
+          requirements: requirements,
+          why: why,
+        )
       end
     end
 
+    found_any = false
     gem = @store.each(name).find do |g|
+      found_any = true
       g.satisfies?(requirements)
     end
 
     if gem
       activate_gem gem, why: why
     else
-      why = " (#{why.join("; ")})" if why && why.first
-      raise LoadError, "unable to satisfy requirements for gem #{name}: #{requirements}#{why}"
+      raise Gel::Error::UnsatisfiedDependencyError.new(
+        name: name,
+        was_locked: @store.is_a?(Gel::LockedStore),
+        found_any: found_any,
+        requirements: requirements,
+        why: why,
+      )
     end
   end
 
@@ -613,10 +624,15 @@ class Gel::Environment
     raise gem.version.class.name unless gem.version.class == String
     if activated_gems[gem.name]
       raise activated_gems[gem.name].version.class.name unless activated_gems[gem.name].version.class == String
-    end
+      return if activated_gems[gem.name].version == gem.version
 
-    return if activated_gems[gem.name] && activated_gems[gem.name].version == gem.version
-    raise LoadError, "already activated #{gem.name} #{activated_gems[gem.name].version} (can't activate #{gem.version})" if activated_gems[gem.name]
+      raise Gel::Error::AlreadyActivatedError.new(
+        name: gem.name,
+        existing: activated_gems[gem.name].version,
+        requested: gem.version,
+        why: why,
+      )
+    end
 
     gem.dependencies.each do |dep, reqs|
       self.gem(dep, *reqs.map { |(qual, ver)| "#{qual} #{ver}" }, why: ["required by #{gem.name} #{gem.version}", *why])
@@ -642,7 +658,7 @@ class Gel::Environment
   end
 
   # Returns either an array of compatible gems that must all be activated
-  # (in the specified order) to activate the given +gem+, or a string
+  # (in the specified order) to activate the given +gem+, or a LoadError
   # describing a dependency conflict that prevents it.
   #
   ##
@@ -658,7 +674,12 @@ class Gel::Environment
       if active_gem == gem
         return []
       else
-        return "already activated #{gem.name} #{active_gem.version} (can't activate #{gem.version})"
+        return Gel::Error::AlreadyActivatedError.new(
+          name: gem.name,
+          existing: active_gem.version,
+          requested: gem.version,
+          why: why,
+        )
       end
     end
 
@@ -679,20 +700,27 @@ class Gel::Environment
         if existing.satisfies?(requirements)
           next
         else
-          return "already loaded gem #{dep} #{existing.version}, which is incompatible with: #{requirements} (#{inner_why.join("; ")})"
+          return Gel::Error::AlreadyActivatedError.new(
+            name: dep,
+            existing: existing.version,
+            requirements: requirements,
+            why: inner_why,
+          )
         end
       end
 
       resolved = nil
       first_failure = nil
 
+      found_any = false
       candidates = @store.each(dep).select do |g|
+        found_any = true
         g.satisfies?(requirements)
       end
 
       candidates.each do |g|
         result = gems_for_activation(g, why: inner_why, context: context)
-        if result.is_a?(String)
+        if result.is_a?(Exception)
           first_failure ||= result
         else
           resolved = result
@@ -708,7 +736,14 @@ class Gel::Environment
       elsif first_failure
         return first_failure
       else
-        return "unable to satisfy requirements for gem #{dep}: #{requirements} (#{inner_why.join("; ")})"
+
+        return Gel::Error::UnsatisfiedDependencyError.new(
+          name: dep,
+          was_locked: @store.is_a?(Gel::LockedStore),
+          found_any: found_any,
+          requirements: requirements,
+          why: inner_why,
+        )
       end
     end
 
@@ -733,7 +768,7 @@ class Gel::Environment
     if full_path = gem_has_file?(gem_name, path)
       require full_path
     else
-      raise LoadError, "No file #{path.inspect} found in gem #{gem_name.inspect}"
+      raise ::LoadError, "No file #{path.inspect} found in gem #{gem_name.inspect}"
     end
   end
 
@@ -845,7 +880,7 @@ class Gel::Environment
 
       return file
     elsif resolved
-      raise LoadError, resolved
+      raise resolved
     end
 
     path
