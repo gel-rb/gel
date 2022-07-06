@@ -561,11 +561,13 @@ GEMSPEC
 
       sha = `cd #{shush_dir} &&
         export GIT_AUTHOR_NAME=Bob GIT_AUTHOR_EMAIL=bob@example.com
+        export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME" GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
         git init >/dev/null &&
         git add shush.gemspec >/dev/null &&
         git commit -m initial >/dev/null &&
         git branch my-branch >/dev/null &&
         git rev-parse HEAD`.chomp
+      raise "Failed to create git repo" if sha.empty? || !$?.success?
 
       gemfile = <<GEMFILE
 source "https://gem-mimer.org"
