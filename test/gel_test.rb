@@ -142,6 +142,9 @@ class GelTest < Minitest::Test
 
           puts full_name.join("::")
 
+          # If these are present, they're deprecated, so don't touch them
+          next if %w(TRUE FALSE NIL Fixnum Bignum Struct::Tms).include?(full_name.join("::"))
+
           if ((child = scope.const_get(name)) rescue nil) && child.is_a?(::Module)
             next if parent_modules.include?(child)
 
