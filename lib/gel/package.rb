@@ -3,6 +3,7 @@
 require "zlib"
 require "yaml"
 
+require_relative "support/sha512"
 require_relative "support/tar"
 require_relative "vendor/ruby_digest"
 
@@ -124,8 +125,7 @@ module Gel
               when "SHA1"
                 Gel::Vendor::RubyDigest::SHA1.hexdigest(data)
               when "SHA512"
-                require "digest"
-                Digest(type).hexdigest(data)
+                Gel::Support::SHA512.hexdigest(data)
               else
                 next
               end
