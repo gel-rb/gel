@@ -5,7 +5,7 @@ require "rbconfig"
 module Gel::Util
   extend self
 
-  LOADABLE_FILE_TYPES = ["rb", "so", RbConfig::CONFIG["DLEXT"], RbConfig::CONFIG["DLEXT2"]].compact.reject(&:empty?)
+  LOADABLE_FILE_TYPES = ["rb", "so", RbConfig::CONFIG["DLEXT"], RbConfig::CONFIG["DLEXT2"]].compact.reject(&:empty?).uniq
   LOADABLE_FILE_TYPES_EXT = LOADABLE_FILE_TYPES.map { |s| -".#{s}" }
   LOADABLE_FILE_TYPES_RE = /(?=\.#{Regexp.union LOADABLE_FILE_TYPES}\z)/
   LOADABLE_FILE_TYPES_PATTERN = "{#{LOADABLE_FILE_TYPES.join(",")}}"
