@@ -83,6 +83,10 @@ class GelTest < Minitest::Test
     with_gel = constants_visible_at_boot(gel: true, command_line: ["--disable=#{GEM_DEPENDENT_FEATURES}", "-r", "bundler"])
     with_bundler = constants_visible_at_boot(gel: false, command_line: ["--disable=#{GEM_DEPENDENT_FEATURES}", "-r", "bundler"])
 
+    assert_includes base_ruby_only, "Object"
+    assert_includes with_gel, "Object"
+    assert_includes with_bundler, "Object"
+
     unique_constants = (with_gel - with_bundler).grep_v(/^Gel::/)
     compatible_constants = (with_gel - base_ruby_only - unique_constants).grep_v(/^Gel::/)
 
