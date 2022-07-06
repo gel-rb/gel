@@ -329,4 +329,14 @@ module Gel::Error
       "Gemspec parse failed"
     end
   end
+
+  class GitResolveError < Gel::UserError
+    def initialize(remote:, ref:)
+      super
+    end
+
+    def message
+      "Unable to resolve #{self[:ref].inspect} in git repository #{self[:remote].inspect}"
+    end
+  end
 end

@@ -39,18 +39,30 @@ class Gel::GitDepot
 
   def resolve(remote, ref)
     if ref
-      # ref could be an arbitrarily-complex ref (HEAD^3 or whatever), so
+      # ref could be an arbitrarily-complex ref (HEAD~3 or whatever), so
       # update our mirror and then resolve it locally
 
       mirror = remote(remote) { false } # always update mirror
 
       r, w = IO.pipe
       status = git(remote, "rev-parse", ref || "HEAD", chdir: mirror, out: w)
-      raise "git rev-parse failed" unless status.success?
-
       w.close
 
-      r.read.chomp
+      if status.success?
+        r.read.chomp
+      else
+        # We didn't keep stderr, but we can infer the nature of the problem
+        # from whether git produced any output: for simple "I don't know what
+        # that is" errors, it returns the input, while more fundamental
+        # problems die earlier and return nothing.
+        if r.read.chomp.empty?
+          # This is an internal error: our mirror must be broken
+          raise "git rev-parse failed"
+        else
+          # This is a user error: the ref doesn't exist
+          raise Gel::Error::GitResolveError.new(remote: remote, ref: ref)
+        end
+      end
     else
       # If we just want to know the remote HEAD, we can ask without even
       # touching our mirror
