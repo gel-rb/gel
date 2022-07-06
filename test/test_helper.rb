@@ -234,7 +234,7 @@ else
   end
 end
 
-def pure_subprocess_output(code, command_line: nil, gel: true, variables: {})
+def pure_subprocess_output(code, command_line: nil, gel: true, variables: {}, chdir: nil)
   source = caller_locations.first
 
   wrapped_code = variables.map { |name, value| "#{name} = Marshal.load(#{Marshal.dump(value).inspect})\n" }.join +
@@ -266,6 +266,7 @@ def pure_subprocess_output(code, command_line: nil, gel: true, variables: {})
     in: IO::NULL,
     out: w,
     err: w,
+    **chdir.nil? ? {} : { chdir: chdir },
   )
 
   w.close

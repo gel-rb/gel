@@ -133,7 +133,7 @@ class GelTest < Minitest::Test
   end
 
   def constants_visible_at_boot(gel:, command_line:)
-    pure_subprocess_output(<<-RUBY, gel: gel, command_line: command_line)
+    pure_subprocess_output(<<-RUBY, gel: gel, command_line: command_line, chdir: File.expand_path("..", RbConfig.ruby))
       def walk(scope, parent_modules = [], parent_names = [])
         parent_modules += [scope]
 
