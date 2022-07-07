@@ -21,6 +21,6 @@ task :fixtures do
   FIXTURE_GEMS.each do |name, version|
     filename = "test/fixtures/#{name}-#{version}.gem"
     next if File.exist?(filename)
-    system "curl", "-s", "-o", filename, "https://rubygems.org/gems/#{name}-#{version}.gem"
+    sh "curl", "-s", "-o", filename, "https://rubygems.org/gems/#{name}-#{version}.gem"
   end
 end

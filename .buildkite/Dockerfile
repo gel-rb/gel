@@ -1,10 +1,11 @@
 ARG RUBY_IMAGE
 FROM ${RUBY_IMAGE:-ruby:latest}
 
-RUN which git >/dev/null || ( \
+RUN (which git >/dev/null && which curl >/dev/null) || ( \
   apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
     git \
+    curl \
   )
 
 RUN mkdir -p /app/test/fixtures
