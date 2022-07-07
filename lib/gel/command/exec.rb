@@ -17,6 +17,7 @@ class Gel::Command::Exec < Gel::Command
     end
 
     ENV["RUBYLIB"] = Gel::Environment.modified_rubylib
+    ENV["BUNDLE_BIN_PATH"] = File.expand_path("../../../exe/gel", __dir__)
 
     if execute_inline?(expanded_command)
       if command_source == :path || command_source == :original

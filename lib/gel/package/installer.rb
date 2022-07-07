@@ -132,6 +132,7 @@ class Gel::Package::Installer
         "GEL_STORE" => File.expand_path(@root_store.root),
         "GEL_GEMFILE" => gemfile,
         "GEL_LOCKFILE" => lockfile,
+        "BUNDLE_BIN_PATH" => File.expand_path("../../../exe/gel", __dir__),
       }
     end
 

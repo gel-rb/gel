@@ -79,6 +79,7 @@ class Gel::GemspecParser
                     "GEL_DEBUG" => nil,
                     "GEL_GEMFILE" => "",
                     "GEL_LOCKFILE" => "",
+                    "BUNDLE_BIN_PATH" => nil,
                   },
                   RbConfig.ruby,
                   "-r", File.expand_path("compatibility", __dir__),
