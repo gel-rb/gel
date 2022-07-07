@@ -8,7 +8,7 @@ class GelTest < Minitest::Test
   # These depend on the gems feature, so when comparing against a
   # --disable=gems run, they must be disabled to get an accurate
   # comparison.
-  GEM_DEPENDENT_FEATURES = RUBY_VERSION.to_f < 3.1 ? "did_you_mean" : "error_highlight,did_you_mean"
+  GEM_DEPENDENT_FEATURES = %w(error_highlight did_you_mean)
 
   def test_that_it_has_a_version_number
     refute_nil ::Gel::VERSION
@@ -52,7 +52,7 @@ class GelTest < Minitest::Test
 
   def test_only_expected_files_are_loaded
     base_ruby_only = files_required_at_boot(gel: false, command_line: ["--disable=gems"])
-    with_gel = files_required_at_boot(gel: true, command_line: ["--disable=#{GEM_DEPENDENT_FEATURES}"])
+    with_gel = files_required_at_boot(gel: true, command_line: ["--disable=#{gem_dependent_features}"])
 
     loaded_files = with_gel - base_ruby_only
 
@@ -80,8 +80,8 @@ class GelTest < Minitest::Test
     extra_requires = SAFE_STDLIB.flat_map { |r| ["-r", r] }
 
     base_ruby_only = constants_visible_at_boot(gel: false, command_line: ["--disable=gems", *extra_requires])
-    with_gel = constants_visible_at_boot(gel: true, command_line: ["--disable=#{GEM_DEPENDENT_FEATURES}", "-r", "bundler"])
-    with_bundler = constants_visible_at_boot(gel: false, command_line: ["--disable=#{GEM_DEPENDENT_FEATURES}", "-r", "bundler"])
+    with_gel = constants_visible_at_boot(gel: true, command_line: ["--disable=#{gem_dependent_features}", "-r", "bundler"])
+    with_bundler = constants_visible_at_boot(gel: false, command_line: ["--disable=#{gem_dependent_features}", "-r", "bundler"])
 
     assert_includes base_ruby_only, "Object"
     assert_includes with_gel, "Object"
@@ -155,5 +155,15 @@ class GelTest < Minitest::Test
 
       walk(Object)
     RUBY
+  end
+
+  def gem_dependent_features
+    @gem_dependent_features ||= GEM_DEPENDENT_FEATURES.select do |feature|
+      output = pure_subprocess_output("nil", gel: false, command_line: ["--disable=#{feature}"])
+
+      # We want to keep any features that ruby doesn't complain about
+      # disabling
+      output.empty?
+    end.join(",")
   end
 end
