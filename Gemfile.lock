@@ -6,25 +6,25 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
-    addressable (2.7.0)
+    addressable (2.8.0)
       public_suffix (>= 2.0.2, < 5.0)
     crack (0.4.5)
       rexml
     hashdiff (1.0.1)
     hpricot (0.8.6)
-    minitest (5.14.3)
-    mocha (1.12.0)
+    minitest (5.16.2)
+    mocha (1.14.0)
     mustache (1.1.1)
-    public_suffix (4.0.6)
+    public_suffix (4.0.7)
     rake (12.3.3)
     rdiscount (2.2.0.2)
-    rexml (3.2.4)
+    rexml (3.2.5)
     ronn (0.7.3)
       hpricot (>= 0.8.2)
       mustache (>= 0.7.0)
       rdiscount (>= 1.5.8)
-    webmock (3.11.1)
-      addressable (>= 2.3.6)
+    webmock (3.14.0)
+      addressable (>= 2.8.0)
       crack (>= 0.3.2)
       hashdiff (>= 0.4.0, < 2.0.0)
 
