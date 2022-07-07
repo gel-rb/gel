@@ -83,10 +83,14 @@ module Gel::Vendor::PubGrub
     end
 
     def eql?(other)
-      min.eql?(other.min) &&
-        max.eql?(other.max) &&
-        include_min.eql?(other.include_min) &&
-        include_max.eql?(other.include_max)
+      if other.is_a?(VersionRange)
+        min.eql?(other.min) &&
+          max.eql?(other.max) &&
+          include_min.eql?(other.include_min) &&
+          include_max.eql?(other.include_max)
+      else
+        ranges.eql?(other.ranges)
+      end
     end
 
     def ranges

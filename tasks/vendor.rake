@@ -29,8 +29,8 @@ Automatiek::RakeTask.new("pstore") do |lib|
 end
 
 Automatiek::RakeTask.new("pub_grub") do |lib|
-  lib.version = "master"
-  lib.download = { :github => "https://github.com/jhawthorn/pub_grub" }
+  lib.version = "range-eql-union"
+  lib.download = { :github => "https://github.com/matthewd/pub_grub" }
   lib.namespace = "PubGrub"
   lib.prefix = "Gel::Vendor"
   lib.vendor_lib = "vendor/pub_grub"
