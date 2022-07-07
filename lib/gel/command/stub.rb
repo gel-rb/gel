@@ -2,6 +2,11 @@
 
 class Gel::Command::Stub < Gel::Command
   def run(command_line)
+    if command_line.first == "--rebuild"
+      Gel::Environment.store.stub_set.rebuild!
+      return
+    end
+
     # Note that the most common stub invocation doesn't actually pass
     # through here at all: a stubfile being run directly will present
     # as `gel <full-path-to-stubfile>` and will be handled by the
