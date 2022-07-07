@@ -12,7 +12,7 @@ GEM
       rexml
     hashdiff (1.0.1)
     hpricot (0.8.6)
-    minitest (5.16.2)
+    minitest (5.15.0)
     mocha (1.14.0)
     mustache (1.1.1)
     public_suffix (4.0.7)
@@ -33,7 +33,7 @@ PLATFORMS
 
 DEPENDENCIES
   gel!
-  minitest (~> 5.0)
+  minitest (~> 5.0, < 5.16)
   mocha
   rake (~> 12.3)
   ronn
