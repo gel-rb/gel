@@ -547,8 +547,6 @@ LOCKFILE
   end
 
   def test_git_gems_get_considered_too
-    skip if ENV["CI"] # FIXME
-
     Dir.mktmpdir do |shush_dir|
       IO.write("#{shush_dir}/shush.gemspec", <<GEMSPEC)
 Gem::Specification.new do |spec|
