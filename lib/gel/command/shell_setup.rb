@@ -4,7 +4,7 @@ class Gel::Command::ShellSetup < Gel::Command
   def run(command_line)
     require "shellwords"
 
-    shell = command_line[0] || File.basename(ENV["SHELL"])
+    shell = command_line[0] || File.basename(ENV.fetch("SHELL", "bash"))
 
     bin_dir = File.expand_path("~/.local/gel/bin")
     unless ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).include?(bin_dir)
