@@ -98,6 +98,10 @@ Use `gel install`, `gel lock`, `gel update`, and `gel exec` as you would the equ
 * `GEL_CACHE`
   The path to the gel version information cache
 
+* `GEL_AUTH`
+  Gem server credentials as a space-separated list of URIs, e.g.:
+  "http://user:pass@ruby.example.com/ http://user2:pass2@gems.example.org/"
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `bin/rake test` to run the tests.
