@@ -17,9 +17,6 @@ class InstallGemTest < Minitest::Test
           stub_request(:get, "https://rubygems.org/gems/rack-test-0.6.3.gem")
             .to_return(body: File.open(fixture_file("rack-test-0.6.3.gem")))
 
-          stub_request(:get, "https://rubygems.org/gems/pub_grub-0.5.0.gem")
-            .to_return(body: File.open(fixture_file("pub_grub-0.5.0.gem")))
-
           Gel::Environment.open(store)
 
           require "gel/command"
