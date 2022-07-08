@@ -5,7 +5,7 @@ require_relative "vendor/ruby_digest"
 class Gel::GitDepot
   attr_reader :mirror_root
 
-  def initialize(store, mirror_root = (ENV["GEL_CACHE"] || "~/.cache/gel") + "/git")
+  def initialize(store, mirror_root = File.join(Gel::Config.cache_dir, "git"))
     @store = store
     @mirror_root = File.expand_path(mirror_root)
   end

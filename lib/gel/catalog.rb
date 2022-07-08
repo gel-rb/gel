@@ -15,7 +15,7 @@ class Gel::Catalog
   autoload :DependencyIndex, File.expand_path("catalog/dependency_index", __dir__)
   autoload :LegacyIndex, File.expand_path("catalog/legacy_index", __dir__)
 
-  def initialize(uri, httpool: Gel::Httpool.new, work_pool:, cache: ENV["GEL_CACHE"] || "~/.cache/gel", initial_gems: [])
+  def initialize(uri, httpool: Gel::Httpool.new, work_pool:, cache: Gel::Config.cache_dir, initial_gems: [])
     @uri = normalize_uri(uri)
     @httpool = httpool
     @work_pool = work_pool
