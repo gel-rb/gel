@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require_relative "../lib/gel/support/sha512"
+require "gel/support/sha512"
 
 require "digest/sha2"
 

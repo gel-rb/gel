@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require_relative "../../lib/gel/command"
+require "gel/command"
 
 class EnvTest < Minitest::Test
   def test_env_command
