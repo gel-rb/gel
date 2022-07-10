@@ -86,6 +86,10 @@ class Gel::Catalog
     @uri.to_s
   end
 
+  def match?(uri)
+    @uri == normalize_uri(uri)
+  end
+
   private
 
   def normalize_uri(uri)

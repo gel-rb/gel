@@ -111,6 +111,57 @@ DEPENDENCIES
 LOCKFILE
   end
 
+  def test_respects_explicit_source
+    gemfile = <<GEMFILE
+source "https://rubygems.org"
+
+gem "rack", source: "https://other.org"
+GEMFILE
+
+    stub_request(:get, "https://index.rubygems.org/versions").
+      to_return(body: <<VERSIONS)
+created_at: 2017-03-27T04:38:13+00:00
+---
+rack 0.1.0,2.0.3 xxx
+rack 0.1.1 yyy
+VERSIONS
+
+    stub_request(:get, "https://index.rubygems.org/info/rack").
+      to_return(body: <<INFO)
+---
+0.1.0 |checksum:zzz
+2.0.3 |checksum:zzz
+0.1.1 |checksum:zzz
+INFO
+
+    stub_request(:get, "https://other.org/versions").
+      to_return(body: <<VERSIONS)
+created_at: 2017-03-27T04:38:13+00:00
+---
+rack 0.5.0 qqq
+VERSIONS
+
+    stub_request(:get, "https://other.org/info/rack").
+      to_return(body: <<INFO)
+---
+0.5.0 |checksum:ccc
+INFO
+
+    assert_equal <<LOCKFILE, lockfile_for_gemfile(gemfile, platforms: "ruby")
+GEM
+  remote: https://rubygems.org/
+  remote: https://other.org/
+  specs:
+    rack (0.5.0)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  rack!
+LOCKFILE
+  end
+
   def test_dependencies_are_followed_and_recorded
     gemfile = <<GEMFILE
 source "https://gem-mimer.org"

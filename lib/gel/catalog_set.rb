@@ -9,8 +9,9 @@ class Gel::CatalogSet
     end
   end
 
-  def initialize(catalogs)
+  def initialize(catalogs, gemfile)
     @catalogs = catalogs
+    @gemfile = gemfile
 
     @cached_specs = Hash.new { |h, k| h[k] = {} }
     @specs_by_package_version = {}
@@ -68,8 +69,19 @@ class Gel::CatalogSet
   def fetch_package_info(package)
     return if @specs_by_package_version.key?(package.name)
 
+    catalogs = @catalogs
+
+    if gem_entry = @gemfile.gems.assoc(package.name)
+      if specified_sources = gem_entry[2][:source]
+        catalogs = catalogs.select do |catalog|
+          catalog.is_a?(Gel::Catalog) &&
+            Array(specified_sources).any? { |s| catalog.match?(s) }
+        end
+      end
+    end
+
     specs = []
-    @catalogs.each do |catalog|
+    catalogs.each do |catalog|
       if catalog.nil?
         break unless specs.empty?
         next
