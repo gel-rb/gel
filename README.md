@@ -6,25 +6,65 @@ A modern gem manager.
 
 Gel is a lightweight alternative to Bundler.
 
+Through a combination of algorithm choices and skipping compatibility
+with some legacy features that date back to the earliest days of
+RubyGems, Gel is able to outperform both Bundler and RubyGems in many
+common use cases.
+
+In making this trade, Gel chooses not to support some less frequently
+used, but independently valuable, Bundler features:
+
 |         |         Gel        | Bundler & Rubygems |
 |---------|--------------------|--------------------|
 | install | :white_check_mark: | :white_check_mark: |
 | update  | :white_check_mark: | :white_check_mark: |
 | lock    | :white_check_mark: | :white_check_mark: |
 | exec    | :white_check_mark: | :white_check_mark: |
-| gem authoring | :x: | :white_check_mark: |
-| vendoring     | :x: | :white_check_mark: |
-| anything else | :x: | :white_check_mark: |
+| gem authoring | :x:  | :white_check_mark: |
+| vendoring     | :ok: | :white_check_mark: |
+| anything else | :x:  | :white_check_mark: |
 
-This gem is still a work in progress, and things that are still needing some additional improvements include Documentation, UI & Error Messages, and Platform compatibility. We are open to and appreciate any help improving any of these areas.
+In most cases, Gel will be a drop-in replacement, and you can still use
+RubyGems directly if you need to `gem push`, for example.
+
+## Can I Use Gel Today?
+
+I ([@matthewd](https://github.com/matthewd)) have been using Gel
+exclusively on my local development machines since January 2019. While I
+have occasionally encountered issues when installing some new gem, they
+have been rare and minor, requiring only a small additional API or
+similar -- and as those outliers have been addressed, they become
+increasingly infrequent.
+
+In particular (and as is consistent with the type of work it does), Gel
+will either work or it will fail -- perhaps on encountering an unusual
+construct in your Gemfile, or perhaps while attempting to install a gem
+that does something weird. The "latest" it is likely to fail is if, at
+runtime, your code (or a gem you've loaded) assumes the presence of a
+specific RubyGems/Bundler API that Gel does not emulate. It's extremely
+rare to encounter more subtle issues that don't manifest as immediate
+failure.
+
+You can use Gel in your local environment with no effect upon your
+production setup, or even your coworkers' -- Gel uses the same Gemfile
+and Gemfile.lock files as Bundler. It also maintains completely
+independent copies of installed gems, so it's totally safe to co-exist
+with Bundler on your machine. (Which one is active is determined by the
+environment variables within your shell terminal.)
 
 ## Why Should I Use Gel?
 
-Gel was written with the goal of improving the performance of common Bundler tasks. Eventually we would like to backport known performance improvements back into Bundler so that everyone can benefit from these improvements, but it is easier to implement and test potential performance improvements in a smaller, more lightweight codebase beforehand.
+Gel was written with the goal of improving the performance of common
+Bundler tasks.
 
-Another way that Gel gains a performance benefit over Bundler is simply that Gel includes less features overall. For anyone that doesn't need _all_ the features provided by Bundler, using Gel as a more lightweight gem manager might be beneficial.
+By focusing on those common requirements, and leaving more obscure needs
+to be filled by Bundler, Gel is able to outperform Bundler in the
+operations you use most.
 
-One of the improvements that Gel has over Bundler is being able to take advantage of a new version solver called [Pub Grub](https://medium.com/@nex3/pubgrub-2fb6470504f). Gel utilizes the `pub_grub` gem (https://github.com/jhawthorn/pub_grub) which is a Ruby port of the PubGrub algorithm.
+Gel also uses a new version solving algorithm called [Pub
+Grub](https://medium.com/@nex3/pubgrub-2fb6470504f) to resolve
+dependencies between gems, via the `pub_grub` gem
+(https://github.com/jhawthorn/pub_grub).
 
 Some real world examples of the types of performance improvements Gel provides over Bundler are as follows:
 
@@ -85,7 +125,17 @@ Or add it to your `.bashrc` or `.zshrc` to enable it everywhere:
 
 ## Usage
 
-Use `gel install`, `gel lock`, `gel update`, and `gel exec` as you would the equivalent `bundle` subcommands.
+Use `gel install`, `gel lock`, `gel update`, and `gel exec` as you would
+the equivalent `bundle` subcommands.
+
+While it will work, in general you should not actually need to use `gel
+exec` directly -- installed gems' executables will automatically respect
+the locally locked versions where appropriate.
+
+Where you would previously have run `bundle exec rubocop` or
+`bundle exec rake` inside an application directory, you can run
+`rubocop` or `rake` and expect the same results, even if you have other
+versions of those gems installed.
 
 ## ENVIRONMENT VARIABLES
 
