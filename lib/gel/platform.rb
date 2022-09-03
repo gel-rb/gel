@@ -22,17 +22,16 @@ module Gel::Platform
   end
 
   def self.match(target_platform, available_platforms)
-    return target_platform if available_platforms.include?(target_platform)
+    matcher = Gel::Support::GemPlatform.new(target_platform)
 
-    SYNONYMS.each do |row|
-      next unless row.include?(target_platform)
+    return available_platforms.include?("ruby") ? "ruby" : nil if matcher == "ruby"
 
-      overlap = row & available_platforms
-      return overlap.first unless overlap.empty?
-    end
+    matches = available_platforms.select do |candidate|
+      matcher =~ candidate
+    end.sort_by { |candidate| candidate&.size || 0 }.reverse
 
-    return "ruby" if available_platforms.include?("ruby")
+    matches << "ruby" if available_platforms.include?("ruby")
 
-    nil
+    matches.first
   end
 end

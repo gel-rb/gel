@@ -24,6 +24,8 @@ class Gel::Environment
         list << "#$1-#{local.os}"
       end
       list << "#{local.cpu}-#{local.os}"
+      list << "universal-#{local.os}" unless local.cpu == "universal"
+      list = list.map { |arch| "#{arch}-#{local.version}" } + list if local.version
       list << "java" if defined?(org.jruby.Ruby)
       list << "ruby"
 
@@ -159,7 +161,10 @@ class Gel::Environment
       strategy = preference_strategy&.call(gem_set)
     end
 
-    target_platforms |= architectures if target_platforms.empty?
+    if target_platforms.empty?
+      possible_inferred_targets = architectures.map { |arch| Gel::Support::GemPlatform.new(arch) }
+      target_platforms = [architectures.first]
+    end
 
     require_relative "work_pool"
     require_relative "catalog"
@@ -308,6 +313,22 @@ class Gel::Environment
 
           active_platforms << resolved_platform
 
+          if possible_inferred_targets
+            possible_inferred_targets = possible_inferred_targets.select do |target|
+              next true if resolved_platform == "ruby"
+              next false if target == "ruby"
+
+              # This is a one-sided version of the GemPlatform#=== condition:
+              # we want to know whether the target adequately specifies the
+              # resolved platform, not just whether they're compatible.
+
+              resolved = Gel::Support::GemPlatform.new(resolved_platform)
+              ([nil, "universal"].include?(resolved.cpu) || resolved.cpu == target.cpu || resolved.cpu == "arm" && target.cpu.start_with?("arm")) &&
+                resolved.os == target.os &&
+                (resolved.version.nil? || resolved.version == target.version)
+            end
+          end
+
           catalog = catalog_set.catalog_for_version(package, version)
 
           deps = catalog_set.dependencies_for(package, version)
@@ -331,7 +352,13 @@ class Gel::Environment
     end
     new_resolution.dependencies = gemfile_dependencies(gemfile: gemfile)
 
-    new_resolution.platforms = target_platforms & active_platforms
+    if possible_inferred_targets
+      # Infer the least specific platform that selects all of the resolved
+      # gems
+      new_resolution.platforms = [possible_inferred_targets.last.to_s]
+    else
+      new_resolution.platforms = target_platforms & active_platforms
+    end
     new_resolution.server_catalogs = server_catalogs
     new_resolution.bundler_version = gem_set&.bundler_version
     new_resolution.ruby_version = RUBY_DESCRIPTION.split.first(2).join(" ") if gem_set&.ruby_version
