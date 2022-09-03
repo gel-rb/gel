@@ -51,6 +51,10 @@ class Gel::Environment
     @config ||= Gel::Config.new
   end
 
+  def self.locked?
+    @store.is_a?(Gel::LockedStore)
+  end
+
   def self.store_set
     list = []
     architectures.each do |arch|
@@ -639,7 +643,7 @@ class Gel::Environment
     else
       raise Gel::Error::UnsatisfiedDependencyError.new(
         name: name,
-        was_locked: @store.is_a?(Gel::LockedStore),
+        was_locked: locked?,
         found_any: found_any,
         requirements: requirements,
         why: why,
@@ -766,7 +770,7 @@ class Gel::Environment
 
         return Gel::Error::UnsatisfiedDependencyError.new(
           name: dep,
-          was_locked: @store.is_a?(Gel::LockedStore),
+          was_locked: locked?,
           found_any: found_any,
           requirements: requirements,
           why: inner_why,
