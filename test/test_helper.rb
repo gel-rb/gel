@@ -248,12 +248,14 @@ def pure_subprocess_output(code, command_line: nil, gel: true, variables: {}, ch
   env =
     if gel
       {
+        "RUBYOPT" => nil,
         "RUBYLIB" => gel.is_a?(String) ? gel : File.expand_path("../slib", __dir__),
         "GEL_STORE" => nil,
         "GEL_LOCKFILE" => nil,
       }
     else
       {
+        "RUBYOPT" => nil,
         "RUBYLIB" => nil,
       }
     end
