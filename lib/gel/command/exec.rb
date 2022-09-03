@@ -33,7 +33,7 @@ class Gel::Command::Exec < Gel::Command
       self.reraise = true
       Kernel.load(expanded_command)
     else
-      Kernel.exec([original_command, expanded_command], *command_line)
+      Kernel.exec([expanded_command, original_command], *command_line)
     end
   end
 
