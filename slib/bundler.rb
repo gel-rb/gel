@@ -32,11 +32,8 @@ module Bundler
   end
 
   def self.bundle_path
-    base_store = Gel::Environment.store
-    base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
-
     Kernel.require "pathname"
-    ::Pathname.new(base_store.root)
+    ::Pathname.new(Gel::Environment.root_store.root)
   end
 
   def self.root

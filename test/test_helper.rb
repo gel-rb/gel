@@ -72,8 +72,7 @@ def with_empty_cache
 end
 
 def with_empty_multi_store(fallbacks: false)
-  original_stores = Gel::Environment.store
-  original_stores = original_stores.inner unless original_stores.is_a?(Gel::MultiStore)
+  original_stores = Gel::Environment.root_store
 
   Dir.mktmpdir do |dir|
     stores = {}

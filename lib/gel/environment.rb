@@ -138,13 +138,16 @@ class Gel::Environment
     @store = original_store
   end
 
+  def self.root_store(store = store())
+    if store.is_a?(Gel::LockedStore)
+      store.inner
+    else
+      store
+    end
+  end
+
   def self.with_root_store(&block)
-    app_store = Gel::Environment.store
-
-    base_store = app_store
-    base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
-
-    with_store(base_store, &block)
+    with_store(root_store, &block)
   end
 
   def self.git_depot
@@ -179,8 +182,7 @@ class Gel::Environment
     server_catalogs = all_sources.map { |s| Gel::Catalog.new(s, initial_gems: server_gems, work_pool: catalog_pool, **catalog_options) }
 
     require_relative "store_catalog"
-    store = store.inner if store.is_a?(Gel::LockedStore)
-    local_catalogs = local_source ? [Gel::StoreCatalog.new(store)] : []
+    local_catalogs = local_source ? [Gel::StoreCatalog.new(root_store(store))] : []
 
     git_sources = gemfile.gems.map { |_, _, o|
       if o[:git]
@@ -399,9 +401,6 @@ class Gel::Environment
   end
 
   def self.install_gem(catalogs, gem_name, requirements = nil, output: nil, solve: true)
-    base_store = Gel::Environment.store
-    base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
-
     gemfile = Gel::GemfileParser.inline do
       source "https://rubygems.org"
 
@@ -411,7 +410,7 @@ class Gel::Environment
     gem_set = solve_for_gemfile(output: output, solve: solve, gemfile: gemfile)
 
     loader = Gel::LockLoader.new(gem_set)
-    locked_store = loader.activate(self, base_store, install: true, output: output)
+    locked_store = loader.activate(self, root_store, install: true, output: output)
     open(locked_store)
   end
 
@@ -434,12 +433,9 @@ class Gel::Environment
     @active_lockfile = true
     loader = Gel::LockLoader.new(resolved_gem_set, gemfile)
 
-    base_store = Gel::Environment.store
-    base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
-
     require_relative "../../slib/bundler"
 
-    locked_store = loader.activate(Gel::Environment, base_store, install: install, output: output)
+    locked_store = loader.activate(Gel::Environment, root_store, install: install, output: output)
     open(locked_store)
   end
 
@@ -467,11 +463,8 @@ class Gel::Environment
       if resolved_gem_set
         loader = Gel::LockLoader.new(resolved_gem_set, gemfile)
 
-        base_store = Gel::Environment.store
-        base_store = base_store.inner if base_store.is_a?(Gel::LockedStore)
-
         begin
-          locked_store = loader.activate(self, base_store, install: install, output: output)
+          locked_store = loader.activate(self, root_store, install: install, output: output)
 
           exes.each do |exe|
             if locked_store.each.any? { |g| g.executables.include?(exe) }
