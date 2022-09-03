@@ -8,7 +8,7 @@ class GelTest < Minitest::Test
   # These depend on the gems feature, so when comparing against a
   # --disable=gems run, they must be disabled to get an accurate
   # comparison.
-  GEM_DEPENDENT_FEATURES = %w(error_highlight did_you_mean)
+  GEM_DEPENDENT_FEATURES = %w(error_highlight did_you_mean syntax_suggest)
 
   def test_that_it_has_a_version_number
     refute_nil ::Gel::VERSION
