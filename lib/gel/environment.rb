@@ -412,7 +412,7 @@ class Gel::Environment
   end
 
   def self.activate(fast: false, install: false, output: nil, error: true)
-    loaded = Gel::Environment.load_gemfile
+    loaded = Gel::Environment.load_gemfile(error: error)
     return if loaded.nil?
     return if @active_lockfile
 
