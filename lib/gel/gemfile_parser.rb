@@ -162,7 +162,14 @@ module Gel::GemfileParser
     def initialize(filename)
       @filename = filename
       @sources = []
-      @git_sources = {}
+      @git_sources = {
+        github: lambda do |value|
+          value = value.to_s
+          value = "#{value}/#{value}" unless value.include?("/")
+          value += ".git" unless value.end_with?(".git")
+          "https://github.com/#{value}"
+        end
+      }
       @ruby = []
       @gems = []
     end
