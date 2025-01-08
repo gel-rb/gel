@@ -103,7 +103,7 @@ class Gel::Package::Installer
             arguments = [name, *operator_pairs.map { |op, ver| "#{op} #{ver}" }]
             gemfile.puts "gem #{arguments.map(&:inspect).join(", ")}"
           end
-          if rake
+          if rake || true
             gemfile.puts "gem 'rake'" unless spec.runtime_dependencies.any? { |name, *| name == "rake" }
           end
           gemfile.close

@@ -48,6 +48,14 @@ class Gel::MultiStore
     end
   end
 
+  def remove_gem(name, version, &block)
+    @stores.each do |_, store|
+      if store.gem?(name, version)
+        store.remove_gem(name, version, &block)
+      end
+    end
+  end
+
   def prepare(versions)
     @stores.each do |_, store|
       store.prepare(versions)

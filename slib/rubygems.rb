@@ -30,6 +30,7 @@ module Gem
   end
 
   LoadError = Class.new(::LoadError)
+  MissingSpecError = Class.new(::StandardError)
 
   module StubSpecification
   end
@@ -180,6 +181,18 @@ module Gem
 
   def self.default_dir
     dir
+  end
+
+  def self.default_specifications_dir
+    Gel::Environment.default_specifications_dir
+  end
+
+  def self.ruby_version
+    Gem::Version.new(RUBY_VERSION)
+  end
+
+  def self.rubygems_version
+    Gem::Version.new(Gem::VERSION)
   end
 
   def self.activate_bin_path(gem_name, bin_name, version = nil)

@@ -93,11 +93,12 @@ end
 def with_fixture_gems_installed(paths, multi: false)
   require "gel/package"
   require "gel/package/installer"
+  require "gel/package/extracter"
 
   with_empty_store(multi: multi) do |store|
     paths.each do |path|
       result = Gel::Package::Installer.new(store)
-      g = Gel::Package.extract(fixture_file(path), result)
+      g = Gel::Package::Extracter.extract(fixture_file(path), result)
       g.compile
       g.install
     end

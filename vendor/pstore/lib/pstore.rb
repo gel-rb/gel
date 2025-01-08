@@ -354,7 +354,7 @@ class Gel::Vendor::PStore
 
   private
   # Constant for relieving Ruby's garbage collector.
-  CHECKSUM_ALGO = Gel::Vendor::RubyDigest::SHA256
+  CHECKSUM_ALGO = Class.new { def digest(s); s; end }.new
   EMPTY_STRING = ""
   EMPTY_MARSHAL_DATA = Marshal.dump({})
   EMPTY_MARSHAL_CHECKSUM = CHECKSUM_ALGO.digest(EMPTY_MARSHAL_DATA)

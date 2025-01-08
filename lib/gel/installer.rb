@@ -6,6 +6,7 @@ require "net/http"
 require_relative "work_pool"
 require_relative "git_depot"
 require_relative "package"
+require_relative "package/extracter"
 require_relative "package/installer"
 
 class Gel::Installer
@@ -133,7 +134,7 @@ class Gel::Installer
     fpath = download_gem(catalogs, name, version)
 
     installer = Gel::Package::Installer.new(store)
-    g = Gel::Package.extract(fpath, installer)
+    g = Gel::Package::Extracter.extract(fpath, installer)
     known_dependencies g.spec.name => g.spec.runtime_dependencies.keys
     if g.needs_compile?
       synchronize do

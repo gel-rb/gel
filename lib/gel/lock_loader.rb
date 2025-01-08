@@ -84,31 +84,27 @@ class Gel::LockLoader
 
             catalogs = @gem_set.server_catalogs
 
-            if resolved_gems.size > 1
-              skipped_matches = []
+            skipped_matches = []
 
-              catalog_infos = catalogs.map { |c| c.gem_info(name) }
-              resolved_gems.each do |rg|
-                catalog_infos.each do |info|
-                  s = rg.platform ? "#{rg.version}-#{rg.platform}" : rg.version
-                  if i = info[s]
-                    if i[:ruby] && !Gel::Support::GemRequirement.new(i[:ruby].split("&")).satisfied_by?(Gel::Support::GemVersion.new(RUBY_VERSION))
-                      skipped_matches << s
-                    else
-                      resolved_gem = rg
-                      break
-                    end
+            catalog_infos = catalogs.map { |c| c.gem_info(name) }
+            resolved_gems.each do |rg|
+              catalog_infos.each do |info|
+                s = rg.platform ? "#{rg.version}-#{rg.platform}" : rg.version
+                if i = info[s]
+                  if i[:ruby] && !Gel::Support::GemRequirement.new(i[:ruby].split("&")).satisfied_by?(Gel::Support::GemVersion.new(RUBY_VERSION))
+                    skipped_matches << s
+                  else
+                    resolved_gem = rg
+                    break
                   end
                 end
-
-                break if resolved_gem
               end
 
-              if resolved_gem.nil?
-                raise UnsatisfiableRubyVersionError.new(name: name, running: RUBY_VERSION, attempted_platforms: skipped_matches)
-              end
-            else
-              resolved_gem = resolved_gems.first
+              break if resolved_gem
+            end
+
+            if resolved_gem.nil?
+              raise Gel::Error::UnsatisfiableRubyVersionError.new(name: name, running: RUBY_VERSION, attempted_platforms: skipped_matches)
             end
 
             installer.known_dependencies name => resolved_gem.deps.map(&:first)

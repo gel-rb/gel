@@ -47,6 +47,16 @@ class Gel::Environment
     platform.nil? || architectures.include?(platform)
   end
 
+  def self.default_specifications_dir
+    @default_specifications_dir ||= File.join(
+      RbConfig::CONFIG["rubylibprefix"],
+      "gems",
+      RbConfig::CONFIG["ruby_version"],
+      "specifications",
+      "default"
+    )
+  end
+
   def self.config
     @config ||= Gel::Config.new
   end
@@ -400,6 +410,25 @@ class Gel::Environment
     gem_set
   end
 
+  def self.uninstall_gem(gem_name, requirements = nil, output: nil)
+    require_relative "package/uninstaller"
+
+    matching_gems = @store.each(gem_name).select do |g|
+      requirements.nil? || g.satisfies?(requirements)
+    end
+
+    if matching_gems.empty?
+      raise Gel::Error::MissingGemError.new(name: gem_name, requirements: requirements)
+    end
+
+    names_and_versions = matching_gems.map { |g| [g.name, g.version] }
+
+    uninstaller = Gel::Package::Uninstaller.new(@store)
+    names_and_versions.each do |name, version|
+      uninstaller.uninstall(name, version)
+    end
+  end
+
   def self.install_gem(catalogs, gem_name, requirements = nil, output: nil, solve: true)
     gemfile = Gel::GemfileParser.inline do
       source "https://rubygems.org"
@@ -521,8 +550,8 @@ class Gel::Environment
       if unlocked_candidates.empty? && locked_candidates.map(&:name).uniq.size == 1
         # We're going to describe the set of versions (that we know
         # about) that would have supplied the executable.
-        valid_versions = locked_candidates.map(&:version).uniq.map { |v| Gel::Support::Version.new(v) }.sort
-        locked_version = Gel::Support::Version.new(resolved_gem_set.gems[locked_candidates.first.name].version)
+        valid_versions = locked_candidates.map(&:version).uniq.map { |v| Gel::Support::GemVersion.new(v) }.sort
+        locked_version = Gel::Support::GemVersion.new(resolved_gem_set.gems[locked_candidates.first.name].version)
 
         # Most likely, our not-executable-having version is outside some
         # contiguous range of executable-having versions, so let's check
@@ -678,7 +707,11 @@ class Gel::Environment
     @store.prepare(preparation)
 
     activated_gems.update(activation)
-    $:.concat lib_dirs
+
+    # We unfortunately do still need to put the dirs into the load path,
+    # and more specifically at the front, because C extensions (psych)
+    # may call rb_require() directly, and that won't defer to us.
+    $:[0, 0] = lib_dirs
   end
 
   # Returns either an array of compatible gems that must all be activated

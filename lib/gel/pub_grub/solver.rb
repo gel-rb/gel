@@ -18,7 +18,8 @@ class Gel::PubGrub::Solver < Gel::Vendor::PubGrub::VersionSolver
   def next_package_to_try
     self.solution.unsatisfied.min_by do |term|
       package = term.package
-      versions = self.source.versions_for(package, term.constraint.range)
+      #versions = self.source.versions_for(package, term.constraint.range)
+      versions = term.constraint.range.select_versions(self.source.instance_variable_get(:@sorted_versions)[package])
 
       if @strategy
         @strategy.package_priority(package, versions) + @package_depth[package]

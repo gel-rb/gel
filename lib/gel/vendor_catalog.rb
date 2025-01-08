@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "package"
+require_relative "package/extracter"
 
 class Gel::VendorCatalog
   attr_reader :path
@@ -13,12 +14,12 @@ class Gel::VendorCatalog
   def prepare
     Dir["#{@path}/*.gem"].each do |filename|
       @filename = filename
-      Gel::Package.extract(filename, self)
+      Gel::Package::Extracter.extract(filename, self)
       @filename = nil
     end
   end
 
-  # Gel::Package.extract callback
+  # Gel::Package::Extracter.extract callback
   def gem(spec)
     @cache[spec.name] ||= {}
     @cache[spec.name][Gel::Support::GemVersion.new(spec.version).to_s] = {

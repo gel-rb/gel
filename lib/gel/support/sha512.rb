@@ -53,10 +53,12 @@ class Gel::Support::SHA512
     0x28db77f523047d84, 0x32caab7b40c72493, 0x3c9ebe0a15c9bebc, 0x431d67c49c100d4c,
     0x4cc5d4becb3e42b6, 0x597f299cfc657e2a, 0x5fcb6fab3ad6faec, 0x6c44198c4a475817,
   ]
-  H = [
-    0x6a09e667f3bcc908, 0xbb67ae8584caa73b, 0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
-    0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179,
-  ]
+  K0 = K.map { |k| k & 0xffffffff }
+  K1 = K.map { |k| k >> 32 }
+  #H = [
+  #  0x6a09e667f3bcc908, 0xbb67ae8584caa73b, 0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
+  #  0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179,
+  #]
   BLOCK_SIZE = 128
 
   attr_reader :h
@@ -66,15 +68,30 @@ class Gel::Support::SHA512
     @buffer = ''.b
     @counter = 0
 
-    @h = H.dup
+    @a0 = 0xf3bcc908
+    @b0 = 0x84caa73b
+    @c0 = 0xfe94f82b
+    @d0 = 0x5f1d36f1
+    @e0 = 0xade682d1
+    @f0 = 0x2b3e6c1f
+    @g0 = 0xfb41bd6b
+    @h0 = 0x137e2179
+
+    @a1 = 0x6a09e667
+    @b1 = 0xbb67ae85
+    @c1 = 0x3c6ef372
+    @d1 = 0xa54ff53a
+    @e1 = 0x510e527f
+    @f1 = 0x9b05688c
+    @g1 = 0x1f83d9ab
+    @h1 = 0x5be0cd19
+
+    @w0 = Array.new(80, 0)
+    @w1 = Array.new(80, 0)
 
     if m
       update(m)
     end
-  end
-
-  def rotr(x, y)
-    ((x >> y) | (x << (64 - y))) & 0xFFFFFFFFFFFFFFFF
   end
 
   def update(m)
@@ -83,46 +100,161 @@ class Gel::Support::SHA512
     @buffer << bytes
     @counter += bytes.size
 
-    while @buffer.size >= BLOCK_SIZE
-      process(@buffer.slice!(0, BLOCK_SIZE))
+    offset = 0
+    while (@buffer.size - offset) >= BLOCK_SIZE
+      process(@buffer, offset)
+      offset += BLOCK_SIZE
+    end
+
+    if offset == @buffer.size
+      @buffer.clear
+    else
+      @buffer.slice!(0, offset)
     end
   end
 
-  def process(chunk)
-    w = Array.new(80, 0)
-    chunk.unpack('Q>*').each_with_index do |x, i|
-      w[i] = x
+  REST_RANGE = 16..79
+  FULL_RANGE = 0..79
+
+  def process(chunk, offset)
+    w0 = @w0
+    w1 = @w1
+
+    i = offset
+    j = 0
+    while j < 16
+      w1[j] = chunk.getbyte(i) << 24 | chunk.getbyte(i + 1) << 16 | chunk.getbyte(i + 2) << 8 | chunk.getbyte(i + 3)
+      w0[j] = chunk.getbyte(i + 4) << 24 | chunk.getbyte(i + 5) << 16 | chunk.getbyte(i + 6) << 8 | chunk.getbyte(i + 7)
+      i += 8
+      j += 1
     end
 
-    (16..79).each do |i|
-      s0 = rotr(w[i - 15], 1) ^ rotr(w[i - 15], 8) ^ (w[i - 15] >> 7)
-      s1 = rotr(w[i - 2], 19) ^ rotr(w[i - 2], 61) ^ (w[i - 2] >> 6)
+    i = 16
+    while i < 80
+      w0_15 = w0[i - 15]
+      w1_15 = w1[i - 15]
+      w0_2 = w0[i - 2]
+      w1_2 = w1[i - 2]
 
-      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) & 0xFFFFFFFFFFFFFFFF
+      sx0 = ((w0_15 >> 1) | ((w1_15 & 0x1) << 31)) ^
+              ((w0_15 >> 8) | ((w1_15 & 0xff) << 24)) ^
+              ((w0_15 >> 7 | ((w1_15 & 0x7f) << 25)))
+      sx1 = ((w1_15 >> 1) | ((w0_15 & 0x1) << 31)) ^
+              ((w1_15 >> 8) | ((w0_15 & 0xff) << 24)) ^
+              (w1_15 >> 7)
+
+      sy0 = ((w0_2 >> 19) | ((w1_2 & 0x7ffff) << 13)) ^
+              ((w1_2 >> 29) | ((w0_2 & 0x1fffffff) << 3)) ^
+              ((w0_2 >> 6) | ((w1_2 & 0x3f) << 26))
+      sy1 = ((w1_2 >> 19) | ((w0_2 & 0x7ffff) << 13)) ^
+              ((w0_2 >> 29) | ((w1_2 & 0x1fffffff) << 3)) ^
+              (w1_2 >> 6)
+
+      n = (w0[i - 16] + sx0 + w0[i - 7] + sy0)
+      w1[i] = (w1[i - 16] + sx1 + w1[i - 7] + sy1 + (n >> 32)) & 0xffffffff
+      w0[i] = n & 0xffffffff
+
+      i += 1
     end
 
-    a, b, c, d, e, f, g, h = @h
+    a0 = @a0
+    a1 = @a1
+    b0 = @b0
+    b1 = @b1
+    c0 = @c0
+    c1 = @c1
+    d0 = @d0
+    d1 = @d1
+    e0 = @e0
+    e1 = @e1
+    f0 = @f0
+    f1 = @f1
+    g0 = @g0
+    g1 = @g1
+    h0 = @h0
+    h1 = @h1
 
-    (0..79).each do |i|
-      s0 = rotr(a, 28) ^ rotr(a, 34) ^ rotr(a, 39)
-      maj = (a & b) ^ (a & c) ^ (b & c)
-      t2 = (s0 + maj) & 0xFFFFFFFFFFFFFFFF
+    i = 0
+    while i < 80
+      sx0 = ((a0 >> 28) | ((a1 & 0xfffffff) << 4)) ^
+              ((a1 >> 2) | ((a0 & 0x3) << 30)) ^
+              ((a1 >> 7) | ((a0 & 0x7f) << 25))
+      sx1 = ((a1 >> 28) | ((a0 & 0xfffffff) << 4)) ^
+              ((a0 >> 2) | ((a1 & 0x3) << 30)) ^
+              ((a0 >> 7) | ((a1 & 0x7f) << 25))
 
-      s1 = rotr(e, 14) ^ rotr(e, 18) ^ rotr(e, 41)
-      ch = (e & f) ^ ((~e) & g)
-      t1 = (h + s1 + ch + K[i] + w[i]) & 0xFFFFFFFFFFFFFFFF
+      maj0 = (a0 & b0) ^ (a0 & c0) ^ (b0 & c0)
+      maj1 = (a1 & b1) ^ (a1 & c1) ^ (b1 & c1)
 
-      h = g
-      g = f
-      f = e
-      e = (d + t1) & 0xFFFFFFFFFFFFFFFF
-      d = c
-      c = b
-      b = a
-      a = (t1 + t2) & 0xFFFFFFFFFFFFFFFF
+      ty0 = sx0 + maj0
+      ty1 = (sx1 + maj1 + (ty0 >> 32)) & 0xffffffff
+      ty0 &= 0xffffffff
+
+
+      sy0 = ((e0 >> 14) | ((e1 & 0x3fff) << 18)) ^
+              ((e0 >> 18) | ((e1 & 0x3ffff) << 14)) ^
+              ((e1 >> 9) | ((e0 & 0x1ff) << 23))
+      sy1 = ((e1 >> 14) | ((e0 & 0x3fff) << 18)) ^
+              ((e1 >> 18) | ((e0 & 0x3ffff) << 14)) ^
+              ((e0 >> 9) | ((e1 & 0x1ff) << 23))
+
+      ch0 = (e0 & f0) ^ ((~e0) & g0)
+      ch1 = (e1 & f1) ^ ((~e1) & g1)
+
+      tx0 = h0 + sy0 + ch0 + K0[i] + w0[i]
+      tx1 = (h1 + sy1 + ch1 + K1[i] + w1[i] + (tx0 >> 32)) & 0xffffffff
+      tx0 &= 0xffffffff
+
+      h0 = g0
+      h1 = g1
+      g0 = f0
+      g1 = f1
+      f0 = e0
+      f1 = e1
+      e0 = d0 + tx0
+      e1 = (d1 + tx1 + (e0 >> 32)) & 0xffffffff
+      e0 &= 0xffffffff
+      d0 = c0
+      d1 = c1
+      c0 = b0
+      c1 = b1
+      b0 = a0
+      b1 = a1
+      a0 = tx0 + ty0
+      a1 = (tx1 + ty1 + (a0 >> 32)) & 0xffffffff
+      a0 &= 0xffffffff
+
+      i += 1
     end
 
-    @h = @h.zip([a, b, c, d, e, f, g, h]).map { |x, y| (x + y) & 0xFFFFFFFFFFFFFFFF }
+    @a0 += a0
+    @a1 = (@a1 + a1 + (@a0 >> 32)) & 0xffffffff
+    @a0 &= 0xffffffff
+    @b0 += b0
+    @b1 = (@b1 + b1 + (@b0 >> 32)) & 0xffffffff
+    @b0 &= 0xffffffff
+    @c0 += c0
+    @c1 = (@c1 + c1 + (@c0 >> 32)) & 0xffffffff
+    @c0 &= 0xffffffff
+    @d0 += d0
+    @d1 = (@d1 + d1 + (@d0 >> 32)) & 0xffffffff
+    @d0 &= 0xffffffff
+    @e0 += e0
+    @e1 = (@e1 + e1 + (@e0 >> 32)) & 0xffffffff
+    @e0 &= 0xffffffff
+    @f0 += f0
+    @f1 = (@f1 + f1 + (@f0 >> 32)) & 0xffffffff
+    @f0 &= 0xffffffff
+    @g0 += g0
+    @g1 = (@g1 + g1 + (@g0 >> 32)) & 0xffffffff
+    @g0 &= 0xffffffff
+    @h0 += h0
+    @h1 = (@h1 + h1 + (@h0 >> 32)) & 0xffffffff
+    @h0 &= 0xffffffff
+  end
+
+  def raw
+    [@a1, @a0, @b1, @b0, @c1, @c0, @d1, @d0, @e1, @e0, @f1, @f0, @g1, @g0, @h1, @h0].pack('N*')
   end
 
   def digest
@@ -133,7 +265,7 @@ class Gel::Support::SHA512
 
     r = dup
     r.update("\x80".b + "\x00".b * (padlen + 8) + length)
-    r.h.pack('Q>*')
+    r.raw
   end
 
   def hexdigest

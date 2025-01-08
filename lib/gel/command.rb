@@ -37,6 +37,29 @@ class Gel::Command
     handle_error(ex)
   end
 
+  if ENV["GEL_PROFILE"]
+    singleton_class.prepend Module.new {
+      def run(command_line)
+        return super unless command_line.first == "install"
+
+        require_without_gel "/Users/matthew/.local/gel/#{RUBY_VERSION}/gems/stackprof-0.2.23/ext/stackprof/stackprof"
+
+        mode = ENV["GEL_PROFILE"].to_sym
+        ex = nil
+        StackProf.run(mode: mode, raw: true, out: "/tmp/gel-#{mode}.dump") do
+          $stderr.puts "Profiling to /tmp/gel-#{mode}.dump"
+          require "timeout"
+          Timeout.timeout(15) do
+            super
+          end
+        rescue Exception => ex
+          p ex
+        end
+        raise ex if ex
+      end
+    }
+  end
+
   def self.handle_error(ex)
     case ex
     when Gel::ReportableError
@@ -112,6 +135,7 @@ require_relative "command/help"
 require_relative "command/version"
 require_relative "command/install"
 require_relative "command/install_gem"
+require_relative "command/uninstall_gem"
 require_relative "command/env"
 require_relative "command/exec"
 require_relative "command/lock"

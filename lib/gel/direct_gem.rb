@@ -36,6 +36,6 @@ class Gel::DirectGem < Gel::StoreGem
       dependencies: gemspec.runtime_dependencies,
     }
 
-    super(root, name, version || Gel::Support::GemVersion.new(gemspec.version).to_s, ("#{root}/ext" if gemspec.extensions.any?), info)
+    super(root, name, version || Gel::Support::GemVersion.new(gemspec.version).to_s, ("#{root}/ext" if Array(gemspec.extensions).any?), info)
   end
 end

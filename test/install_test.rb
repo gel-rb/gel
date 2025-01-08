@@ -4,6 +4,7 @@ require "test_helper"
 
 require "gel/package"
 require "gel/package/installer"
+require "gel/package/extracter"
 
 class InstallTest < Minitest::Test
   def test_no_gemfile
@@ -17,11 +18,11 @@ class InstallTest < Minitest::Test
       store = Gel::Store.new(dir)
 
       result = Gel::Package::Installer.new(store)
-      g = Gel::Package.extract(fixture_file("rack-2.0.3.gem"), result)
+      g = Gel::Package::Extracter.extract(fixture_file("rack-2.0.3.gem"), result)
       g.compile
       g.install
 
-      g = Gel::Package.extract(fixture_file("rack-0.1.0.gem"), result)
+      g = Gel::Package::Extracter.extract(fixture_file("rack-0.1.0.gem"), result)
       g.compile
       g.install
 
@@ -76,7 +77,7 @@ class InstallTest < Minitest::Test
     Dir.mktmpdir do |dir|
       store = Gel::Store.new(dir)
       result = Gel::Package::Installer.new(store)
-      g = Gel::Package.extract(fixture_file("fast_blank-1.0.0.gem"), result)
+      g = Gel::Package::Extracter.extract(fixture_file("fast_blank-1.0.0.gem"), result)
       g.compile
       g.install
 
@@ -118,7 +119,7 @@ class InstallTest < Minitest::Test
       result = Gel::Package::Installer.new(store)
       dir = store["ruby", true].root
 
-      g = Gel::Package.extract(fixture_file("rainbow-2.2.2.gem"), result)
+      g = Gel::Package::Extracter.extract(fixture_file("rainbow-2.2.2.gem"), result)
       g.compile
       g.install
 
@@ -160,7 +161,7 @@ class InstallTest < Minitest::Test
       store = Gel::Store.new(dir)
 
       result = Gel::Package::Installer.new(store)
-      g = Gel::Package.extract(fixture_file("ruby_parser-3.8.2.gem"), result)
+      g = Gel::Package::Extracter.extract(fixture_file("ruby_parser-3.8.2.gem"), result)
       g.compile
       g.install
 

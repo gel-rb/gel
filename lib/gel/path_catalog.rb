@@ -36,6 +36,7 @@ class Gel::PathCatalog
   end
 
   def gemspec_from(filename)
+    $stderr.puts "Gel::PathCatalog#gemspec_from(#{filename.inspect})"
     Gel::GemspecParser.parse(File.read(filename), filename)
   end
 
