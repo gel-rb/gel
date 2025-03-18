@@ -12,4 +12,4 @@ gem "minitest", "~> 5.0", "< 5.16" # Ruby 2.5 compat
 gem "mocha"
 gem "webmock"
 
-gem "ronn", platform: :ruby
+gem "ronn-ng"

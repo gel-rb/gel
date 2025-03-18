@@ -6,24 +6,36 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
-    addressable (2.8.0)
-      public_suffix (>= 2.0.2, < 5.0)
-    crack (0.4.5)
+    addressable (2.8.7)
+      public_suffix (>= 2.0.2, < 7.0)
+    bigdecimal (3.1.9)
+    crack (1.0.0)
+      bigdecimal
       rexml
-    hashdiff (1.0.1)
-    hpricot (0.8.6)
+    hashdiff (1.1.2)
+    kramdown (2.5.1)
+      rexml (>= 3.3.9)
+    kramdown-parser-gfm (1.1.0)
+      kramdown (~> 2.0)
+    mini_portile2 (2.8.8)
     minitest (5.15.0)
-    mocha (1.14.0)
+    mocha (2.7.1)
+      ruby2_keywords (>= 0.0.5)
     mustache (1.1.1)
-    public_suffix (4.0.7)
+    nokogiri (1.18.4)
+      mini_portile2 (~> 2.8.2)
+      racc (~> 1.4)
+    public_suffix (6.0.1)
+    racc (1.8.1)
     rake (12.3.3)
-    rdiscount (2.2.0.2)
-    rexml (3.2.5)
-    ronn (0.7.3)
-      hpricot (>= 0.8.2)
-      mustache (>= 0.7.0)
-      rdiscount (>= 1.5.8)
-    webmock (3.14.0)
+    rexml (3.4.1)
+    ronn-ng (0.10.1)
+      kramdown (~> 2, >= 2.1)
+      kramdown-parser-gfm (~> 1, >= 1.0.1)
+      mustache (~> 1)
+      nokogiri (~> 1, >= 1.14.3)
+    ruby2_keywords (0.0.5)
+    webmock (3.25.1)
       addressable (>= 2.8.0)
       crack (>= 0.3.2)
       hashdiff (>= 0.4.0, < 2.0.0)
@@ -36,7 +48,7 @@ DEPENDENCIES
   minitest (~> 5.0, < 5.16)
   mocha
   rake (~> 12.3)
-  ronn
+  ronn-ng
   webmock
 
 BUNDLED WITH
