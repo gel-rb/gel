@@ -64,7 +64,7 @@ class GelTest < Minitest::Test
       /^
         #{Regexp.union(RbConfig::CONFIG["rubyarchdir"], RbConfig::CONFIG["rubylibdir"])}
         \/
-        #{Regexp.union(SAFE_STDLIB)}
+        #{Regexp.union(*SAFE_STDLIB, "bundled_gems")}
         \.
         #{Regexp.union(*["rb", "so", RbConfig::CONFIG["DLEXT"], RbConfig::CONFIG["DLEXT2"]].compact)}
       $/x
@@ -90,11 +90,28 @@ class GelTest < Minitest::Test
     unique_constants = (with_gel - with_bundler).grep_v(/^Gel::/)
     compatible_constants = (with_gel - base_ruby_only - unique_constants).grep_v(/^Gel::/)
 
+    bundled_gem_constants = if RUBY_VERSION > "3.3"
+      %w(
+        Gem::BUNDLED_GEMS
+        Gem::BUNDLED_GEMS::ARCHDIR
+        Gem::BUNDLED_GEMS::DLEXT
+        Gem::BUNDLED_GEMS::EXACT
+        Gem::BUNDLED_GEMS::LIBDIR
+        Gem::BUNDLED_GEMS::LIBEXT
+        Gem::BUNDLED_GEMS::PREFIXED
+        Gem::BUNDLED_GEMS::SINCE
+        Gem::BUNDLED_GEMS::SINCE_FAST_PATH
+        Gem::BUNDLED_GEMS::WARNED
+      )
+    else
+      []
+    end
+
     assert_equal %w(
       Gel
     ).join("\n"), unique_constants.join("\n")
 
-    assert_equal %w(
+    assert_equal (%w(
       Bundler
       Bundler::LockfileParser
       Bundler::ORIGINAL_ENV
@@ -102,6 +119,7 @@ class GelTest < Minitest::Test
       Bundler::VERSION
 
       Gem
+    ) + bundled_gem_constants + %w(
       Gem::Dependency
       Gem::Deprecate
       Gem::LoadError
@@ -121,7 +139,7 @@ class GelTest < Minitest::Test
       Gem::Version
       Gem::Version::ANCHORED_VERSION_PATTERN
       Gem::Version::VERSION_PATTERN
-    ).join("\n"), compatible_constants.join("\n")
+    )).join("\n"), compatible_constants.join("\n")
   end
 
   private
