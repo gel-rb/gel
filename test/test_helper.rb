@@ -272,8 +272,18 @@ def pure_subprocess_output(code, command_line: nil, gel: true, variables: {}, ch
 
   w.close
 
-  Process.waitpid2(pid)
-  r.read.lines.map(&:chomp)
+  output = []
+
+  t = Process.detach(pid)
+
+  while t.alive?
+    output.concat(r.read.lines.map(&:chomp))
+  end
+  t.join
+
+  output.concat(r.read.lines.map(&:chomp))
+
+  output
 end
 
 def jruby?
