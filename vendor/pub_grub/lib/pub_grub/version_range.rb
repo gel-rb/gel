@@ -23,6 +23,10 @@ module Gel::Vendor::PubGrub
         other.empty?
       end
 
+      def hash
+        [].hash
+      end
+
       def intersects?(_)
         false
       end
@@ -133,7 +137,7 @@ module Gel::Vendor::PubGrub
       ]
     end
 
-    # Returns verisons which are included by this range.
+    # Returns versions which are included by this range.
     #
     # versions must be sorted
     def select_versions(versions)
@@ -358,6 +362,12 @@ module Gel::Vendor::PubGrub
 
     def inspect
       "#<#{self.class} #{to_s}>"
+    end
+
+    def upper_invert
+      return self.class.empty unless max
+
+      VersionRange.new(min: max, include_min: !include_max)
     end
 
     def invert

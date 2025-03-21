@@ -1,7 +1,7 @@
-require_relative '../pub_grub/package'
-require_relative '../pub_grub/version_constraint'
-require_relative '../pub_grub/incompatibility'
-require_relative '../pub_grub/basic_package_source'
+require_relative 'package'
+require_relative 'version_constraint'
+require_relative 'incompatibility'
+require_relative 'basic_package_source'
 
 module Gel::Vendor::PubGrub
   class StaticPackageSource < BasicPackageSource
