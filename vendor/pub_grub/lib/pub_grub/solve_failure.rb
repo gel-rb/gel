@@ -1,4 +1,4 @@
-require_relative '../pub_grub/failure_writer'
+require_relative 'failure_writer'
 
 module Gel::Vendor::PubGrub
   class SolveFailure < StandardError
