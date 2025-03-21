@@ -1,4 +1,4 @@
-require_relative '../pub_grub/version_range'
+require_relative 'version_range'
 
 module Gel::Vendor::PubGrub
   class VersionConstraint
