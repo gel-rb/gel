@@ -22,6 +22,7 @@ GEM
     mocha (2.7.1)
       ruby2_keywords (>= 0.0.5)
     mustache (1.1.1)
+    mutex_m (0.3.0)
     nokogiri (1.18.4)
       mini_portile2 (~> 2.8.2)
       racc (~> 1.4)
@@ -47,6 +48,7 @@ DEPENDENCIES
   gel!
   minitest (~> 5.0, < 5.16)
   mocha
+  mutex_m
   rake (~> 12.3)
   ronn-ng
   webmock
