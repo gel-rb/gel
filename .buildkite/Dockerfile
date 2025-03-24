@@ -6,6 +6,7 @@ RUN (which git >/dev/null && which curl >/dev/null) || ( \
   DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
     git \
     curl \
+    build-essential \
   )
 
 RUN mkdir -p /app/test/fixtures
