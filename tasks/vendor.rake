@@ -2,7 +2,7 @@
 
 Automatiek::RakeTask.new("ruby-digest") do |lib|
   lib.version = "master"
-  lib.download = { :github => "https://github.com/Solistra/ruby-digest" }
+  lib.download = { :github => "https://github.com/matthewd/ruby-digest" }
   lib.namespace = "RubyDigest"
   lib.prefix = "Gel::Vendor"
   lib.vendor_lib = "vendor/ruby-digest"
@@ -11,6 +11,8 @@ Automatiek::RakeTask.new("ruby-digest") do |lib|
     # After the main class, it installs itself as a ::Digest alias, and
     # defines the pseudo-autoload global method. We don't need those.
     contents.gsub!(/^end$(?m:.*)/, "end\n")
+
+    contents.gsub!(/\A/, "# frozen_string_literal: false\n")
   end
 end
 
