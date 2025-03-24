@@ -11,6 +11,7 @@ gem "rake", "~> 12.3"
 gem "minitest", "~> 5.0", "< 5.16" # Ruby 2.5 compat
 gem "mutex_m" # removed from minitest 2.21.0, but no longer default gem
 gem "mocha"
+gem "ostruct"
 gem "webmock"
 
 # We want `ronn` for generating manpages during a release build, but
