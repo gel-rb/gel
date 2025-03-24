@@ -139,9 +139,8 @@ class Gel::GitDepot
       parts.map { |part| shellword(part) }.join(" ")
     end
 
-    require "logger"
-    Logger = ::Logger.new($stderr)
-    Logger.level = ::Logger::DEBUG
+    require_relative "logger"
+    Logger = Gel::Logger.new($stderr)
 
     def logger
       Logger

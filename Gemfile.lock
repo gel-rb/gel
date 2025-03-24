@@ -13,30 +13,16 @@ GEM
       bigdecimal
       rexml
     hashdiff (1.1.2)
-    kramdown (2.5.1)
-      rexml (>= 3.3.9)
-    kramdown-parser-gfm (1.1.0)
-      kramdown (~> 2.0)
-    mini_portile2 (2.8.8)
     minitest (5.15.0)
     mocha (2.7.1)
       ruby2_keywords (>= 0.0.5)
-    mustache (1.1.1)
     mutex_m (0.3.0)
-    nokogiri (1.18.4)
-      mini_portile2 (~> 2.8.2)
-      racc (~> 1.4)
-    public_suffix (6.0.1)
-    racc (1.8.1)
-    rake (12.3.3)
+    ostruct (0.6.1)
+    public_suffix (4.0.7)
+    rake (13.2.1)
     rexml (3.4.1)
-    ronn-ng (0.10.1)
-      kramdown (~> 2, >= 2.1)
-      kramdown-parser-gfm (~> 1, >= 1.0.1)
-      mustache (~> 1)
-      nokogiri (~> 1, >= 1.14.3)
     ruby2_keywords (0.0.5)
-    webmock (3.25.1)
+    webmock (3.24.0)
       addressable (>= 2.8.0)
       crack (>= 0.3.2)
       hashdiff (>= 0.4.0, < 2.0.0)
@@ -49,8 +35,8 @@ DEPENDENCIES
   minitest (~> 5.0, < 5.16)
   mocha
   mutex_m
-  rake (~> 12.3)
-  ronn-ng
+  ostruct
+  rake
   webmock
 
 BUNDLED WITH

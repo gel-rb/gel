@@ -114,7 +114,7 @@ class InstallTest < Minitest::Test
   def test_installing_a_rake_extension
     skip if jruby?
 
-    with_fixture_gems_installed(["rake-12.3.2.gem"], multi: true) do |store|
+    with_fixture_gems_installed(["rake-13.2.1.gem"], multi: true) do |store|
       result = Gel::Package::Installer.new(store)
       dir = store["ruby", true].root
 
@@ -139,7 +139,7 @@ class InstallTest < Minitest::Test
 
       assert_equal [
         ["rainbow", "2.2.2"],
-        ["rake", "12.3.2"],
+        ["rake", "13.2.1"],
       ], entries.sort
 
       assert_equal({

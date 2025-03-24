@@ -2,12 +2,12 @@
 
 require "monitor"
 
+require_relative "logger"
+
 class Gel::Httpool
   include MonitorMixin
 
-  require "logger"
-  Logger = ::Logger.new($stderr)
-  Logger.level = $DEBUG ? ::Logger::DEBUG : ::Logger::WARN
+  Logger = Gel::Logger.new($stderr)
 
   def initialize
     super()

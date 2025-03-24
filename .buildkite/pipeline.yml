@@ -2,9 +2,10 @@ _templates:
   - &rake
     command: "bin/rake"
     plugins:
-      docker-compose#v3.3.0:
+      docker-compose#v5.6.0:
         run: app
         config: .buildkite/docker-compose.yml
+        progress: plain
     timeout_in_minutes: 10
 
 steps:

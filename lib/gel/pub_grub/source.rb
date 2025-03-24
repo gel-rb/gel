@@ -6,6 +6,9 @@ require_relative "../../../vendor/pub_grub/lib/pub_grub/rubygems"
 require_relative "package"
 require_relative "../platform"
 
+require_relative "../logger"
+Gel::Vendor::PubGrub.logger = Gel::Logger.new($stderr)
+
 module Gel::PubGrub
   class Source < Gel::Vendor::PubGrub::BasicPackageSource
     attr_reader :root
