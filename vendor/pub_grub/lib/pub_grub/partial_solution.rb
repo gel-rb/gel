@@ -1,4 +1,4 @@
-require_relative '../pub_grub/assignment'
+require_relative 'assignment'
 
 module Gel::Vendor::PubGrub
   class PartialSolution

@@ -129,6 +129,10 @@ module Gel::Vendor::PubGrub
       VersionUnion.union(new_ranges, normalize: false)
     end
 
+    def upper_invert
+      ranges.last.upper_invert
+    end
+
     def invert
       ranges.map(&:invert).inject(:intersect)
     end

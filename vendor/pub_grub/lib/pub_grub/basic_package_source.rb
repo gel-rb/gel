@@ -1,5 +1,5 @@
-require_relative '../pub_grub/version_constraint'
-require_relative '../pub_grub/incompatibility'
+require_relative 'version_constraint'
+require_relative 'incompatibility'
 
 module Gel::Vendor::PubGrub
   # Types:
