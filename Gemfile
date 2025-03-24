@@ -13,4 +13,9 @@ gem "mutex_m" # removed from minitest 2.21.0, but no longer default gem
 gem "mocha"
 gem "webmock"
 
-gem "ronn-ng"
+# We want `ronn` for generating manpages during a release build, but
+# it's awkward to carry as a full dependency, because it pulls in
+# Nokogiri, which is too complex to expect to work across all the Ruby
+# versions we run in CI.
+#
+# gem "ronn-ng"
