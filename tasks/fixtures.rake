@@ -13,7 +13,7 @@ FIXTURE_GEMS = [
   ["atomic", "1.1.16"],
   ["atomic", "1.1.16-java"],
   ["rainbow", "2.2.2"],
-  ["rake", "12.3.2"],
+  ["rake", "13.2.1"],
   ["ruby_parser", "3.8.2"]
 ]
 

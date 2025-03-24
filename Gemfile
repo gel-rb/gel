@@ -7,7 +7,7 @@ git_source(:github) { |repo_name| "https://github.com/#{repo_name}" }
 # we vendor.
 gem "gel", path: "."
 
-gem "rake", "~> 12.3"
+gem "rake"
 gem "minitest", "~> 5.0", "< 5.16" # Ruby 2.5 compat
 gem "mutex_m" # removed from minitest 2.21.0, but no longer default gem
 gem "mocha"
