@@ -177,9 +177,14 @@ class Gel::Environment
     require_relative "catalog"
     all_sources = (gemfile.sources | gemfile.gems.flat_map { |_, _, o| o[:source] }).compact
     local_source = all_sources.delete(:local)
-    server_gems = gemfile.gems.select { |_, _, o| !o[:path] && !o[:git] }.map(&:first)
+    server_gems = gemfile.gems.select { |_, _, o| !o[:path] && !o[:git] }
     catalog_pool = Gel::WorkPool.new(8, name: "gel-catalog")
-    server_catalogs = all_sources.map { |s| Gel::Catalog.new(s, initial_gems: server_gems, work_pool: catalog_pool, **catalog_options) }
+    server_catalogs = all_sources.map do |s|
+      source_gems = server_gems.
+        select { |_, _, o| Array(o[:source]).include?(s) || o[:source].nil? }.
+        map(&:first)
+      Gel::Catalog.new(s, initial_gems: source_gems, work_pool: catalog_pool, **catalog_options)
+    end
 
     require_relative "store_catalog"
     local_catalogs = local_source ? [Gel::StoreCatalog.new(root_store(store))] : []
@@ -250,7 +255,7 @@ class Gel::Environment
     end
 
     require_relative "catalog_set"
-    catalog_set = Gel::CatalogSet.new(catalogs)
+    catalog_set = Gel::CatalogSet.new(catalogs, gemfile)
 
     if solve
       require_relative "pub_grub/solver"
