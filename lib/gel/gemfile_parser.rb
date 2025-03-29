@@ -177,13 +177,21 @@ module Gel::GemfileParser
     def flatten(options, stack)
       options = options.dup
       stack.reverse_each do |layer|
-        options.update(layer) { |_, current, outer| current }
+        options.update(layer) { |_, current, outer| Array(outer) + Array(current) }
       end
+
       @git_sources.each do |key, block|
         next unless options.key?(key)
         raise "Multiple git sources specified" if options.key?(:git)
         options[:git] = block.call(options.delete(key))
       end
+
+      if options[:install_if]
+        options[:install_if] = Array(options[:install_if]).all? do |condition|
+          condition.respond_to?(:call) ? condition.call : condition
+        end
+      end
+
       options
     end
 
@@ -191,12 +199,6 @@ module Gel::GemfileParser
       return if name == "bundler"
       raise "Only git sources can specify a :branch" if options[:branch] && !options[:git]
       raise "Duplicate entry for gem #{name.inspect}" if @gems.assoc(name)
-
-      if options[:install_if]
-        options[:install_if] = Array(options[:install_if]).all? do |condition|
-          condition.respond_to?(:call) ? condition.call : condition
-        end
-      end
 
       @gems << [name, requirements, options]
     end
