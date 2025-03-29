@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "gel/command"
 
 class VersionTest < Minitest::Test
   def test_version

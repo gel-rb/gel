@@ -3,7 +3,7 @@
 require_relative "db"
 
 class Gel::StubSet
-  attr_reader :root
+  attr_reader :root, :dir
 
   def initialize(root)
     @root = File.realpath(File.expand_path(root))
@@ -39,6 +39,12 @@ class Gel::StubSet
       @db.each_key do |exe|
         create_stub(exe)
       end
+    end
+  end
+
+  def all_stubs
+    @db.reading do
+      @db.each_key.to_a
     end
   end
 

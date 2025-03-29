@@ -30,6 +30,12 @@ require_relative "util"
 #     GEL_AUTH="https://user@pass:private-gem-server.local"
 
 class Gel::Config
+  def self.cache_dir
+    File.expand_path(ENV["GEL_CACHE"] || "~/.cache/gel")
+  end
+
+  attr_reader :path
+
   def initialize(root_path = "~/.config/gel")
     @root = File.expand_path(root_path)
     @path = File.join(@root, "config")
