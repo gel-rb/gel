@@ -299,6 +299,16 @@ ensure
   $stdout = original_stdout
 end
 
+def capture_stderr
+  original_stderr = $stderr
+  $stderr = StringIO.new
+  yield
+rescue SystemExit
+  $stderr.string
+ensure
+  $stderr = original_stderr
+end
+
 def assert_nothing_raised
   yield
 end

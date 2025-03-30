@@ -225,6 +225,16 @@ module Gel::Error
     end
   end
 
+  class NoGemError < Gel::UserError
+    def initialize
+      super
+    end
+
+    def message
+      "Please specify gem to add"
+    end
+  end
+
   class UnknownGemError < Gel::UserError
     def initialize(gem_name:)
       super
