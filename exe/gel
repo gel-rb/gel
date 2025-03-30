@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+ENV["GEL_PROGRAM_NAME"] = $PROGRAM_NAME
 if defined?(::Gem) && !defined?(::Gel)
   # Note there's a similar re-exec in gemlib/gel/stub.rb
 
