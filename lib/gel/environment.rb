@@ -35,8 +35,7 @@ class Gel::Environment
   GEMFILE_PLATFORMS = begin
     v = RbConfig::CONFIG["ruby_version"].split(".")[0..1].inject(:+)
 
-    # FIXME: This isn't the right condition
-    if defined?(org.jruby.Ruby)
+    if RUBY_ENGINE == "jruby" || RUBY_PLATFORM == "java"
       ["jruby", "jruby_#{v}", "java", "java_#{v}"]
     else
       ["ruby", "ruby_#{v}", "mri", "mri_#{v}"]
